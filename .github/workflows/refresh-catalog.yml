@@ -1,0 +1,45 @@
+name: Refresh Loupe catalog
+
+# Rebuilds loupe-feed/catalog.json from the brands' live Shopify feeds.
+# Runs daily and on demand. The committed catalog.json is served — for free,
+# globally cached — by jsDelivr at:
+#   https://cdn.jsdelivr.net/gh/<your-username>/<your-repo>@main/loupe-feed/catalog.json
+
+on:
+  schedule:
+    - cron: "0 8 * * *"   # every day at 08:00 UTC
+  workflow_dispatch: {}    # manual "Run workflow" button
+  push:
+    paths:
+      - "loupe-feed/brands.json"   # rebuild immediately when the brand list changes
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Build catalog
+        run: python loupe-feed/build_catalog.py
+
+      - name: Commit if changed
+        run: |
+          git config user.name  "loupe-catalog-bot"
+          git config user.email "actions@users.noreply.github.com"
+          if [[ -n "$(git status --porcelain loupe-feed/catalog.json)" ]]; then
+            git add loupe-feed/catalog.json
+            git commit -m "chore: refresh catalog $(date -u +%Y-%m-%d)"
+            git push
+            echo "Catalog updated."
+          else
+            echo "No catalog changes."
+          fi
