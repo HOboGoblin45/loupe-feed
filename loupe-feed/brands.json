@@ -1,0 +1,21 @@
+{
+  "_comment": "Curated niche brands for the Loupe live catalog feed. Each runs on Shopify, which exposes a public /products.json endpoint (no auth). 'currency' is the store's base currency — the scraper converts to USD. 'perBrand' caps how many products are pulled from each brand to keep the catalog curated. To add a brand: confirm https://<domain>/products.json returns JSON, then add an entry. Bot-protected stores (return empty) are simply skipped at runtime.",
+  "fx_to_usd": { "USD": 1.0, "AUD": 0.66, "EUR": 1.08, "GBP": 1.27, "CAD": 0.73 },
+  "perBrand": 10,
+  "brands": [
+    { "brand": "Deiji Studios",       "domain": "deijistudios.com",      "currency": "AUD" },
+    { "brand": "House of Sunny",      "domain": "houseofsunny.com",      "currency": "GBP" },
+    { "brand": "Frankies Bikinis",    "domain": "frankiesbikinis.com",   "currency": "USD" },
+    { "brand": "Faithfull the Brand", "domain": "faithfullthebrand.com", "currency": "AUD" },
+    { "brand": "Chan Luu",            "domain": "chanluu.com",           "currency": "USD" },
+    { "brand": "Staud",               "domain": "staud.clothing",        "currency": "USD" },
+    { "brand": "Sleeper",             "domain": "the-sleeper.com",       "currency": "USD" },
+    { "brand": "Paloma Wool",         "domain": "palomawool.com",        "currency": "EUR" },
+    { "brand": "Lisa Says Gah",       "domain": "lisasaysgah.com",       "currency": "USD" },
+    { "brand": "Margaux",             "domain": "margauxny.com",         "currency": "USD" },
+    { "brand": "DÔEN",                "domain": "shopdoen.com",          "currency": "USD" },
+    { "brand": "Sir the Label",       "domain": "sirthelabel.com",       "currency": "USD" },
+    { "brand": "Cou Cou Intimates",   "domain": "coucouintimates.com",   "currency": "USD" },
+    { "brand": "RIXO",                "domain": "rixo.co.uk",            "currency": "GBP" }
+  ]
+}
