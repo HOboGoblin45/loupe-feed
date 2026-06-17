@@ -16,6 +16,14 @@
     { "brand": "DÔEN",                "domain": "shopdoen.com",          "currency": "USD" },
     { "brand": "Sir the Label",       "domain": "sirthelabel.com",       "currency": "USD" },
     { "brand": "Cou Cou Intimates",   "domain": "coucouintimates.com",   "currency": "USD" },
-    { "brand": "RIXO",                "domain": "rixo.co.uk",            "currency": "GBP" }
+    { "brand": "RIXO",                "domain": "rixo.co.uk",            "currency": "GBP" },
+    { "brand": "St. Agni",            "domain": "st-agni.com",           "currency": "AUD" },
+    { "brand": "Selkie",              "domain": "selkiecollection.com",  "currency": "USD" },
+    { "brand": "Cult Gaia",           "domain": "cultgaia.com",          "currency": "USD" },
+    { "brand": "Musier Paris",        "domain": "www.musier-paris.com",  "currency": "EUR" },
+    { "brand": "Rouje",               "domain": "www.rouje.com",         "currency": "EUR" },
+    { "brand": "The Frankie Shop",    "domain": "thefrankieshop.com",    "currency": "USD" },
+    { "brand": "Peppermayo",          "domain": "peppermayo.com",        "currency": "AUD" },
+    { "brand": "Meshki",              "domain": "meshki.com",            "currency": "AUD" }
   ]
 }

@@ -20,6 +20,7 @@ Output (catalog.json):
 """
 
 import json
+import random
 import sys
 import time
 import urllib.request
@@ -161,12 +162,14 @@ def main():
     fx_table = cfg["fx_to_usd"]
     per_brand = int(cfg.get("perBrand", 10))
     products, seen_ids = [], set()
+    by_brand = {}
     summary = []
 
     for entry in cfg["brands"]:
         brand, domain = entry["brand"], entry["domain"]
         fx = fx_table.get(entry.get("currency", "USD"), 1.0)
         got = 0
+        bucket = []
         try:
             # pull a generous page, then take the first `per_brand` valid items
             data = fetch_json(f"https://{domain}/products.json?limit={max(per_brand * 3, 30)}")
@@ -177,12 +180,27 @@ def main():
                 if not norm or norm["id"] in seen_ids:
                     continue
                 seen_ids.add(norm["id"])
-                products.append(norm)
+                bucket.append(norm)
                 got += 1
+            if bucket:
+                by_brand[brand] = bucket
             summary.append(f"  {brand:<22} {got:>3} items")
         except (urllib.error.URLError, urllib.error.HTTPError, ValueError, TimeoutError) as e:
             summary.append(f"  {brand:<22}  SKIP ({type(e).__name__})")
         time.sleep(0.5)  # be polite
+
+    # Round-robin interleave across brands so the published feed is never grouped
+    # brand-by-brand (the app shuffles too, but a mixed feed is the right default
+    # for any consumer and for the very first cards a user sees).
+    buckets = list(by_brand.values())
+    random.shuffle(buckets)
+    for b in buckets:
+        random.shuffle(b)
+    while any(buckets):
+        random.shuffle(buckets)
+        for b in buckets:
+            if b:
+                products.append(b.pop(0))
 
     catalog = {
         "generatedAt": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
@@ -197,7 +215,7 @@ def main():
     # Fail the CI run only if we got essentially nothing (keeps a bad scrape from
     # overwriting a good catalog with an empty one).
     if len(products) < 20:
-        print("ERROR: too few products scraped — not enough to publish.", file=sys.stderr)
+        print("ERROR: too few products scraped \u2014 not enough to publish.", file=sys.stderr)
         sys.exit(1)
 
 
