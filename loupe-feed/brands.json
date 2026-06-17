@@ -24,6 +24,13 @@
     { "brand": "Rouje",               "domain": "www.rouje.com",         "currency": "EUR" },
     { "brand": "The Frankie Shop",    "domain": "thefrankieshop.com",    "currency": "USD" },
     { "brand": "Peppermayo",          "domain": "peppermayo.com",        "currency": "AUD" },
-    { "brand": "Meshki",              "domain": "meshki.com",            "currency": "AUD" }
+    { "brand": "Meshki",              "domain": "meshki.com",            "currency": "AUD" },
+    { "brand": "Baserange",           "domain": "baserange.com",         "currency": "EUR" },
+    { "brand": "Brooke Callahan",     "domain": "brookecallahan.com",    "currency": "USD" },
+    { "brand": "Tyler McGillivary",   "domain": "tylermcgillivary.com",  "currency": "USD" },
+    { "brand": "SIEDRÉS",             "domain": "siedres.com",           "currency": "USD" },
+    { "brand": "With Jéan",           "domain": "withjean.com",          "currency": "AUD" },
+    { "brand": "MISBHV",              "domain": "misbhv.com",            "currency": "EUR" },
+    { "brand": "Goldie Swimwear",     "domain": "goldieswimwear.com",    "currency": "USD" }
   ]
 }
