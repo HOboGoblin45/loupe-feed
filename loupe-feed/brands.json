@@ -69,6 +69,17 @@
     { "brand": "Aeyde",               "domain": "aeyde.com",             "currency": "EUR" },
     { "brand": "Marland Backus",      "domain": "marlandbackus.com",     "currency": "USD" },
     { "brand": "Mode Mischief",       "domain": "modemischief.com",      "currency": "AUD" },
-    { "brand": "Wolf Circus",         "domain": "www.wolfcircus.com",    "currency": "CAD" }
+    { "brand": "Wolf Circus",         "domain": "www.wolfcircus.com",    "currency": "CAD" },
+    { "brand": "Fashion Brand Company","domain": "fashionbrandcompany.com","currency": "USD" },
+    { "brand": "Apres Studio",        "domain": "apresstudio.com.au",    "currency": "AUD" },
+    { "brand": "Buci NYC",            "domain": "bucibucibuci.com",      "currency": "USD" },
+    { "brand": "Geel",                "domain": "geel.us",               "currency": "USD" },
+    { "brand": "Audette",             "domain": "audette-shop.com",      "currency": "USD" },
+    { "brand": "Tone Deaf Studios",   "domain": "tonedeaf-studios.com",  "currency": "USD" },
+    { "brand": "Little Yarn",         "domain": "littleyarn.com.au",     "currency": "AUD" },
+    { "brand": "Mais x Frida",        "domain": "maisxfrida.com",        "currency": "EUR" },
+    { "brand": "Susmie's",            "domain": "susmies.com",           "currency": "EUR" },
+    { "brand": "Mirchi by Kim",       "domain": "mirchibykim.com",       "currency": "USD" },
+    { "brand": "Gumi",                "domain": "gumi.us",               "currency": "USD" }
   ]
 }
