@@ -20,12 +20,14 @@ Output (catalog.json):
 """
 
 import json
+import os
 import random
 import sys
 import time
+import urllib.parse
 import urllib.request
 import urllib.error
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
 HERE = Path(__file__).parent
@@ -71,6 +73,35 @@ MULTICOLOR_HINTS = ["print", "floral", "stripe", "check", "gingham", "multi", "f
                     "patchwork", "rainbow", "tie-dye", "leopard", "animal", "paisley", "ditsy"]
 
 VALID_COLORS = {"black", "white", "pink", "blue", "green", "brown", "red", "neutral", "multicolor"}
+
+# ── Sovrn Commerce affiliate wrapping ─────────────────────────────────────────
+# When SOVRN_API_KEY is set (a GitHub Actions secret, injected as an env var),
+# every product's affiliateUrl is wrapped in a Sovrn "Redirect API" link so the
+# click is attributed to Loupe and earns commission. When the key is absent
+# (e.g. local runs, or before the Sovrn account is approved), links pass through
+# unchanged — the app still sends users straight to the brand's product page, so
+# nothing breaks. This is a server-side switch: add the secret, the next catalog
+# build monetizes all brands at once with no app update.
+#
+# Format (Sovrn Redirect API): https://redirect.viglink.com/?key=<KEY>&u=<dest>&cuid=<id>
+#   key  = your Commerce API key (Platform → Commerce → Settings → "Key" icon)
+#   u    = the destination URL, percent-encoded
+#   cuid = optional Custom Tracking ID (<=32 alphanumeric chars) for reporting
+# Confirm this exact format against one link from the dashboard's "Create Links"
+# tool before going wide; the base/params are isolated here so it's a one-line tweak.
+SOVRN_API_KEY = os.environ.get("SOVRN_API_KEY", "").strip()
+SOVRN_REDIRECT_BASE = "https://redirect.viglink.com/"
+SOVRN_CUID = os.environ.get("SOVRN_CUID", "loupeapp").strip()
+
+
+def monetize(url):
+    """Wrap a destination URL in a Sovrn affiliate redirect when a key is set."""
+    if not SOVRN_API_KEY:
+        return url
+    params = {"key": SOVRN_API_KEY, "u": url}
+    if SOVRN_CUID:
+        params["cuid"] = SOVRN_CUID
+    return SOVRN_REDIRECT_BASE + "?" + urllib.parse.urlencode(params)
 
 
 def fetch_json(url, timeout=25):
@@ -153,7 +184,7 @@ def normalize(product, brand, domain, fx):
         "category": category,
         "colorTags": colors,
         "imageUrl": img,
-        "affiliateUrl": f"https://{domain}/products/{handle}",
+        "affiliateUrl": monetize(f"https://{domain}/products/{handle}"),
     }
 
 
@@ -202,8 +233,41 @@ def main():
             if b:
                 products.append(b.pop(0))
 
+    now = datetime.now(timezone.utc)
+    now_iso = now.strftime("%Y-%m-%dT%H:%M:%SZ")
+    # Products that existed before we started stamping dates are backdated so the
+    # FIRST run after this upgrade doesn't flag the entire catalog as "new".
+    backdated_iso = (now - timedelta(days=30)).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+    prev_ids = set()
+    prev_added = {}
+    if OUT_FILE.exists():
+        try:
+            prev = json.loads(OUT_FILE.read_text(encoding="utf-8"))
+            for p in prev.get("products", []):
+                pid = p.get("id")
+                if pid:
+                    prev_ids.add(pid)
+                    if p.get("addedAt"):
+                        prev_added[pid] = p["addedAt"]
+        except (ValueError, OSError):
+            pass
+
+    # Stamp each product's stable "first seen" date for NEW-arrival flagging:
+    #   • seen before with a date  → carry it over
+    #   • existed before this feature → backdate (not new)
+    #   • genuinely new product     → now
+    for product in products:
+        pid = product["id"]
+        if pid in prev_added:
+            product["addedAt"] = prev_added[pid]
+        elif pid in prev_ids:
+            product["addedAt"] = backdated_iso
+        else:
+            product["addedAt"] = now_iso
+
     catalog = {
-        "generatedAt": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "generatedAt": now_iso,
         "count": len(products),
         "products": products,
     }
