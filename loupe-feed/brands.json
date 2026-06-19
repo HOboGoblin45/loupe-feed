@@ -1,5 +1,5 @@
 {
-  "_comment": "Curated niche brands for the Loupe live catalog feed. Each runs on Shopify, which exposes a public /products.json endpoint (no auth). 'currency' is the store's base currency — the scraper converts to USD. 'perBrand' caps how many products are pulled from each brand to keep the catalog curated. To add a brand: confirm https://<domain>/products.json returns JSON, then add an entry. Bot-protected stores (return empty) are simply skipped at runtime.",
+  "_comment": "Curated niche brands for the Loupe live catalog feed. Each runs on Shopify, which exposes a public /products.json endpoint (no auth). 'currency' is the store's base currency â€” the scraper converts to USD. 'perBrand' caps how many products are pulled from each brand to keep the catalog curated. To add a brand: confirm https://<domain>/products.json returns JSON, then add an entry. Bot-protected stores (return empty) are simply skipped at runtime.",
   "fx_to_usd": { "USD": 1.0, "AUD": 0.66, "EUR": 1.08, "GBP": 1.27, "CAD": 0.73, "NZD": 0.61, "SEK": 0.092, "DKK": 0.145 },
   "perBrand": 40,
   "brands": [
@@ -19,8 +19,8 @@
     { "brand": "Baserange",           "domain": "baserange.com",         "currency": "EUR" },
     { "brand": "Brooke Callahan",     "domain": "brookecallahan.com",    "currency": "USD" },
     { "brand": "Tyler McGillivary",   "domain": "tylermcgillivary.com",  "currency": "USD" },
-    { "brand": "SIEDRÉS",             "domain": "siedres.com",           "currency": "USD" },
-    { "brand": "With Jéan",           "domain": "withjean.com",          "currency": "AUD" },
+    { "brand": "SIEDRÃ‰S",             "domain": "siedres.com",           "currency": "USD" },
+    { "brand": "With JÃ©an",           "domain": "withjean.com",          "currency": "AUD" },
     { "brand": "MISBHV",              "domain": "misbhv.com",            "currency": "EUR" },
     { "brand": "Ciao Lucia",          "domain": "ciaolucia.com",         "currency": "USD" },
     { "brand": "Mirror Palais",       "domain": "mirrorpalais.com",      "currency": "USD" },
@@ -80,6 +80,21 @@
     { "brand": "Mais x Frida",        "domain": "maisxfrida.com",        "currency": "EUR" },
     { "brand": "Susmie's",            "domain": "susmies.com",           "currency": "EUR" },
     { "brand": "Mirchi by Kim",       "domain": "mirchibykim.com",       "currency": "USD" },
-    { "brand": "Gumi",                "domain": "gumi.us",               "currency": "USD" }
+    { "brand": "Gumi",                "domain": "gumi.us",               "currency": "USD" },
+    { "brand": "Kinkifish",           "domain": "kinkifish.com",         "currency": "USD" },
+    { "brand": "Orseund Iris",        "domain": "orseundiris.com",       "currency": "USD" },
+    { "brand": "Susamusa",            "domain": "susamusa.com",          "currency": "GBP" },
+    { "brand": "Le Febour",           "domain": "le-febour.com",         "currency": "CAD" },
+    { "brand": "Maem Disko",          "domain": "maemdisko.com",         "currency": "AUD" },
+    { "brand": "Tae Park",            "domain": "tae-park.com",          "currency": "USD" },
+    { "brand": "Fait Par Foutch",     "domain": "faitparfoutch.com",     "currency": "USD" },
+    { "brand": "Priscavera",          "domain": "priscavera.com",        "currency": "USD" },
+    { "brand": "Unica Leathers",      "domain": "unicaleathers.com",     "currency": "USD" },
+    { "brand": "NUUK Jewelry",        "domain": "nuukjewellery.com",     "currency": "EUR" },
+    { "brand": "Phoebe Philo",        "domain": "phoebephilo.com",       "currency": "GBP" },
+    { "brand": "The Row",             "domain": "therow.com",            "currency": "USD" },
+    { "brand": "Toteme",              "domain": "toteme-studio.com",     "currency": "SEK" },
+    { "brand": "Khaite",              "domain": "khaite.com",            "currency": "USD" },
+    { "brand": "Dries Van Noten",     "domain": "driesvannoten.com",     "currency": "EUR" }
   ]
 }
