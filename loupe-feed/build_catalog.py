@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """
-Loupe â€” live catalog builder.
+Loupe — live catalog builder.
 
 Pulls each curated brand's public Shopify product feed (https://<domain>/products.json),
 normalizes every item into the app's Product shape, converts prices to USD, infers
 category + color tags, and writes catalog.json.
 
-Runs in CI (GitHub Actions) on a daily schedule. Pure standard library â€” no pip install.
+Runs in CI (GitHub Actions) on a daily schedule. Pure standard library — no pip install.
 
 Output (catalog.json):
   {
@@ -39,7 +39,7 @@ USER_AGENT = (
     "(KHTML, like Gecko) Chrome/124.0 Safari/537.36"
 )
 
-# â”€â”€ Category inference â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── Category inference ────────────────────────────────────────────────────────
 # Checked in priority order; first hit wins. Falls back to 'tops'.
 CATEGORY_RULES = [
     ("accessories", ["bag", "tote", "clutch", "pouch", "purse", "scarf", "necklace",
@@ -57,7 +57,7 @@ CATEGORY_RULES = [
                      "halter", "tube", "set", "jumper", "polo", "turtleneck"]),
 ]
 
-# â”€â”€ Color inference â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── Color inference ───────────────────────────────────────────────────────────
 COLOR_RULES = [
     ("black",  ["black", "noir", "onyx", "jet"]),
     ("white",  ["white", "ivory", "blanc"]),
@@ -74,17 +74,17 @@ MULTICOLOR_HINTS = ["print", "floral", "stripe", "check", "gingham", "multi", "f
 
 VALID_COLORS = {"black", "white", "pink", "blue", "green", "brown", "red", "neutral", "multicolor"}
 
-# â”€â”€ Sovrn Commerce affiliate wrapping â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── Sovrn Commerce affiliate wrapping ─────────────────────────────────────────
 # When SOVRN_API_KEY is set (a GitHub Actions secret, injected as an env var),
 # every product's affiliateUrl is wrapped in a Sovrn "Redirect API" link so the
 # click is attributed to Loupe and earns commission. When the key is absent
 # (e.g. local runs, or before the Sovrn account is approved), links pass through
-# unchanged â€” the app still sends users straight to the brand's product page, so
+# unchanged — the app still sends users straight to the brand's product page, so
 # nothing breaks. This is a server-side switch: add the secret, the next catalog
 # build monetizes all brands at once with no app update.
 #
 # Format (Sovrn Redirect API): https://redirect.viglink.com/?key=<KEY>&u=<dest>&cuid=<id>
-#   key  = your Commerce API key (Platform â†’ Commerce â†’ Settings â†’ "Key" icon)
+#   key  = your Commerce API key (Platform → Commerce → Settings → "Key" icon)
 #   u    = the destination URL, percent-encoded
 #   cuid = optional Custom Tracking ID (<=32 alphanumeric chars) for reporting
 # Confirm this exact format against one link from the dashboard's "Create Links"
@@ -194,7 +194,7 @@ def available_sizes(product):
     if not size_opt:
         return []
 
-    # position is 1-based â†’ maps to option1/option2/option3 on each variant.
+    # position is 1-based → maps to option1/option2/option3 on each variant.
     pos = size_opt.get("position")
     try:
         pos = int(pos)
@@ -318,6 +318,29 @@ def main():
             if b:
                 products.append(b.pop(0))
 
+    # Merge in curated products — brands we can't auto-scrape (e.g. partners on
+    # non-Shopify platforms, like Ganni on Salesforce Commerce Cloud). These are
+    # hand-built to the exact catalog schema and appended; the app reshuffles the
+    # feed so order here doesn't matter. They flow through the same addedAt
+    # stamping and monetize() wrapping as scraped products.
+    curated_file = HERE / "curated.json"
+    if curated_file.exists():
+        try:
+            curated = json.loads(curated_file.read_text(encoding="utf-8"))
+            added = 0
+            for p in curated.get("products", []):
+                pid = p.get("id")
+                if not pid or pid in seen_ids:
+                    continue
+                seen_ids.add(pid)
+                if p.get("affiliateUrl"):
+                    p["affiliateUrl"] = monetize(p["affiliateUrl"])
+                products.append(p)
+                added += 1
+            summary.append(f"  {'(curated)':<22} {added:>3} items")
+        except (ValueError, OSError) as e:
+            summary.append(f"  (curated)              SKIP ({type(e).__name__})")
+
     now = datetime.now(timezone.utc)
     now_iso = now.strftime("%Y-%m-%dT%H:%M:%SZ")
     # Products that existed before we started stamping dates are backdated so the
@@ -339,9 +362,9 @@ def main():
             pass
 
     # Stamp each product's stable "first seen" date for NEW-arrival flagging:
-    #   â€¢ seen before with a date  â†’ carry it over
-    #   â€¢ existed before this feature â†’ backdate (not new)
-    #   â€¢ genuinely new product     â†’ now
+    #   • seen before with a date  → carry it over
+    #   • existed before this feature → backdate (not new)
+    #   • genuinely new product     → now
     for product in products:
         pid = product["id"]
         if pid in prev_added:
