@@ -1,5 +1,5 @@
 {
-  "_comment": "Curated niche brands for the Loupe live catalog feed. Each runs on Shopify, which exposes a public /products.json endpoint (no auth). 'currency' is the store's base currency â€” the scraper converts to USD. 'perBrand' caps how many products are pulled from each brand to keep the catalog curated. To add a brand: confirm https://<domain>/products.json returns JSON, then add an entry. Bot-protected stores (return empty) are simply skipped at runtime.",
+  "_comment": "Curated niche brands for the Loupe live catalog feed. Each runs on Shopify, which exposes a public /products.json endpoint (no auth). 'currency' is the store's base currency — the scraper converts to USD. 'perBrand' caps how many products are pulled from each brand to keep the catalog curated. To add a brand: confirm https://<domain>/products.json returns JSON, then add an entry. Bot-protected stores (return empty) are simply skipped at runtime.",
   "fx_to_usd": { "USD": 1.0, "AUD": 0.66, "EUR": 1.08, "GBP": 1.27, "CAD": 0.73, "NZD": 0.61, "SEK": 0.092, "DKK": 0.145 },
   "perBrand": 40,
   "brands": [
@@ -19,8 +19,8 @@
     { "brand": "Baserange",           "domain": "baserange.com",         "currency": "EUR" },
     { "brand": "Brooke Callahan",     "domain": "brookecallahan.com",    "currency": "USD" },
     { "brand": "Tyler McGillivary",   "domain": "tylermcgillivary.com",  "currency": "USD" },
-    { "brand": "SIEDRÃ‰S",             "domain": "siedres.com",           "currency": "USD" },
-    { "brand": "With JÃ©an",           "domain": "withjean.com",          "currency": "AUD" },
+    { "brand": "SIEDRÉS",             "domain": "siedres.com",           "currency": "USD" },
+    { "brand": "With Jéan",           "domain": "withjean.com",          "currency": "AUD" },
     { "brand": "MISBHV",              "domain": "misbhv.com",            "currency": "EUR" },
     { "brand": "Ciao Lucia",          "domain": "ciaolucia.com",         "currency": "USD" },
     { "brand": "Mirror Palais",       "domain": "mirrorpalais.com",      "currency": "USD" },
@@ -99,6 +99,7 @@
     { "brand": "Mpaz Studio",         "domain": "mpazstudio.com",        "currency": "USD" },
     { "brand": "Carmen Says",         "domain": "carmensays.com",        "currency": "EUR" },
     { "brand": "Oddli",               "domain": "oddli.com",             "currency": "USD" },
-    { "brand": "Demonde",             "domain": "demodemode.com",        "currency": "USD" }
+    { "brand": "Demonde",             "domain": "demodemode.com",        "currency": "USD" },
+    { "brand": "Ganni",               "domain": "ganni.com",             "currency": "USD" }
   ]
 }
