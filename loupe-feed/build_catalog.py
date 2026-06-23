@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """
-Loupe — live catalog builder.
+Loupe â€” live catalog builder.
 
 Pulls each curated brand's public Shopify product feed (https://<domain>/products.json),
 normalizes every item into the app's Product shape, converts prices to USD, infers
 category + color tags, and writes catalog.json.
 
-Runs in CI (GitHub Actions) on a daily schedule. Pure standard library — no pip install.
+Runs in CI (GitHub Actions) on a daily schedule. Pure standard library â€” no pip install.
 
 Output (catalog.json):
   {
@@ -39,7 +39,7 @@ USER_AGENT = (
     "(KHTML, like Gecko) Chrome/124.0 Safari/537.36"
 )
 
-# ── Category inference ────────────────────────────────────────────────────────
+# â”€â”€ Category inference â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 # Checked in priority order; first hit wins. Falls back to 'tops'.
 CATEGORY_RULES = [
     ("accessories", ["bag", "tote", "clutch", "pouch", "purse", "scarf", "necklace",
@@ -57,7 +57,7 @@ CATEGORY_RULES = [
                      "halter", "tube", "set", "jumper", "polo", "turtleneck"]),
 ]
 
-# ── Color inference ───────────────────────────────────────────────────────────
+# â”€â”€ Color inference â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 COLOR_RULES = [
     ("black",  ["black", "noir", "onyx", "jet"]),
     ("white",  ["white", "ivory", "blanc"]),
@@ -74,17 +74,17 @@ MULTICOLOR_HINTS = ["print", "floral", "stripe", "check", "gingham", "multi", "f
 
 VALID_COLORS = {"black", "white", "pink", "blue", "green", "brown", "red", "neutral", "multicolor"}
 
-# ── Sovrn Commerce affiliate wrapping ─────────────────────────────────────────
+# â”€â”€ Sovrn Commerce affiliate wrapping â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 # When SOVRN_API_KEY is set (a GitHub Actions secret, injected as an env var),
 # every product's affiliateUrl is wrapped in a Sovrn "Redirect API" link so the
 # click is attributed to Loupe and earns commission. When the key is absent
 # (e.g. local runs, or before the Sovrn account is approved), links pass through
-# unchanged — the app still sends users straight to the brand's product page, so
+# unchanged â€” the app still sends users straight to the brand's product page, so
 # nothing breaks. This is a server-side switch: add the secret, the next catalog
 # build monetizes all brands at once with no app update.
 #
 # Format (Sovrn Redirect API): https://redirect.viglink.com/?key=<KEY>&u=<dest>&cuid=<id>
-#   key  = your Commerce API key (Platform → Commerce → Settings → "Key" icon)
+#   key  = your Commerce API key (Platform â†’ Commerce â†’ Settings â†’ "Key" icon)
 #   u    = the destination URL, percent-encoded
 #   cuid = optional Custom Tracking ID (<=32 alphanumeric chars) for reporting
 # Confirm this exact format against one link from the dashboard's "Create Links"
@@ -153,6 +153,89 @@ def first_image(product):
     return None
 
 
+def gallery_images(product, n=5):
+    """Up to `n` image src's for the product gallery (hero first, deduped)."""
+    out = []
+    seen = set()
+    hero = first_image(product)
+    if hero and hero not in seen:
+        seen.add(hero)
+        out.append(hero)
+    for im in product.get("images") or []:
+        if len(out) >= n:
+            break
+        src = im.get("src")
+        if src and src not in seen:
+            seen.add(src)
+            out.append(src)
+    return out[:n]
+
+
+# Canonical letter-size ordering for sensible display.
+_SIZE_ORDER = {
+    "XXS": 0, "XS": 1, "S": 2, "M": 3, "L": 4,
+    "XL": 5, "XXL": 6, "2XL": 6, "XXXL": 7, "3XL": 7,
+}
+
+
+def _norm_size(val):
+    return str(val or "").strip().upper().replace(" ", "")
+
+
+def available_sizes(product):
+    """In-stock size values for a product, sensibly ordered, or [] if no size option."""
+    options = product.get("options") or []
+    size_opt = None
+    for opt in options:
+        name = (opt.get("name") or "").strip().lower()
+        if name in ("size", "sizes"):
+            size_opt = opt
+            break
+    if not size_opt:
+        return []
+
+    # position is 1-based â†’ maps to option1/option2/option3 on each variant.
+    pos = size_opt.get("position")
+    try:
+        pos = int(pos)
+    except (TypeError, ValueError):
+        pos = 1
+    key = f"option{pos}"
+
+    in_stock = []
+    seen = set()
+    for v in product.get("variants") or []:
+        if not v.get("available"):
+            continue
+        raw = v.get(key)
+        if raw is None:
+            continue
+        s = str(raw).strip()
+        if s and s not in seen:
+            seen.add(s)
+            in_stock.append(s)
+
+    if not in_stock:
+        return []
+
+    # If they look like standard letter sizes, sort by the canonical scale;
+    # otherwise preserve the option's declared value order, filtered to in-stock.
+    if all(_norm_size(s) in _SIZE_ORDER for s in in_stock):
+        return sorted(in_stock, key=lambda s: _SIZE_ORDER[_norm_size(s)])
+
+    order = [str(x).strip() for x in (size_opt.get("values") or [])]
+    if order:
+        in_stock_set = set(in_stock)
+        ordered = [s for s in order if s in in_stock_set]
+        # Append any in-stock values not present in the declared values list.
+        for s in in_stock:
+            if s not in order:
+                ordered.append(s)
+        if ordered:
+            return ordered
+    return in_stock
+
+
 def first_price(product):
     for v in product.get("variants") or []:
         p = v.get("price")
@@ -184,6 +267,8 @@ def normalize(product, brand, domain, fx):
         "category": category,
         "colorTags": colors,
         "imageUrl": img,
+        "sizes": available_sizes(product),
+        "images": gallery_images(product),
         "affiliateUrl": monetize(f"https://{domain}/products/{handle}"),
     }
 
@@ -254,9 +339,9 @@ def main():
             pass
 
     # Stamp each product's stable "first seen" date for NEW-arrival flagging:
-    #   • seen before with a date  → carry it over
-    #   • existed before this feature → backdate (not new)
-    #   • genuinely new product     → now
+    #   â€¢ seen before with a date  â†’ carry it over
+    #   â€¢ existed before this feature â†’ backdate (not new)
+    #   â€¢ genuinely new product     â†’ now
     for product in products:
         pid = product["id"]
         if pid in prev_added:
