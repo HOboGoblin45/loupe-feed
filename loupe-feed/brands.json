@@ -95,6 +95,10 @@
     { "brand": "The Row",             "domain": "therow.com",            "currency": "USD" },
     { "brand": "Toteme",              "domain": "toteme-studio.com",     "currency": "SEK" },
     { "brand": "Khaite",              "domain": "khaite.com",            "currency": "USD" },
-    { "brand": "Dries Van Noten",     "domain": "driesvannoten.com",     "currency": "EUR" }
+    { "brand": "Dries Van Noten",     "domain": "driesvannoten.com",     "currency": "EUR" },
+    { "brand": "Mpaz Studio",         "domain": "mpazstudio.com",        "currency": "USD" },
+    { "brand": "Carmen Says",         "domain": "carmensays.com",        "currency": "EUR" },
+    { "brand": "Oddli",               "domain": "oddli.com",             "currency": "USD" },
+    { "brand": "Demonde",             "domain": "demodemode.com",        "currency": "USD" }
   ]
 }
