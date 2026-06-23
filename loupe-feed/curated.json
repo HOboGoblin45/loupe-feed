@@ -1,0 +1,522 @@
+{
+  "_comment": "Curated products for brands we cannot auto-scrape (e.g. partners on non-Shopify platforms). Same schema as catalog.json products; merged in by build_catalog.py and re-stamped with addedAt. Ganni runs on Salesforce Commerce Cloud; images are clean white-background packshots from their US store.",
+  "products": [
+    {
+      "id": "ganni-black-mini-bou-bag-a6946",
+      "brand": "Ganni",
+      "name": "Black Mini Bou Bag",
+      "price": 490,
+      "category": "accessories",
+      "colorTags": [
+        "black"
+      ],
+      "imageUrl": "https://www.ganni.com/dw/image/v2/AAWT_PRD/on/demandware.static/-/Sites-ganni-master-catalogue/default/dw3f86d5ec/images/images/packshots/A6946_5894_099_1.jpg?sw=1000",
+      "sizes": [],
+      "images": [
+        "https://www.ganni.com/dw/image/v2/AAWT_PRD/on/demandware.static/-/Sites-ganni-master-catalogue/default/dw3f86d5ec/images/images/packshots/A6946_5894_099_1.jpg?sw=1000"
+      ],
+      "affiliateUrl": "https://www.ganni.com/us/black-mini-bou-bag-A6946.html"
+    },
+    {
+      "id": "ganni-black-small-bou-bag-a5241",
+      "brand": "Ganni",
+      "name": "Black Small Bou Bag",
+      "price": 545,
+      "category": "accessories",
+      "colorTags": [
+        "black"
+      ],
+      "imageUrl": "https://www.ganni.com/dw/image/v2/AAWT_PRD/on/demandware.static/-/Sites-ganni-master-catalogue/default/dw7dda37b5/images/images/packshots/A5241_5894_099_1.jpg?sw=1000",
+      "sizes": [],
+      "images": [
+        "https://www.ganni.com/dw/image/v2/AAWT_PRD/on/demandware.static/-/Sites-ganni-master-catalogue/default/dw7dda37b5/images/images/packshots/A5241_5894_099_1.jpg?sw=1000"
+      ],
+      "affiliateUrl": "https://www.ganni.com/us/black-small-bou-bag-A5241.html"
+    },
+    {
+      "id": "ganni-brown-mini-bou-bag-a7280",
+      "brand": "Ganni",
+      "name": "Brown Mini Bou Bag",
+      "price": 490,
+      "category": "accessories",
+      "colorTags": [
+        "brown"
+      ],
+      "imageUrl": "https://www.ganni.com/dw/image/v2/AAWT_PRD/on/demandware.static/-/Sites-ganni-master-catalogue/default/dwe7a0b108/images/images/packshots/A7280_5894_890_1.jpg?sw=1000",
+      "sizes": [],
+      "images": [
+        "https://www.ganni.com/dw/image/v2/AAWT_PRD/on/demandware.static/-/Sites-ganni-master-catalogue/default/dwe7a0b108/images/images/packshots/A7280_5894_890_1.jpg?sw=1000"
+      ],
+      "affiliateUrl": "https://www.ganni.com/us/brown-mini-bou-bag-A7280.html"
+    },
+    {
+      "id": "ganni-burgundy-mini-bou-bag-a6947",
+      "brand": "Ganni",
+      "name": "Burgundy Mini Bou Bag",
+      "price": 490,
+      "category": "accessories",
+      "colorTags": [
+        "red"
+      ],
+      "imageUrl": "https://www.ganni.com/dw/image/v2/AAWT_PRD/on/demandware.static/-/Sites-ganni-master-catalogue/default/dw3b70723c/images/images/packshots/A6947_5894_436_1.jpg?sw=1000",
+      "sizes": [],
+      "images": [
+        "https://www.ganni.com/dw/image/v2/AAWT_PRD/on/demandware.static/-/Sites-ganni-master-catalogue/default/dw3b70723c/images/images/packshots/A6947_5894_436_1.jpg?sw=1000"
+      ],
+      "affiliateUrl": "https://www.ganni.com/us/burgundy-mini-bou-bag-A6947.html"
+    },
+    {
+      "id": "ganni-leopard-xxl-tote-a7161",
+      "brand": "Ganni",
+      "name": "Leopard XXL Tote",
+      "price": 285,
+      "category": "accessories",
+      "colorTags": [
+        "brown",
+        "neutral"
+      ],
+      "imageUrl": "https://www.ganni.com/dw/image/v2/AAWT_PRD/on/demandware.static/-/Sites-ganni-master-catalogue/default/dwff997701/images/images/packshots/A7161_5903_943_1.jpg?sw=1000",
+      "sizes": [],
+      "images": [
+        "https://www.ganni.com/dw/image/v2/AAWT_PRD/on/demandware.static/-/Sites-ganni-master-catalogue/default/dwff997701/images/images/packshots/A7161_5903_943_1.jpg?sw=1000"
+      ],
+      "affiliateUrl": "https://www.ganni.com/us/leopard-xxl-tote-A7161.html"
+    },
+    {
+      "id": "ganni-black-xxl-banana-print-tote-a6896",
+      "brand": "Ganni",
+      "name": "Black XXL Banana Print Tote",
+      "price": 255,
+      "category": "accessories",
+      "colorTags": [
+        "black"
+      ],
+      "imageUrl": "https://www.ganni.com/dw/image/v2/AAWT_PRD/on/demandware.static/-/Sites-ganni-master-catalogue/default/dwd7db5376/images/images/packshots/A6896_5903_099_1.jpg?sw=1000",
+      "sizes": [],
+      "images": [
+        "https://www.ganni.com/dw/image/v2/AAWT_PRD/on/demandware.static/-/Sites-ganni-master-catalogue/default/dwd7db5376/images/images/packshots/A6896_5903_099_1.jpg?sw=1000"
+      ],
+      "affiliateUrl": "https://www.ganni.com/us/black-xxl-banana-print-tote-A6896.html"
+    },
+    {
+      "id": "ganni-leopard-large-canvas-tote-bag-a7179",
+      "brand": "Ganni",
+      "name": "Leopard Large Canvas Tote Bag",
+      "price": 240,
+      "category": "accessories",
+      "colorTags": [
+        "brown",
+        "neutral"
+      ],
+      "imageUrl": "https://www.ganni.com/dw/image/v2/AAWT_PRD/on/demandware.static/-/Sites-ganni-master-catalogue/default/dwadb2e997/images/images/packshots/A7179_5903_943_1.jpg?sw=1000",
+      "sizes": [],
+      "images": [
+        "https://www.ganni.com/dw/image/v2/AAWT_PRD/on/demandware.static/-/Sites-ganni-master-catalogue/default/dwadb2e997/images/images/packshots/A7179_5903_943_1.jpg?sw=1000"
+      ],
+      "affiliateUrl": "https://www.ganni.com/us/leopard-large-canvas-tote-bag-A7179.html"
+    },
+    {
+      "id": "ganni-brown-mini-hobo-bag-a7102",
+      "brand": "Ganni",
+      "name": "Brown Mini Hobo Bag",
+      "price": 495,
+      "category": "accessories",
+      "colorTags": [
+        "brown"
+      ],
+      "imageUrl": "https://www.ganni.com/dw/image/v2/AAWT_PRD/on/demandware.static/-/Sites-ganni-master-catalogue/default/dwa6e32e59/images/images/packshots/A7102_979_1.jpg?sw=1000",
+      "sizes": [],
+      "images": [
+        "https://www.ganni.com/dw/image/v2/AAWT_PRD/on/demandware.static/-/Sites-ganni-master-catalogue/default/dwa6e32e59/images/images/packshots/A7102_979_1.jpg?sw=1000"
+      ],
+      "affiliateUrl": "https://www.ganni.com/us/brown-mini-hobo-bag-A7102.html"
+    },
+    {
+      "id": "ganni-blue-relaxed-jersey-tiger-t-shirt-t4007",
+      "brand": "Ganni",
+      "name": "Blue Relaxed Jersey Tiger T-shirt",
+      "price": 145,
+      "category": "tops",
+      "colorTags": [
+        "blue"
+      ],
+      "imageUrl": "https://www.ganni.com/dw/image/v2/AAWT_PRD/on/demandware.static/-/Sites-ganni-master-catalogue/default/dwf8589be4/images/images/packshots/T4007_3575_745_1.jpg?sw=1000",
+      "sizes": [],
+      "images": [
+        "https://www.ganni.com/dw/image/v2/AAWT_PRD/on/demandware.static/-/Sites-ganni-master-catalogue/default/dwf8589be4/images/images/packshots/T4007_3575_745_1.jpg?sw=1000"
+      ],
+      "affiliateUrl": "https://www.ganni.com/us/blue-relaxed-jersey-tiger-t-shirt-T4007.html"
+    },
+    {
+      "id": "ganni-pink-poodle-sweater-k2499",
+      "brand": "Ganni",
+      "name": "Pink Poodle Sweater",
+      "price": 375,
+      "category": "tops",
+      "colorTags": [
+        "pink"
+      ],
+      "imageUrl": "https://www.ganni.com/dw/image/v2/AAWT_PRD/on/demandware.static/-/Sites-ganni-master-catalogue/default/dwa95bc4bb/images/images/packshots/K2499_2678_868_1.jpg?sw=1000",
+      "sizes": [],
+      "images": [
+        "https://www.ganni.com/dw/image/v2/AAWT_PRD/on/demandware.static/-/Sites-ganni-master-catalogue/default/dwa95bc4bb/images/images/packshots/K2499_2678_868_1.jpg?sw=1000"
+      ],
+      "affiliateUrl": "https://www.ganni.com/us/pink-poodle-sweater-K2499.html"
+    },
+    {
+      "id": "ganni-white-basic-jersey-cherry-relaxed-t-shirt-t4004",
+      "brand": "Ganni",
+      "name": "White Basic Jersey Cherry Relaxed T-shirt",
+      "price": 160,
+      "category": "tops",
+      "colorTags": [
+        "white"
+      ],
+      "imageUrl": "https://www.ganni.com/dw/image/v2/AAWT_PRD/on/demandware.static/-/Sites-ganni-master-catalogue/default/dwaf1ca73e/images/images/packshots/T4004_3575_151_1.jpg?sw=1000",
+      "sizes": [],
+      "images": [
+        "https://www.ganni.com/dw/image/v2/AAWT_PRD/on/demandware.static/-/Sites-ganni-master-catalogue/default/dwaf1ca73e/images/images/packshots/T4004_3575_151_1.jpg?sw=1000"
+      ],
+      "affiliateUrl": "https://www.ganni.com/us/white-basic-jersey-cherry-relaxed-t-shirt-T4004.html"
+    },
+    {
+      "id": "ganni-black-soft-cotton-rib-tank-top-t3898",
+      "brand": "Ganni",
+      "name": "Black Soft Cotton Rib Tank Top",
+      "price": 105,
+      "category": "tops",
+      "colorTags": [
+        "black"
+      ],
+      "imageUrl": "https://www.ganni.com/dw/image/v2/AAWT_PRD/on/demandware.static/-/Sites-ganni-master-catalogue/default/dw26fb545a/images/images/packshots/T3898_099_1.jpg?sw=1000",
+      "sizes": [],
+      "images": [
+        "https://www.ganni.com/dw/image/v2/AAWT_PRD/on/demandware.static/-/Sites-ganni-master-catalogue/default/dw26fb545a/images/images/packshots/T3898_099_1.jpg?sw=1000"
+      ],
+      "affiliateUrl": "https://www.ganni.com/us/black-soft-cotton-rib-tank-top-T3898.html"
+    },
+    {
+      "id": "ganni-leopard-cotton-poplin-peplum-tie-blouse-f9116",
+      "brand": "Ganni",
+      "name": "Leopard Cotton Poplin Peplum Tie Blouse",
+      "price": 235,
+      "category": "tops",
+      "colorTags": [
+        "brown",
+        "neutral"
+      ],
+      "imageUrl": "https://www.ganni.com/dw/image/v2/AAWT_PRD/on/demandware.static/-/Sites-ganni-master-catalogue/default/dw0b960eed/images/images/packshots/F9116_6488_943_1.jpg?sw=1000",
+      "sizes": [],
+      "images": [
+        "https://www.ganni.com/dw/image/v2/AAWT_PRD/on/demandware.static/-/Sites-ganni-master-catalogue/default/dw0b960eed/images/images/packshots/F9116_6488_943_1.jpg?sw=1000"
+      ],
+      "affiliateUrl": "https://www.ganni.com/us/leopard-cotton-poplin-peplum-tie-blouse-F9116.html"
+    },
+    {
+      "id": "ganni-black-mini-ribbed-merino-cardigan-k2474",
+      "brand": "Ganni",
+      "name": "Black Mini Ribbed Merino Cardigan",
+      "price": 325,
+      "category": "tops",
+      "colorTags": [
+        "black"
+      ],
+      "imageUrl": "https://www.ganni.com/dw/image/v2/AAWT_PRD/on/demandware.static/-/Sites-ganni-master-catalogue/default/dw30211a72/images/images/packshots/K2474_2649_252_1.jpg?sw=1000",
+      "sizes": [],
+      "images": [
+        "https://www.ganni.com/dw/image/v2/AAWT_PRD/on/demandware.static/-/Sites-ganni-master-catalogue/default/dw30211a72/images/images/packshots/K2474_2649_252_1.jpg?sw=1000"
+      ],
+      "affiliateUrl": "https://www.ganni.com/us/black-mini-ribbed-merino-cardigan-K2474.html"
+    },
+    {
+      "id": "ganni-betzy-cropped-jeans-in-leopard-print-j1059",
+      "brand": "Ganni",
+      "name": "Betzy Cropped Jeans in Leopard Print",
+      "price": 325,
+      "category": "bottoms",
+      "colorTags": [
+        "brown",
+        "neutral"
+      ],
+      "imageUrl": "https://www.ganni.com/dw/image/v2/AAWT_PRD/on/demandware.static/-/Sites-ganni-master-catalogue/default/dw8d966268/images/images/packshots/J1059_6508_943_1.jpg?sw=1000",
+      "sizes": [],
+      "images": [
+        "https://www.ganni.com/dw/image/v2/AAWT_PRD/on/demandware.static/-/Sites-ganni-master-catalogue/default/dw8d966268/images/images/packshots/J1059_6508_943_1.jpg?sw=1000"
+      ],
+      "affiliateUrl": "https://www.ganni.com/us/betzy-cropped-jeans-in-leopard-print-J1059.html"
+    },
+    {
+      "id": "ganni-light-blue-a-line-mini-denim-dress-w0887",
+      "brand": "Ganni",
+      "name": "Light Blue A-line Mini Denim Dress",
+      "price": 295,
+      "category": "dresses",
+      "colorTags": [
+        "blue"
+      ],
+      "imageUrl": "https://www.ganni.com/dw/image/v2/AAWT_PRD/on/demandware.static/-/Sites-ganni-master-catalogue/default/dw93abc323/images/images/packshots/W0887_6977_326_1.jpg?sw=1000",
+      "sizes": [],
+      "images": [
+        "https://www.ganni.com/dw/image/v2/AAWT_PRD/on/demandware.static/-/Sites-ganni-master-catalogue/default/dw93abc323/images/images/packshots/W0887_6977_326_1.jpg?sw=1000"
+      ],
+      "affiliateUrl": "https://www.ganni.com/us/light-blue-a-line-mini-denim-dress-W0887.html"
+    },
+    {
+      "id": "ganni-red-crinkled-check-taffeta-dress-w0844",
+      "brand": "Ganni",
+      "name": "Red Crinkled Check Taffeta Dress",
+      "price": 375,
+      "category": "dresses",
+      "colorTags": [
+        "red"
+      ],
+      "imageUrl": "https://www.ganni.com/dw/image/v2/AAWT_PRD/on/demandware.static/-/Sites-ganni-master-catalogue/default/dw535392ea/images/images/packshots/W0844_6965_847_1.jpg?sw=1000",
+      "sizes": [],
+      "images": [
+        "https://www.ganni.com/dw/image/v2/AAWT_PRD/on/demandware.static/-/Sites-ganni-master-catalogue/default/dw535392ea/images/images/packshots/W0844_6965_847_1.jpg?sw=1000"
+      ],
+      "affiliateUrl": "https://www.ganni.com/us/red-crinkled-check-taffeta-dress-W0844.html"
+    },
+    {
+      "id": "ganni-black-cotton-poplin-tie-string-mini-dress-f9005",
+      "brand": "Ganni",
+      "name": "Black Cotton Poplin Tie String Mini Dress",
+      "price": 255,
+      "category": "dresses",
+      "colorTags": [
+        "black"
+      ],
+      "imageUrl": "https://www.ganni.com/dw/image/v2/AAWT_PRD/on/demandware.static/-/Sites-ganni-master-catalogue/default/dw5f552060/images/images/packshots/F9005_6479_099_1.jpg?sw=1000",
+      "sizes": [],
+      "images": [
+        "https://www.ganni.com/dw/image/v2/AAWT_PRD/on/demandware.static/-/Sites-ganni-master-catalogue/default/dw5f552060/images/images/packshots/F9005_6479_099_1.jpg?sw=1000"
+      ],
+      "affiliateUrl": "https://www.ganni.com/us/black-cotton-poplin-tie-string-mini-dress-F9005.html"
+    },
+    {
+      "id": "ganni-blue-textured-cloque-midi-dress-w0467",
+      "brand": "Ganni",
+      "name": "Blue Textured Cloque Midi Dress",
+      "price": 495,
+      "category": "dresses",
+      "colorTags": [
+        "blue"
+      ],
+      "imageUrl": "https://www.ganni.com/dw/image/v2/AAWT_PRD/on/demandware.static/-/Sites-ganni-master-catalogue/default/dwadf99903/images/images/packshots/W0467_6793_326_1.jpg?sw=1000",
+      "sizes": [],
+      "images": [
+        "https://www.ganni.com/dw/image/v2/AAWT_PRD/on/demandware.static/-/Sites-ganni-master-catalogue/default/dwadf99903/images/images/packshots/W0467_6793_326_1.jpg?sw=1000"
+      ],
+      "affiliateUrl": "https://www.ganni.com/us/blue-textured-cloque-midi-dress-W0467.html"
+    },
+    {
+      "id": "ganni-black-washed-kimono-dress-w0793",
+      "brand": "Ganni",
+      "name": "Black Washed Kimono Dress",
+      "price": 290,
+      "category": "dresses",
+      "colorTags": [
+        "black"
+      ],
+      "imageUrl": "https://www.ganni.com/dw/image/v2/AAWT_PRD/on/demandware.static/-/Sites-ganni-master-catalogue/default/dw84ce5471/images/images/packshots/W0793_6977_099_1.jpg?sw=1000",
+      "sizes": [],
+      "images": [
+        "https://www.ganni.com/dw/image/v2/AAWT_PRD/on/demandware.static/-/Sites-ganni-master-catalogue/default/dw84ce5471/images/images/packshots/W0793_6977_099_1.jpg?sw=1000"
+      ],
+      "affiliateUrl": "https://www.ganni.com/us/black-washed-kimono-dress-W0793.html"
+    },
+    {
+      "id": "ganni-ganni-x-new-balance-t500-sneakers-s2900",
+      "brand": "Ganni",
+      "name": "GANNI x New Balance T500 Sneakers",
+      "price": 150,
+      "category": "shoes",
+      "colorTags": [
+        "gray",
+        "neutral"
+      ],
+      "imageUrl": "https://www.ganni.com/dw/image/v2/AAWT_PRD/on/demandware.static/-/Sites-ganni-master-catalogue/default/dwf095fdcb/images/images/packshots/S2900_4908_135_1.jpg?sw=1000",
+      "sizes": [],
+      "images": [
+        "https://www.ganni.com/dw/image/v2/AAWT_PRD/on/demandware.static/-/Sites-ganni-master-catalogue/default/dwf095fdcb/images/images/packshots/S2900_4908_135_1.jpg?sw=1000"
+      ],
+      "affiliateUrl": "https://www.ganni.com/us/ganni-x-new-balance-t500-sneakers-S2900.html"
+    },
+    {
+      "id": "ganni-feminine-buckle-ballerinas-in-red-s2843",
+      "brand": "Ganni",
+      "name": "Feminine Buckle Ballerinas in Red",
+      "price": 425,
+      "category": "shoes",
+      "colorTags": [
+        "red"
+      ],
+      "imageUrl": "https://www.ganni.com/dw/image/v2/AAWT_PRD/on/demandware.static/-/Sites-ganni-master-catalogue/default/dw695f5ac7/images/images/packshots/S2843_4926_474_1.jpg?sw=1000",
+      "sizes": [],
+      "images": [
+        "https://www.ganni.com/dw/image/v2/AAWT_PRD/on/demandware.static/-/Sites-ganni-master-catalogue/default/dw695f5ac7/images/images/packshots/S2843_4926_474_1.jpg?sw=1000"
+      ],
+      "affiliateUrl": "https://www.ganni.com/us/feminine-buckle-ballerinas-in-red-S2843.html"
+    },
+    {
+      "id": "ganni-feminine-buckle-ballerinas-in-black-s2730",
+      "brand": "Ganni",
+      "name": "Feminine Buckle Ballerinas in Black",
+      "price": 425,
+      "category": "shoes",
+      "colorTags": [
+        "black"
+      ],
+      "imageUrl": "https://www.ganni.com/dw/image/v2/AAWT_PRD/on/demandware.static/-/Sites-ganni-master-catalogue/default/dw1baea7b6/images/images/packshots/S2730_4898_099_1.jpg?sw=1000",
+      "sizes": [],
+      "images": [
+        "https://www.ganni.com/dw/image/v2/AAWT_PRD/on/demandware.static/-/Sites-ganni-master-catalogue/default/dw1baea7b6/images/images/packshots/S2730_4898_099_1.jpg?sw=1000"
+      ],
+      "affiliateUrl": "https://www.ganni.com/us/feminine-buckle-ballerinas-in-black-S2730.html"
+    },
+    {
+      "id": "ganni-mid-shaft-embroidered-western-boots-in-black-s3110",
+      "brand": "Ganni",
+      "name": "Mid Shaft Embroidered Western Boots in Black",
+      "price": 825,
+      "category": "shoes",
+      "colorTags": [
+        "black"
+      ],
+      "imageUrl": "https://www.ganni.com/dw/image/v2/AAWT_PRD/on/demandware.static/-/Sites-ganni-master-catalogue/default/dw19dcc001/images/images/packshots/S3110_4911_004_1.jpg?sw=1000",
+      "sizes": [],
+      "images": [
+        "https://www.ganni.com/dw/image/v2/AAWT_PRD/on/demandware.static/-/Sites-ganni-master-catalogue/default/dw19dcc001/images/images/packshots/S3110_4911_004_1.jpg?sw=1000"
+      ],
+      "affiliateUrl": "https://www.ganni.com/us/mid-shaft-embroidered-western-boots-in-black-S3110.html"
+    },
+    {
+      "id": "ganni-card-holder-in-grained-brown-a7276",
+      "brand": "Ganni",
+      "name": "Card Holder in Grained Brown",
+      "price": 105,
+      "category": "accessories",
+      "colorTags": [
+        "brown"
+      ],
+      "imageUrl": "https://www.ganni.com/dw/image/v2/AAWT_PRD/on/demandware.static/-/Sites-ganni-master-catalogue/default/dwdd954d92/images/images/packshots/A7276_5898_979_1.jpg?sw=1000",
+      "sizes": [],
+      "images": [
+        "https://www.ganni.com/dw/image/v2/AAWT_PRD/on/demandware.static/-/Sites-ganni-master-catalogue/default/dwdd954d92/images/images/packshots/A7276_5898_979_1.jpg?sw=1000"
+      ],
+      "affiliateUrl": "https://www.ganni.com/us/card-holder-in-grained-brown-A7276.html"
+    },
+    {
+      "id": "ganni-card-holder-in-grained-black-with-gold-a7303",
+      "brand": "Ganni",
+      "name": "Card Holder in Grained Black with Gold",
+      "price": 105,
+      "category": "accessories",
+      "colorTags": [
+        "black"
+      ],
+      "imageUrl": "https://www.ganni.com/dw/image/v2/AAWT_PRD/on/demandware.static/-/Sites-ganni-master-catalogue/default/dwf7e61792/images/images/packshots/A7303_5898_099_1.jpg?sw=1000",
+      "sizes": [],
+      "images": [
+        "https://www.ganni.com/dw/image/v2/AAWT_PRD/on/demandware.static/-/Sites-ganni-master-catalogue/default/dwf7e61792/images/images/packshots/A7303_5898_099_1.jpg?sw=1000"
+      ],
+      "affiliateUrl": "https://www.ganni.com/us/card-holder-in-grained-black-with-gold-A7303.html"
+    },
+    {
+      "id": "ganni-cap-in-light-blue-denim-a6919",
+      "brand": "Ganni",
+      "name": "Cap in Light Blue Denim",
+      "price": 160,
+      "category": "accessories",
+      "colorTags": [
+        "blue"
+      ],
+      "imageUrl": "https://www.ganni.com/dw/image/v2/AAWT_PRD/on/demandware.static/-/Sites-ganni-master-catalogue/default/dw0fefea99/images/images/packshots/A6919_5958_676_1.jpg?sw=1000",
+      "sizes": [],
+      "images": [
+        "https://www.ganni.com/dw/image/v2/AAWT_PRD/on/demandware.static/-/Sites-ganni-master-catalogue/default/dw0fefea99/images/images/packshots/A6919_5958_676_1.jpg?sw=1000"
+      ],
+      "affiliateUrl": "https://www.ganni.com/us/cap-in-light-blue-denim-A6919.html"
+    },
+    {
+      "id": "ganni-ganni-x-ace-and-tate-tigers-eye-dakota-sunglasses-a6041",
+      "brand": "Ganni",
+      "name": "GANNI x Ace & Tate Tiger's Eye Dakota Sunglasses",
+      "price": 195,
+      "category": "accessories",
+      "colorTags": [
+        "brown"
+      ],
+      "imageUrl": "https://www.ganni.com/dw/image/v2/AAWT_PRD/on/demandware.static/-/Sites-ganni-master-catalogue/default/dw83680f39/images/images/packshots/A6041_5746_177_1.jpg?sw=1000",
+      "sizes": [],
+      "images": [
+        "https://www.ganni.com/dw/image/v2/AAWT_PRD/on/demandware.static/-/Sites-ganni-master-catalogue/default/dw83680f39/images/images/packshots/A6041_5746_177_1.jpg?sw=1000"
+      ],
+      "affiliateUrl": "https://www.ganni.com/us/ganni-x-ace-and-tate-tigers-eye-dakota-sunglasses-A6041.html"
+    },
+    {
+      "id": "ganni-kat-belt-small-in-black-patent-a7112",
+      "brand": "Ganni",
+      "name": "Kat Belt Small in Black Patent",
+      "price": 215,
+      "category": "accessories",
+      "colorTags": [
+        "black"
+      ],
+      "imageUrl": "https://www.ganni.com/dw/image/v2/AAWT_PRD/on/demandware.static/-/Sites-ganni-master-catalogue/default/dw2d405690/images/images/packshots/A7112_5971_099_1.jpg?sw=1000",
+      "sizes": [],
+      "images": [
+        "https://www.ganni.com/dw/image/v2/AAWT_PRD/on/demandware.static/-/Sites-ganni-master-catalogue/default/dw2d405690/images/images/packshots/A7112_5971_099_1.jpg?sw=1000"
+      ],
+      "affiliateUrl": "https://www.ganni.com/us/kat-belt-small-in-black-patent-A7112.html"
+    },
+    {
+      "id": "ganni-kat-belt-small-in-red-a7070",
+      "brand": "Ganni",
+      "name": "Kat Belt Small in Red",
+      "price": 215,
+      "category": "accessories",
+      "colorTags": [
+        "red"
+      ],
+      "imageUrl": "https://www.ganni.com/dw/image/v2/AAWT_PRD/on/demandware.static/-/Sites-ganni-master-catalogue/default/dw9df00c30/images/images/packshots/A7070_5971_818_1.jpg?sw=1000",
+      "sizes": [],
+      "images": [
+        "https://www.ganni.com/dw/image/v2/AAWT_PRD/on/demandware.static/-/Sites-ganni-master-catalogue/default/dw9df00c30/images/images/packshots/A7070_5971_818_1.jpg?sw=1000"
+      ],
+      "affiliateUrl": "https://www.ganni.com/us/kat-belt-small-in-red-A7070.html"
+    },
+    {
+      "id": "ganni-card-holder-in-grained-black-a7277",
+      "brand": "Ganni",
+      "name": "Card Holder in Grained Black",
+      "price": 105,
+      "category": "accessories",
+      "colorTags": [
+        "black"
+      ],
+      "imageUrl": "https://www.ganni.com/dw/image/v2/AAWT_PRD/on/demandware.static/-/Sites-ganni-master-catalogue/default/dwf5886873/images/images/packshots/A7277_5898_099_1.jpg?sw=1000",
+      "sizes": [],
+      "images": [
+        "https://www.ganni.com/dw/image/v2/AAWT_PRD/on/demandware.static/-/Sites-ganni-master-catalogue/default/dwf5886873/images/images/packshots/A7277_5898_099_1.jpg?sw=1000"
+      ],
+      "affiliateUrl": "https://www.ganni.com/us/card-holder-in-grained-black-A7277.html"
+    },
+    {
+      "id": "ganni-ganni-x-ace-and-tate-black-kayla-sunglasses-a6034",
+      "brand": "Ganni",
+      "name": "GANNI x Ace & Tate Black Kayla Sunglasses",
+      "price": 195,
+      "category": "accessories",
+      "colorTags": [
+        "black"
+      ],
+      "imageUrl": "https://www.ganni.com/dw/image/v2/AAWT_PRD/on/demandware.static/-/Sites-ganni-master-catalogue/default/dwc4491749/images/images/packshots/A6034_5746_099_1.jpg?sw=1000",
+      "sizes": [],
+      "images": [
+        "https://www.ganni.com/dw/image/v2/AAWT_PRD/on/demandware.static/-/Sites-ganni-master-catalogue/default/dwc4491749/images/images/packshots/A6034_5746_099_1.jpg?sw=1000"
+      ],
+      "affiliateUrl": "https://www.ganni.com/us/ganni-x-ace-and-tate-black-kayla-sunglasses-A6034.html"
+    }
+  ]
+}
