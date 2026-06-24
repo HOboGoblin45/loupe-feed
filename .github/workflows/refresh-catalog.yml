@@ -29,6 +29,8 @@ jobs:
           python-version: "3.12"
 
       - name: Build catalog
+        env:
+          SOVRN_API_KEY: ${{ secrets.SOVRN_API_KEY }}
         run: python loupe-feed/build_catalog.py
 
       - name: Commit if changed
