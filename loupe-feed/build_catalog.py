@@ -22,6 +22,7 @@ Output (catalog.json):
 import json
 import os
 import random
+import re
 import sys
 import time
 import urllib.parse
@@ -39,8 +40,77 @@ USER_AGENT = (
     "(KHTML, like Gecko) Chrome/124.0 Safari/537.36"
 )
 
+# ── Junk / non-product filter ─────────────────────────────────────────────────
+# Real Shopify stores publish a lot of non-garment "products" through
+# /products.json — gift cards, shipping/insurance/route add-ons, deposits,
+# fabric swatches, sticker/sample packs, gift wrap, warranties. They have
+# images and prices, so they pass normalize()'s basic checks and surface as
+# junk swipe cards. We reject any product whose title contains one of these
+# phrases (case-insensitive, word-aware so "shipping" matches but "ship" inside
+# "relationship" does not). A second, softer rule drops anything cheap that ALSO
+# reads like an add-on — this catches "Route Package Protection $0.98" style
+# items without nuking genuinely cheap real products (a $12 hair clip stays).
+JUNK_TITLE_PHRASES = [
+    "gift card", "e-gift", "egift", "e gift card", "shipping", "insurance",
+    "protection", "route", "checkout+", "checkout plus", "sticker", "sample",
+    "deposit", "swatch", "donation", "gift wrap", "gift-wrap", "warranty",
+    "add-on", "add on", "addon", "pre-order deposit", "store credit",
+]
+# Cheaper than this AND matching an add-on word → almost certainly not a garment.
+JUNK_PRICE_FLOOR = 15
+JUNK_ADDON_WORDS = [
+    "shipping", "insurance", "protection", "route", "swatch", "sample",
+    "sticker", "deposit", "donation", "gift", "warranty", "add-on", "add on",
+    "addon", "wrap", "credit",
+]
+
+
+def _word_in(needle, hay):
+    """True if `needle` appears in `hay` on word boundaries (handles multi-word
+    phrases). Avoids matching e.g. 'ship' inside 'relationship'."""
+    return re.search(r"(?<![a-z0-9])" + re.escape(needle) + r"(?![a-z0-9])", hay) is not None
+
+
+def is_junk(title, price):
+    """True if a product looks like a non-garment add-on / utility SKU."""
+    hay = (title or "").lower()
+    if not hay:
+        return True
+    for phrase in JUNK_TITLE_PHRASES:
+        if _word_in(phrase, hay):
+            return True
+    # Cheap + add-on-flavored title → drop (keeps real low-priced products).
+    if price is not None and price < JUNK_PRICE_FLOOR:
+        if any(_word_in(w, hay) for w in JUNK_ADDON_WORDS):
+            return True
+    return False
+
+
 # ── Category inference ────────────────────────────────────────────────────────
 # Checked in priority order; first hit wins. Falls back to 'tops'.
+#
+# Category mapping decision (the app only supports 6 categories): the app's
+# Category type — src/data/seedProducts.ts — and the catalog validator —
+# src/services/catalog.ts (VALID_CATEGORIES) — accept ONLY:
+#   tops · bottoms · dresses · outerwear · shoes · accessories
+# Any other category string is *silently dropped* by the app's toProduct()
+# validator. So we do NOT invent "swim"/"intimates"/"jumpsuits" categories
+# (they'd vanish from the feed). Instead we route the mis-filed groups to the
+# best-fitting existing category, with intent rather than accidental fall-through:
+#   • jumpsuit / romper / playsuit / overall / boilersuit / unitard  → dresses
+#       (closest one-piece, full-body silhouette; renders well in the deck)
+#   • swim (bikini / swimsuit / one-piece / trunks)                   → tops
+#   • intimates (bra / bralette / brief / lingerie / thong / corset)  → tops
+# Swim + intimates land in "tops" because that's the closest existing bucket and
+# ProductCard treats tops as a "cover" frame. They share the SWIM_INTIMATES
+# keyword set below so a future real "swim"/"intimates" category is a one-liner.
+SWIM_INTIMATES_KEYWORDS = [
+    "swim", "bikini", "swimsuit", "swimwear", "one-piece", "one piece", "trunks",
+    "bra", "bralette", "brief", "briefs", "lingerie", "thong", "knicker",
+    "underwear", "intimate", "boyshort", "tankini", "rashguard", "rash guard",
+]
+JUMPSUIT_KEYWORDS = ["jumpsuit", "romper", "playsuit", "overall", "boilersuit",
+                     "unitard", "catsuit"]
 CATEGORY_RULES = [
     ("accessories", ["bag", "tote", "clutch", "pouch", "purse", "scarf", "necklace",
                       "earring", "bracelet", "ring", "pendant", "hat", "cap", "beret",
@@ -49,9 +119,15 @@ CATEGORY_RULES = [
                      "loafer", "pump", "clog", "slipper", "ballet"]),
     ("outerwear",   ["coat", "jacket", "blazer", "cardigan", "trench", "parka",
                      "anorak", "overcoat", "puffer"]),
+    # One-piece full-body garments map to 'dresses' (closest existing silhouette).
+    ("dresses",     JUMPSUIT_KEYWORDS),
     ("bottoms",     ["skirt", "trouser", "pant", "short", "jean", "legging",
                      "culotte", "capri"]),
     ("dresses",     ["dress", "gown"]),
+    # Swim + intimates → 'tops' (best existing bucket; flag for a future real
+    # 'swim'/'intimates' category). Checked before the generic tops keywords so a
+    # bikini/bralette is categorized intentionally, not via a stray "set"/"tube".
+    ("tops",        SWIM_INTIMATES_KEYWORDS),
     ("tops",        ["top", "shirt", "tee", "t-shirt", "blouse", "cami", "tank",
                      "sweater", "knit", "vest", "bodysuit", "corset", "bralette",
                      "halter", "tube", "set", "jumper", "polo", "turtleneck"]),
@@ -118,9 +194,22 @@ def infer_category(product_type, title):
     return "tops"
 
 
-def infer_colors(title, options):
-    hay = title.lower()
-    # pull color option values too
+def infer_colors(title, options, tags=None, product_type=""):
+    """Infer up to 2 color tags. Color almost never lives in the title alone — it
+    lives in the variant color option, the product tags, and sometimes the
+    product_type. We read all of them so the catch-all 'neutral' fallback only
+    fires when there's genuinely no color signal anywhere."""
+    hay = (title or "").lower()
+    if product_type:
+        hay += " " + str(product_type).lower()
+    # Shopify `tags` may be a comma string or a list — normalize either way.
+    if tags:
+        if isinstance(tags, str):
+            hay += " " + tags.lower()
+        else:
+            hay += " " + " ".join(str(t).lower() for t in tags)
+    # Pull values from EVERY option whose name looks like a color/colour option,
+    # not just the first. Variant values are where the color usually is.
     for opt in options or []:
         name = (opt.get("name") or "").lower()
         if "color" in name or "colour" in name:
@@ -131,7 +220,8 @@ def infer_colors(title, options):
             found.append(tag)
     if any(h in hay for h in MULTICOLOR_HINTS):
         found.append("multicolor")
-    # de-dup, keep order, cap at 2
+    # de-dup, keep order, cap at 2. VALID_COLORS guards against emitting any tag
+    # the app can't filter (e.g. there is no 'gray' tag — grey maps to 'neutral').
     seen, out = set(), []
     for c in found:
         if c in VALID_COLORS and c not in seen:
@@ -142,6 +232,50 @@ def infer_colors(title, options):
 
 def slugify(brand):
     return "".join(c if c.isalnum() else "-" for c in brand.lower()).strip("-")
+
+
+# Color words used to fold "Loafer in Black" / "Loafer - Tan" / "Loafer (Cream)"
+# down to a shared base name so we can cap near-identical color variants. We use
+# every color keyword the inference engine knows about, plus a few common variant
+# qualifiers, so the same loafer in 5 colors collapses to one base.
+_BASE_COLOR_WORDS = set()
+for _tag, _kws in COLOR_RULES:
+    _BASE_COLOR_WORDS.update(_kws)
+_BASE_COLOR_WORDS.update(MULTICOLOR_HINTS)
+_BASE_COLOR_WORDS.update([
+    "colour", "color", "shade",
+])
+# Per base-name cap: at most this many color variants of one product per brand,
+# so a 5-colorway loafer doesn't flood the deck with near-identical cards.
+MAX_VARIANTS_PER_BASE = 2
+
+
+def base_name(title):
+    """Normalize a product title to a color-agnostic base name. Strips trailing
+    color words and common separators so 'Romy Loafer - Black' and 'Romy Loafer
+    in Cream' share a base. Used only to cap near-identical color variants."""
+    t = (title or "").lower()
+    # Split off anything after a separator commonly used to denote colorway.
+    for sep in (" - ", " – ", " — ", " in ", " / ", " | "):
+        idx = t.find(sep)
+        if idx != -1:
+            tail = t[idx + len(sep):]
+            # Only treat the tail as a colorway if it's short and color-flavored.
+            tail_words = re.findall(r"[a-z]+", tail)
+            if tail_words and all(
+                w in _BASE_COLOR_WORDS or len(tail_words) <= 2 for w in tail_words
+            ):
+                t = t[:idx]
+                break
+    # Drop a parenthetical color, e.g. "Loafer (Tan)".
+    t = re.sub(r"\(([^)]*)\)", lambda m: "" if all(
+        w in _BASE_COLOR_WORDS for w in re.findall(r"[a-z]+", m.group(1))
+    ) else m.group(0), t)
+    # Strip any trailing color tokens left dangling.
+    words = re.findall(r"[a-z0-9']+", t)
+    while words and words[-1] in _BASE_COLOR_WORDS:
+        words.pop()
+    return " ".join(words).strip() or (title or "").strip().lower()
 
 
 def first_image(product):
@@ -257,8 +391,13 @@ def normalize(product, brand, domain, fx):
     price = round(raw_price * fx)
     if price <= 0:
         return None
-    category = infer_category(product.get("product_type", ""), title)
-    colors = infer_colors(title, product.get("options"))
+    # Drop gift cards, shipping/insurance/route add-ons, swatches, samples, etc.
+    if is_junk(title, price):
+        return None
+    product_type = product.get("product_type", "")
+    category = infer_category(product_type, title)
+    colors = infer_colors(title, product.get("options"),
+                          tags=product.get("tags"), product_type=product_type)
     return {
         "id": f"{slugify(brand)}-{handle}",
         "brand": brand,
@@ -281,20 +420,62 @@ def main():
     by_brand = {}
     summary = []
 
+    # Load the previous good catalog UP FRONT. It does two jobs: (1) carries each
+    # product's stable addedAt date (NEW-arrival flagging), and (2) lets us carry
+    # FORWARD a brand's last-known products if its store fails to scrape THIS run —
+    # so a transient outage or rate-limit can never silently drop a brand (and its
+    # followers' feed) from the live catalog. A brand only truly leaves Loupe when
+    # it's removed from brands.json.
+    prev_ids = set()
+    prev_added = {}
+    prev_by_brand = {}
+    if OUT_FILE.exists():
+        try:
+            prev = json.loads(OUT_FILE.read_text(encoding="utf-8"))
+            for p in prev.get("products", []):
+                pid = p.get("id")
+                if not pid:
+                    continue
+                prev_ids.add(pid)
+                if p.get("addedAt"):
+                    prev_added[pid] = p["addedAt"]
+                prev_by_brand.setdefault(p.get("brand"), []).append(p)
+        except (ValueError, OSError):
+            pass
+
+    def scrape_brand(domain):
+        """Fetch a brand's products.json with a few retries — most scrape 'failures'
+        are momentary timeouts / rate-limits, not a dead store."""
+        last = None
+        for attempt in range(3):
+            try:
+                return fetch_json(f"https://{domain}/products.json?limit={max(per_brand * 3, 30)}")
+            except (urllib.error.URLError, urllib.error.HTTPError, ValueError, TimeoutError) as e:
+                last = e
+                time.sleep(1.5 * (attempt + 1))
+        raise last
+
     for entry in cfg["brands"]:
         brand, domain = entry["brand"], entry["domain"]
         fx = fx_table.get(entry.get("currency", "USD"), 1.0)
         got = 0
         bucket = []
+        base_counts = {}  # base product name -> # color variants already kept
         try:
             # pull a generous page, then take the first `per_brand` valid items
-            data = fetch_json(f"https://{domain}/products.json?limit={max(per_brand * 3, 30)}")
+            data = scrape_brand(domain)
             for product in data.get("products", []):
                 if got >= per_brand:
                     break
                 norm = normalize(product, brand, domain, fx)
                 if not norm or norm["id"] in seen_ids:
                     continue
+                # Cap near-identical color variants of the same base product so the
+                # deck stays visually varied (a 5-colorway loafer -> ~2 cards).
+                bkey = base_name(norm["name"])
+                if base_counts.get(bkey, 0) >= MAX_VARIANTS_PER_BASE:
+                    continue
+                base_counts[bkey] = base_counts.get(bkey, 0) + 1
                 seen_ids.add(norm["id"])
                 bucket.append(norm)
                 got += 1
@@ -304,6 +485,24 @@ def main():
         except (urllib.error.URLError, urllib.error.HTTPError, ValueError, TimeoutError) as e:
             summary.append(f"  {brand:<22}  SKIP ({type(e).__name__})")
         time.sleep(0.5)  # be polite
+
+    # Carry forward any brand that returned NOTHING this run but existed in the last
+    # good catalog — reuse its previous products (already normalized + monetized) so
+    # a momentary failure never drops the brand. seen_ids guards against duplicates.
+    carried_total = 0
+    for entry in cfg["brands"]:
+        brand = entry["brand"]
+        if brand in by_brand:
+            continue
+        carried = [p for p in prev_by_brand.get(brand, []) if p.get("id") and p["id"] not in seen_ids]
+        if carried:
+            for p in carried:
+                seen_ids.add(p["id"])
+            by_brand[brand] = carried
+            carried_total += len(carried)
+            summary.append(f"  {brand:<22} {len(carried):>3} items (carried)")
+    if carried_total:
+        summary.append(f"  -> carried forward {carried_total} items for brands that briefly failed")
 
     # Round-robin interleave across brands so the published feed is never grouped
     # brand-by-brand (the app shuffles too, but a mixed feed is the right default
@@ -347,19 +546,8 @@ def main():
     # FIRST run after this upgrade doesn't flag the entire catalog as "new".
     backdated_iso = (now - timedelta(days=30)).strftime("%Y-%m-%dT%H:%M:%SZ")
 
-    prev_ids = set()
-    prev_added = {}
-    if OUT_FILE.exists():
-        try:
-            prev = json.loads(OUT_FILE.read_text(encoding="utf-8"))
-            for p in prev.get("products", []):
-                pid = p.get("id")
-                if pid:
-                    prev_ids.add(pid)
-                    if p.get("addedAt"):
-                        prev_added[pid] = p["addedAt"]
-        except (ValueError, OSError):
-            pass
+    # (prev_ids / prev_added were loaded up front, together with the carry-forward
+    # data, so a brand that briefly failed keeps its products AND their addedAt.)
 
     # Stamp each product's stable "first seen" date for NEW-arrival flagging:
     #   • seen before with a date  → carry it over
@@ -384,6 +572,24 @@ def main():
     print("Loupe catalog build")
     print("\n".join(summary))
     print(f"\nTotal: {len(products)} products -> {OUT_FILE.name}")
+
+    # ── Content-quality stats ─────────────────────────────────────────────────
+    # Surface the metrics the catalog audit cares about so each run is auditable:
+    # how many products fell back to a bare 'neutral' color, and the category mix
+    # (so swim/intimates/jumpsuit re-routing is visible).
+    if products:
+        neutral_only = sum(
+            1 for p in products if p.get("colorTags") == ["neutral"]
+        )
+        cat_counts = {}
+        for p in products:
+            cat_counts[p["category"]] = cat_counts.get(p["category"], 0) + 1
+        print("\nContent stats")
+        print(f"  neutral-only color fallback: {neutral_only}/{len(products)} "
+              f"({100 * neutral_only / len(products):.1f}%)")
+        print("  category mix: " + ", ".join(
+            f"{c}={n}" for c, n in sorted(cat_counts.items(), key=lambda kv: -kv[1])
+        ))
     # Fail the CI run only if we got essentially nothing (keeps a bad scrape from
     # overwriting a good catalog with an empty one).
     if len(products) < 20:
