@@ -150,6 +150,46 @@ MULTICOLOR_HINTS = ["print", "floral", "stripe", "check", "gingham", "multi", "f
 
 VALID_COLORS = {"black", "white", "pink", "blue", "green", "brown", "red", "neutral", "multicolor"}
 
+# ── Mainstream-house cap ──────────────────────────────────────────────────────
+# Loupe's whole pitch is genuine *discovery* — niche, indie, micro-influencer
+# labels. A handful of established designer houses are in the catalog for breadth
+# and aspiration, but they aren't "discoveries", and at perBrand=60 each they'd
+# crowd the deck and dilute the indie-forward feel. So we cap THESE brands at a
+# much lower per-brand count (MAINSTREAM_CAP) while every indie brand keeps the
+# full perBrand budget. Matching is case-insensitive and tolerant of accent
+# variants (e.g. Toteme / Totême) by comparing on a normalized form of the
+# brand name; add a normalized name here to cap a new mainstream house.
+MAINSTREAM_CAP = 15
+
+
+def _norm_brand(name):
+    """Lowercased, accent/punctuation-folded brand key for mainstream matching.
+    Folds Totême->toteme, 'LA Apparel'->'laapparel' so spelling/accent variants
+    all collapse to one comparable token."""
+    s = (name or "").lower()
+    # Strip common accents we actually see (ê/é -> e) without pulling in a dep.
+    for a, b in (("ê", "e"), ("é", "e"), ("è", "e"), ("ñ", "n"), ("í", "i"), ("á", "a"), ("ó", "o")):
+        s = s.replace(a, b)
+    return re.sub(r"[^a-z0-9]", "", s)
+
+
+# Established houses (not "discoveries"). Stored as normalized keys so accent /
+# spacing / spelling variants match. Includes the brand names actually present
+# in brands.json today plus the obvious aliases the audit called out.
+MAINSTREAM_BRANDS = {
+    _norm_brand(b) for b in [
+        "The Row", "Khaite", "Toteme", "Totême", "Ganni", "Dries Van Noten",
+        "Proenza Schouler", "Coperni", "Staud", "Cult Gaia", "Phoebe Philo",
+        "Frankies Bikinis", "LA Apparel", "Los Angeles Apparel",
+    ]
+}
+
+
+def effective_cap(brand, per_brand):
+    """Per-brand product cap: mainstream houses are capped at MAINSTREAM_CAP so
+    the feed stays indie-forward; everyone else keeps the full perBrand budget."""
+    return MAINSTREAM_CAP if _norm_brand(brand) in MAINSTREAM_BRANDS else per_brand
+
 # ── Sovrn Commerce affiliate wrapping ─────────────────────────────────────────
 # When SOVRN_API_KEY is set (a GitHub Actions secret, injected as an env var),
 # every product's affiliateUrl is wrapped in a Sovrn "Redirect API" link so the
@@ -458,14 +498,16 @@ def main():
     for entry in cfg["brands"]:
         brand, domain = entry["brand"], entry["domain"]
         fx = fx_table.get(entry.get("currency", "USD"), 1.0)
+        # Mainstream houses get a lower cap than indie brands (discovery-first).
+        cap = effective_cap(brand, per_brand)
         got = 0
         bucket = []
         base_counts = {}  # base product name -> # color variants already kept
         try:
-            # pull a generous page, then take the first `per_brand` valid items
+            # pull a generous page, then take the first `cap` valid items
             data = scrape_brand(domain)
             for product in data.get("products", []):
-                if got >= per_brand:
+                if got >= cap:
                     break
                 norm = normalize(product, brand, domain, fx)
                 if not norm or norm["id"] in seen_ids:

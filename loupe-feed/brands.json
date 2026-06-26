@@ -133,6 +133,12 @@
     { "brand": "Heaven Mayhem",             "domain": "heavenmayhem.com",              "currency": "USD" },
     { "brand": "Arete Studios",             "domain": "aretestudios.com",              "currency": "USD" },
     { "brand": "VESTIGE",                   "domain": "shop-vestige.com",              "currency": "USD" },
-    { "brand": "Eshim",                     "domain": "eshim.us",                      "currency": "USD" }
+    { "brand": "Eshim",                     "domain": "eshim.us",                      "currency": "USD" },
+    { "brand": "Maguire",                   "domain": "maguireshoes.com",              "currency": "CAD" },
+    { "brand": "Flattered",                 "domain": "flattered.com",                 "currency": "SEK" },
+    { "brand": "ALOHAS",                    "domain": "alohas.io",                     "currency": "EUR" },
+    { "brand": "Yuni Buffa",                "domain": "yunibuffa.com",                 "currency": "USD" },
+    { "brand": "Sentaler",                  "domain": "sentaler.com",                  "currency": "CAD" },
+    { "brand": "Mackage",                   "domain": "mackage.com",                   "currency": "USD" }
   ]
 }
