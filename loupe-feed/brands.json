@@ -131,6 +131,8 @@
     { "brand": "Romontio",                  "domain": "romontio.com",                  "currency": "USD" },
     { "brand": "Side Eye",                  "domain": "sideeye.com",                   "currency": "USD" },
     { "brand": "Heaven Mayhem",             "domain": "heavenmayhem.com",              "currency": "USD" },
-    { "brand": "Arete Studios",             "domain": "aretestudios.com",              "currency": "USD" }
+    { "brand": "Arete Studios",             "domain": "aretestudios.com",              "currency": "USD" },
+    { "brand": "VESTIGE",                   "domain": "shop-vestige.com",              "currency": "USD" },
+    { "brand": "Eshim",                     "domain": "eshim.us",                      "currency": "USD" }
   ]
 }
