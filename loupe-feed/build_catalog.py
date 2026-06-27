@@ -28,6 +28,7 @@ import time
 import urllib.parse
 import urllib.request
 import urllib.error
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
@@ -345,6 +346,56 @@ def gallery_images(product, n=5):
     return out[:n]
 
 
+# ── Image validation ─────────────────────────────────────────────────────────
+# Some stores (especially multi-brand boutiques) carry products whose hero photo
+# is a dead Shopify URL or is hotlinked from a designer CDN that blocks it. Such
+# a product passes every text check but renders as a BLANK tile in the app. We
+# verify each product's image actually loads (200 + image content-type) and keep
+# only working images — repairing from the gallery when possible, dropping the
+# product when nothing loads. A safety net (in main) ignores the whole pass if it
+# would drop an implausible share of the catalog (i.e. a network problem, not
+# genuinely dead images), so a transient blip can never gut the live feed.
+
+def _image_ok(url, timeout=6):
+    """True iff the URL returns 200 (or 206) with an image/* content-type."""
+    if not url or not isinstance(url, str) or not url.startswith("http"):
+        return False
+    # Try a cheap HEAD first; some CDNs reject HEAD, so fall back to a 1-byte GET.
+    for method, extra in (("HEAD", {}), ("GET", {"Range": "bytes=0-0"})):
+        try:
+            headers = {"User-Agent": USER_AGENT, "Accept": "image/*,*/*"}
+            headers.update(extra)
+            req = urllib.request.Request(url, method=method, headers=headers)
+            with urllib.request.urlopen(req, timeout=timeout) as resp:
+                status = getattr(resp, "status", resp.getcode())
+                if status not in (200, 206):
+                    return False
+                ctype = (resp.headers.get("Content-Type") or "").lower()
+                return ctype.startswith("image/")
+        except Exception:
+            continue
+    return False
+
+
+def _repair_images(product):
+    """Point the product at images that actually load (hero first), or return
+    None when none of its images work so the caller can drop it."""
+    candidates = []
+    hero = product.get("imageUrl")
+    if hero:
+        candidates.append(hero)
+    for u in product.get("images") or []:
+        if u not in candidates:
+            candidates.append(u)
+    for u in candidates:
+        if _image_ok(u):
+            product["imageUrl"] = u
+            gallery = [u] + [g for g in (product.get("images") or []) if g != u]
+            product["images"] = gallery[:5]
+            return product
+    return None
+
+
 # Canonical letter-size ordering for sensible display.
 _SIZE_ORDER = {
     "XXS": 0, "XS": 1, "S": 2, "M": 3, "L": 4,
@@ -421,7 +472,7 @@ def first_price(product):
     return None
 
 
-def normalize(product, brand, domain, fx):
+def normalize(product, brand, domain, fx, multi_brand=False):
     title = (product.get("title") or "").strip()
     handle = product.get("handle")
     img = first_image(product)
@@ -434,13 +485,21 @@ def normalize(product, brand, domain, fx):
     # Drop gift cards, shipping/insurance/route add-ons, swatches, samples, etc.
     if is_junk(title, price):
         return None
+    # Multi-brand boutiques (e.g. Arete Studios) resell many designers under one
+    # storefront. Label each item with its REAL vendor when present, falling back
+    # to the store name — so the app shows the designer, not the shop, as the brand.
+    display_brand = brand
+    if multi_brand:
+        vendor = (product.get("vendor") or "").strip()
+        if vendor and vendor.lower() not in ("", "frontpage"):
+            display_brand = vendor
     product_type = product.get("product_type", "")
     category = infer_category(product_type, title)
     colors = infer_colors(title, product.get("options"),
                           tags=product.get("tags"), product_type=product_type)
     return {
-        "id": f"{slugify(brand)}-{handle}",
-        "brand": brand,
+        "id": f"{slugify(display_brand)}-{handle}",
+        "brand": display_brand,
         "name": title,
         "price": price,
         "category": category,
@@ -498,6 +557,7 @@ def main():
     for entry in cfg["brands"]:
         brand, domain = entry["brand"], entry["domain"]
         fx = fx_table.get(entry.get("currency", "USD"), 1.0)
+        multi_brand = bool(entry.get("multiBrand"))
         # Mainstream houses get a lower cap than indie brands (discovery-first).
         cap = effective_cap(brand, per_brand)
         got = 0
@@ -509,7 +569,7 @@ def main():
             for product in data.get("products", []):
                 if got >= cap:
                     break
-                norm = normalize(product, brand, domain, fx)
+                norm = normalize(product, brand, domain, fx, multi_brand=multi_brand)
                 if not norm or norm["id"] in seen_ids:
                     continue
                 # Cap near-identical color variants of the same base product so the
@@ -581,6 +641,27 @@ def main():
             summary.append(f"  {'(curated)':<22} {added:>3} items")
         except (ValueError, OSError) as e:
             summary.append(f"  (curated)              SKIP ({type(e).__name__})")
+
+    # ── Drop products whose image won't actually render (no blank tiles) ───────
+    # Validate concurrently (I/O-bound). SAFETY: if this would drop an implausible
+    # share of the catalog, assume a network problem and keep everything rather
+    # than gut the live feed.
+    if products and os.environ.get("VALIDATE_IMAGES", "1") != "0":
+        total_before = len(products)
+        with ThreadPoolExecutor(max_workers=16) as ex:
+            results = list(ex.map(_repair_images, products))
+        kept = [p for p in results if p is not None]
+        dropped = total_before - len(kept)
+        drop_ratio = dropped / max(total_before, 1)
+        if drop_ratio > 0.40:
+            summary.append(
+                f"  -> image-check would drop {dropped}/{total_before} (>40%); "
+                f"assuming a network issue — keeping all, unvalidated"
+            )
+        else:
+            products = kept
+            if dropped:
+                summary.append(f"  -> dropped {dropped} items whose image did not load")
 
     now = datetime.now(timezone.utc)
     now_iso = now.strftime("%Y-%m-%dT%H:%M:%SZ")
