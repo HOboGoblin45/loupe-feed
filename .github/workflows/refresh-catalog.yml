@@ -1,9 +1,22 @@
 name: Refresh Loupe catalog
 
 # Rebuilds loupe-feed/catalog.json from the brands' live Shopify feeds.
-# Runs daily and on demand. The committed catalog.json is served — for free,
-# globally cached — by jsDelivr at:
+# Runs daily, on demand, and immediately whenever Aniqa approves a brand.
+# The committed catalog.json is served — for free, globally cached — by jsDelivr:
 #   https://cdn.jsdelivr.net/gh/<your-username>/<your-repo>@main/loupe-feed/catalog.json
+#
+# Brand requests are NEVER auto-added. Pipeline order each run:
+#   1. Process brand requests (TWO stages):
+#        STAGE A "review" — resolve + safety-gate every pending request; valid
+#          ones are set to awaiting_review and EMAILED to Aniqa with one-click
+#          Approve/Deny buttons (Resend). Junk is auto-rejected (no email).
+#        STAGE B "add"    — append the brands Aniqa already APPROVED to
+#          brands.json, mark them 'added', and record them in new_brands.json.
+#   2. Build catalog — scrape every brand (incl. just-added ones), monetize via
+#      Sovrn, write catalog.json.
+#   3. Commit brands.json + catalog.json (default GITHUB_TOKEN; bot commits do
+#      not retrigger this workflow, so there's no loop).
+#   4. Notify the requester + that brand's followers via Expo push.
 
 on:
   schedule:
@@ -12,9 +25,22 @@ on:
   push:
     paths:
       - "loupe-feed/brands.json"   # rebuild immediately when the brand list changes
+  repository_dispatch:
+    types: [brand-approved]        # the Edge Function fires this on Approve →
+                                   # run the pipeline immediately (Stage B adds it)
 
 permissions:
   contents: write
+
+# Serialize every trigger (daily cron, manual, brands.json push, and the
+# brand-approved repository_dispatch) into ONE queue so a daily rebuild and an
+# Approve-fired rebuild can't run concurrently and race on the commit/push —
+# which could drop a just-added brand. cancel-in-progress: false means an
+# in-flight run finishes (rather than being killed mid-commit) before the next
+# queued run starts.
+concurrency:
+  group: refresh-catalog
+  cancel-in-progress: false
 
 jobs:
   refresh:
@@ -28,20 +54,70 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Process brand requests
+        # The brand-approval pipeline (Supabase/Resend/Edge Function) is optional
+        # and may not be configured yet. It must NEVER block the catalog rebuild —
+        # if its secrets are missing or it errors, we log and carry on to the build.
+        continue-on-error: true
+        run: python loupe-feed/process_requests.py
+        env:
+          # Supabase (read pending/approved rows, write status transitions)
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          # Email Aniqa the Approve/Deny review (Stage A)
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          ANIQA_EMAIL: ${{ secrets.ANIQA_EMAIL }}
+          EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
+          # Build the signed Approve/Deny links into the Edge Function
+          APPROVAL_BASE_URL: ${{ secrets.APPROVAL_BASE_URL }}
+          APPROVAL_HMAC_SECRET: ${{ secrets.APPROVAL_HMAC_SECRET }}
+
       - name: Build catalog
+        run: python loupe-feed/build_catalog.py
         env:
           SOVRN_API_KEY: ${{ secrets.SOVRN_API_KEY }}
-        run: python loupe-feed/build_catalog.py
+          SOVRN_CUID: ${{ secrets.SOVRN_CUID }}
 
       - name: Commit if changed
         run: |
+          set -euo pipefail
           git config user.name  "loupe-catalog-bot"
           git config user.email "actions@users.noreply.github.com"
-          if [[ -n "$(git status --porcelain loupe-feed/catalog.json)" ]]; then
-            git add loupe-feed/catalog.json
-            git commit -m "chore: refresh catalog $(date -u +%Y-%m-%d)"
-            git push
+          # process_requests.py (Stage B) can edit brands.json; build_catalog.py
+          # writes catalog.json. Commit both. new_brands.json is intentionally
+          # NOT committed (it's gitignored, run-local handoff to the notify step).
+          if [[ -z "$(git status --porcelain loupe-feed/brands.json loupe-feed/catalog.json)" ]]; then
+            echo "No catalog changes."
+            exit 0
+          fi
+          git add loupe-feed/brands.json loupe-feed/catalog.json
+          git commit -m "chore: refresh catalog $(date -u +%Y-%m-%d)"
+          # Even though concurrency serializes our own runs, a human commit (or a
+          # brands.json push) can land between checkout and push. Rebase onto the
+          # latest main and retry once on a non-fast-forward so an approved brand's
+          # commit is never lost to a rejected push.
+          branch="${GITHUB_REF_NAME:-main}"
+          push_with_rebase() {
+            git pull --rebase --autostash origin "$branch"
+            git push origin "HEAD:$branch"
+          }
+          if push_with_rebase; then
             echo "Catalog updated."
           else
-            echo "No catalog changes."
+            echo "Push failed (likely non-fast-forward) — rebasing and retrying once."
+            sleep 3
+            if push_with_rebase; then
+              echo "Catalog updated on retry."
+            else
+              echo "ERROR: catalog push failed after retry." >&2
+              exit 1
+            fi
           fi
+
+      - name: Notify requesters & followers
+        # Push notifications are best-effort and optional — never fail the run.
+        continue-on-error: true
+        run: python loupe-feed/notify_brand_requests.py
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
