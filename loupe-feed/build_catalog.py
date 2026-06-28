@@ -206,14 +206,25 @@ def effective_cap(brand, per_brand):
 #   cuid = optional Custom Tracking ID (<=32 alphanumeric chars) for reporting
 # Confirm this exact format against one link from the dashboard's "Create Links"
 # tool before going wide; the base/params are isolated here so it's a one-line tweak.
+# TODO: verify the exact redirect format against a Sovrn dashboard "Create Links"
+# output before enabling the key (base host + param names). The base/params are
+# isolated here so confirming it is a one-line change.
 SOVRN_API_KEY = os.environ.get("SOVRN_API_KEY", "").strip()
 SOVRN_REDIRECT_BASE = "https://redirect.viglink.com/"
 SOVRN_CUID = os.environ.get("SOVRN_CUID", "loupeapp").strip()
 
 
 def monetize(url):
-    """Wrap a destination URL in a Sovrn affiliate redirect when a key is set."""
+    """Wrap a destination URL in a Sovrn affiliate redirect when a key is set.
+
+    Idempotent: a URL that is ALREADY a Sovrn redirect is returned unchanged, so
+    re-running the build (or re-wrapping curated links that were saved already
+    wrapped) can never double-wrap into redirect.viglink.com/?...&u=redirect...
+    """
     if not SOVRN_API_KEY:
+        return url
+    # Already wrapped (e.g. a curated link or a carried-forward product) → leave it.
+    if isinstance(url, str) and url.startswith(SOVRN_REDIRECT_BASE):
         return url
     params = {"key": SOVRN_API_KEY, "u": url}
     if SOVRN_CUID:
@@ -542,17 +553,56 @@ def main():
         except (ValueError, OSError):
             pass
 
-    def scrape_brand(domain):
-        """Fetch a brand's products.json with a few retries — most scrape 'failures'
-        are momentary timeouts / rate-limits, not a dead store."""
+    def scrape_page(domain, limit, since_id=None):
+        """Fetch ONE products.json page with a few retries — most scrape
+        'failures' are momentary timeouts / rate-limits, not a dead store.
+        Shopify caps ?limit at 250; we never ask for more. `since_id` walks to
+        the next page (Shopify returns products with id > since_id)."""
+        # Shopify hard-caps page size at 250; asking for more is silently clamped.
+        limit = min(max(int(limit), 1), 250)
+        qs = f"limit={limit}"
+        if since_id is not None:
+            qs += f"&since_id={since_id}"
         last = None
         for attempt in range(3):
             try:
-                return fetch_json(f"https://{domain}/products.json?limit={max(per_brand * 3, 30)}")
+                return fetch_json(f"https://{domain}/products.json?{qs}")
             except (urllib.error.URLError, urllib.error.HTTPError, ValueError, TimeoutError) as e:
                 last = e
                 time.sleep(1.5 * (attempt + 1))
         raise last
+
+    # Per-brand page size: enough headroom over `cap` to absorb junk/variant
+    # filtering, but never above Shopify's 250 max.
+    PAGE_LIMIT = min(max(per_brand * 3, 30), 250)
+    # Safety bound so a huge store can't loop forever; cap*4 valid-item headroom
+    # at PAGE_LIMIT per page is plenty to collect `cap` survivors.
+    MAX_PAGES = 20
+
+    def scrape_brand(domain, cap):
+        """Yield successive products.json pages for a brand, walking `since_id`
+        until a short/empty page (store exhausted) or MAX_PAGES. The caller stops
+        early once it has `cap` post-filter items, so for most brands this fetches
+        exactly one page."""
+        since_id = None
+        for _ in range(MAX_PAGES):
+            data = scrape_page(domain, PAGE_LIMIT, since_id)
+            page = (data or {}).get("products", []) or []
+            if not page:
+                return
+            yield page
+            # A page shorter than the requested limit means the store is exhausted.
+            if len(page) < PAGE_LIMIT:
+                return
+            # Advance: next page is products with id greater than the last seen.
+            last_id = None
+            for p in page:
+                pid = p.get("id")
+                if isinstance(pid, int):
+                    last_id = pid
+            if last_id is None:
+                return  # no numeric ids to paginate on — stop rather than loop
+            since_id = last_id
 
     for entry in cfg["brands"]:
         brand, domain = entry["brand"], entry["domain"]
@@ -563,27 +613,35 @@ def main():
         got = 0
         bucket = []
         base_counts = {}  # base product name -> # color variants already kept
+        pages_seen = 0
         try:
-            # pull a generous page, then take the first `cap` valid items
-            data = scrape_brand(domain)
-            for product in data.get("products", []):
+            # Walk products.json pages (since_id) until we have `cap` valid items
+            # or the store is exhausted. Most brands satisfy `cap` on page 1.
+            for page in scrape_brand(domain, cap):
+                pages_seen += 1
+                for product in page:
+                    if got >= cap:
+                        break
+                    norm = normalize(product, brand, domain, fx, multi_brand=multi_brand)
+                    if not norm or norm["id"] in seen_ids:
+                        continue
+                    # Cap near-identical color variants of the same base product so
+                    # the deck stays visually varied (a 5-colorway loafer -> ~2 cards).
+                    bkey = base_name(norm["name"])
+                    if base_counts.get(bkey, 0) >= MAX_VARIANTS_PER_BASE:
+                        continue
+                    base_counts[bkey] = base_counts.get(bkey, 0) + 1
+                    seen_ids.add(norm["id"])
+                    bucket.append(norm)
+                    got += 1
                 if got >= cap:
-                    break
-                norm = normalize(product, brand, domain, fx, multi_brand=multi_brand)
-                if not norm or norm["id"] in seen_ids:
-                    continue
-                # Cap near-identical color variants of the same base product so the
-                # deck stays visually varied (a 5-colorway loafer -> ~2 cards).
-                bkey = base_name(norm["name"])
-                if base_counts.get(bkey, 0) >= MAX_VARIANTS_PER_BASE:
-                    continue
-                base_counts[bkey] = base_counts.get(bkey, 0) + 1
-                seen_ids.add(norm["id"])
-                bucket.append(norm)
-                got += 1
+                    break  # enough — don't fetch further pages
             if bucket:
                 by_brand[brand] = bucket
-            summary.append(f"  {brand:<22} {got:>3} items")
+            # Flag brands that exhausted their store without filling `cap` — usually
+            # a small catalog, heavy junk/variant filtering, or a too-low page walk.
+            short = " (under cap — store exhausted)" if got < cap else ""
+            summary.append(f"  {brand:<22} {got:>3} items{short}")
         except (urllib.error.URLError, urllib.error.HTTPError, ValueError, TimeoutError) as e:
             summary.append(f"  {brand:<22}  SKIP ({type(e).__name__})")
         time.sleep(0.5)  # be polite
@@ -643,25 +701,65 @@ def main():
             summary.append(f"  (curated)              SKIP ({type(e).__name__})")
 
     # ── Drop products whose image won't actually render (no blank tiles) ───────
-    # Validate concurrently (I/O-bound). SAFETY: if this would drop an implausible
-    # share of the catalog, assume a network problem and keep everything rather
-    # than gut the live feed.
+    # Validate concurrently (I/O-bound). SAFETY is evaluated PER BRAND: if a
+    # single brand loses most of its images — e.g. its CDN blocks the CI runner's
+    # IP — we keep that brand's items UNVALIDATED (un-repaired, original images)
+    # instead of letting them silently vanish, since "scrape succeeded" means
+    # carry-forward won't rescue them. Other brands still get genuinely-dead
+    # images repaired/dropped. A global guard remains as a secondary net for a
+    # broad network blip that hits everything at once.
+    PER_BRAND_KEEP_RATIO = 0.40   # a brand dropping >40% of its images is suspect
+    GLOBAL_KEEP_RATIO = 0.40      # the original whole-catalog guard, kept as backup
     if products and os.environ.get("VALIDATE_IMAGES", "1") != "0":
         total_before = len(products)
+        # Validate every product once (returns the repaired product or None).
+        # Pair each ORIGINAL product with its result so we can choose, per brand,
+        # whether to keep the validated survivors or fall back to the originals.
         with ThreadPoolExecutor(max_workers=16) as ex:
-            results = list(ex.map(_repair_images, products))
-        kept = [p for p in results if p is not None]
-        dropped = total_before - len(kept)
-        drop_ratio = dropped / max(total_before, 1)
-        if drop_ratio > 0.40:
+            results = list(ex.map(_repair_images, list(products)))
+        global_kept = sum(1 for r in results if r is not None)
+        global_drop_ratio = (total_before - global_kept) / max(total_before, 1)
+
+        if global_drop_ratio > GLOBAL_KEEP_RATIO:
+            # Catalog-wide collapse → almost certainly a network problem, not dead
+            # images. Keep EVERYTHING unvalidated rather than gut the live feed.
             summary.append(
-                f"  -> image-check would drop {dropped}/{total_before} (>40%); "
-                f"assuming a network issue — keeping all, unvalidated"
+                f"  -> image-check would drop {total_before - global_kept}/{total_before} "
+                f"(>40% catalog-wide); assuming a network issue — keeping all, unvalidated"
             )
         else:
-            products = kept
-            if dropped:
-                summary.append(f"  -> dropped {dropped} items whose image did not load")
+            # Decide per brand. Group (original, result) pairs by brand in order.
+            per_brand_idx = {}
+            for orig, res in zip(products, results):
+                per_brand_idx.setdefault(orig.get("brand"), []).append((orig, res))
+
+            kept = []
+            total_dropped = 0
+            for bname, pairs in per_brand_idx.items():
+                b_total = len(pairs)
+                b_dropped = sum(1 for _orig, res in pairs if res is None)
+                b_ratio = b_dropped / max(b_total, 1)
+                if b_dropped and b_ratio > PER_BRAND_KEEP_RATIO:
+                    # This brand lost most of its images — treat as a CDN/IP block,
+                    # NOT genuinely dead images. Keep all its items unvalidated
+                    # (original images intact) so the brand never silently vanishes.
+                    for orig, _res in pairs:
+                        kept.append(orig)
+                    summary.append(
+                        f"  -> {bname}: image-check would drop {b_dropped}/{b_total} "
+                        f"(>40%); keeping this brand unvalidated (likely CDN/IP block)"
+                    )
+                else:
+                    # Normal case: keep validated/repaired survivors, drop the dead.
+                    for _orig, res in pairs:
+                        if res is not None:
+                            kept.append(res)
+                    total_dropped += b_dropped
+            # Preserve the original feed order (per-brand grouping reshuffled it).
+            kept_by_id = {p.get("id"): p for p in kept}
+            products = [kept_by_id[p["id"]] for p in products if p.get("id") in kept_by_id]
+            if total_dropped:
+                summary.append(f"  -> dropped {total_dropped} items whose image did not load")
 
     now = datetime.now(timezone.utc)
     now_iso = now.strftime("%Y-%m-%dT%H:%M:%SZ")
