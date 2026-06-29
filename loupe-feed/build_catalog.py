@@ -127,7 +127,7 @@ CATEGORY_RULES = [
     # deliberately don't want the bare 'hair' substring (it would catch "mohair").
     ("accessories", ["bag", "handbag", "crossbody", "backpack", "tote", "clutch",
                       "pouch", "purse", "scarf", "necklace", "earring", "bracelet",
-                      "ring", "pendant", "hat", "cap", "beret", "belt", "sunglass",
+                      "ring", "pendant", "brooch", "anklet", "cufflink", "hat", "cap", "beret", "belt", "sunglass",
                       "jewel", "hair", "hairband", "headband", "hairclip", "barrette",
                       "scrunchie", "glove", "wallet"]),
     # Swim + intimates → 'tops' (best existing bucket; flag for a future real
