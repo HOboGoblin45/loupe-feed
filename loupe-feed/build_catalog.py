@@ -784,6 +784,24 @@ def main():
             if total_dropped:
                 summary.append(f"  -> dropped {total_dropped} items whose image did not load")
 
+    # Final de-dup: collapse identical brand+name repeats. A piece is sometimes
+    # listed once per colorway with the COLOR NOT in its title, so several entries
+    # share the exact same brand + name (different handles -> ids). The id de-dup
+    # can't catch these, and they read as the SAME card shown twice. Keep the FIRST
+    # of each identical (brand, name); differently-named colorways stay, so variety
+    # is preserved.
+    _seen_bn = set()
+    _deduped = []
+    for prod in products:
+        _bn = ((prod.get("brand") or "").strip().lower(), (prod.get("name") or "").strip().lower())
+        if _bn in _seen_bn:
+            continue
+        _seen_bn.add(_bn)
+        _deduped.append(prod)
+    if len(_deduped) != len(products):
+        summary.append(f"  -> de-duped {len(products) - len(_deduped)} same-name repeats")
+    products = _deduped
+
     now = datetime.now(timezone.utc)
     now_iso = now.strftime("%Y-%m-%dT%H:%M:%SZ")
     # Products that existed before we started stamping dates are backdated so the
