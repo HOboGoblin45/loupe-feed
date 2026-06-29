@@ -69,7 +69,7 @@ JUNK_ADDON_WORDS = [
 def _word_in(needle, hay):
     """True if `needle` appears in `hay` on word boundaries (handles multi-word
     phrases). Avoids matching e.g. 'ship' inside 'relationship'."""
-    return re.search(r"(?<![a-z0-9])" + re.escape(needle) + r"(?![a-z0-9])", hay) is not None
+    return re.search(r"(?<![a-z0-9])" + re.escape(needle) + r"(?:s|es)?(?![a-z0-9])", hay) is not None
 
 
 def is_junk(title, price):
@@ -121,7 +121,7 @@ CATEGORY_RULES = [
     ("outerwear",   ["coat", "jacket", "blazer", "cardigan", "trench", "parka",
                      "anorak", "overcoat", "puffer"]),
     ("shoes",       ["shoe", "boot", "sandal", "mule", "flat", "sneaker", "heel",
-                     "loafer", "pump", "clog", "slipper", "ballet"]),
+                     "loafer", "pump", "clog", "slipper"]),
     # Compound forms (handbag/hairband/headband/crossbody...) are listed explicitly
     # because word-boundary matching won't find 'bag'/'hair' inside them — and we
     # deliberately don't want the bare 'hair' substring (it would catch "mohair").
@@ -260,39 +260,45 @@ def infer_category(product_type, title):
 
 
 def infer_colors(title, options, tags=None, product_type=""):
-    """Infer up to 2 color tags. Color almost never lives in the title alone — it
-    lives in the variant color option, the product tags, and sometimes the
-    product_type. We read all of them so the catch-all 'neutral' fallback only
-    fires when there's genuinely no color signal anywhere."""
-    hay = (title or "").lower()
+    """Infer up to 2 color tags for the colorway actually shown.
+
+    Filter-accuracy fix: a Shopify product lists EVERY colorway it sells in its
+    variant color option, but the catalog shows ONE image (one colorway). Reading
+    all variant values tags a black-pictured top that also comes in pink as 'pink'
+    so it wrongly surfaces under the Pink filter. So read the SHOWN colorway from
+    the title/product_type FIRST, and only fall back to tags + variant color
+    values when the title names no color at all."""
+    def _from(hay):
+        found = []
+        for tag, kws in COLOR_RULES:
+            if any(k in hay for k in kws):
+                found.append(tag)
+        if any(h in hay for h in MULTICOLOR_HINTS):
+            found.append("multicolor")
+        seen, out = set(), []
+        for c in found:
+            if c in VALID_COLORS and c not in seen:
+                seen.add(c)
+                out.append(c)
+        return out[:2]
+    # 1) The colorway the image shows is almost always named in the title.
+    title_hay = (title or "").lower()
     if product_type:
-        hay += " " + str(product_type).lower()
-    # Shopify `tags` may be a comma string or a list — normalize either way.
+        title_hay += " " + str(product_type).lower()
+    shown = _from(title_hay)
+    if shown:
+        return shown
+    # 2) Untitled colorway -> fall back to tags + the variant color values.
+    fb = ""
     if tags:
-        if isinstance(tags, str):
-            hay += " " + tags.lower()
-        else:
-            hay += " " + " ".join(str(t).lower() for t in tags)
-    # Pull values from EVERY option whose name looks like a color/colour option,
-    # not just the first. Variant values are where the color usually is.
+        fb += " " + (tags.lower() if isinstance(tags, str)
+                     else " ".join(str(t).lower() for t in tags))
     for opt in options or []:
         name = (opt.get("name") or "").lower()
         if "color" in name or "colour" in name:
-            hay += " " + " ".join(str(v).lower() for v in opt.get("values", []))
-    found = []
-    for tag, kws in COLOR_RULES:
-        if any(k in hay for k in kws):
-            found.append(tag)
-    if any(h in hay for h in MULTICOLOR_HINTS):
-        found.append("multicolor")
-    # de-dup, keep order, cap at 2. VALID_COLORS guards against emitting any tag
-    # the app can't filter (e.g. there is no 'gray' tag — grey maps to 'neutral').
-    seen, out = set(), []
-    for c in found:
-        if c in VALID_COLORS and c not in seen:
-            seen.add(c)
-            out.append(c)
-    return out[:2] if out else ["neutral"]
+            fb += " " + " ".join(str(v).lower() for v in opt.get("values", []))
+    out = _from(fb)
+    return out if out else ["neutral"]
 
 
 def slugify(brand):
