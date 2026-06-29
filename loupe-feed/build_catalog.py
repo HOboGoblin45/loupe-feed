@@ -113,18 +113,23 @@ SWIM_INTIMATES_KEYWORDS = [
 JUMPSUIT_KEYWORDS = ["jumpsuit", "romper", "playsuit", "overall", "boilersuit",
                      "unitard", "catsuit"]
 CATEGORY_RULES = [
-    ("accessories", ["bag", "tote", "clutch", "pouch", "purse", "scarf", "necklace",
-                      "earring", "bracelet", "ring", "pendant", "hat", "cap", "beret",
-                      "belt", "sunglass", "jewel", "hair", "glove", "wallet"]),
-    ("shoes",       ["shoe", "boot", "sandal", "mule", "flat", "sneaker", "heel",
-                     "loafer", "pump", "clog", "slipper", "ballet"]),
-    ("outerwear",   ["coat", "jacket", "blazer", "cardigan", "trench", "parka",
-                     "anorak", "overcoat", "puffer"]),
     # One-piece full-body garments map to 'dresses' (closest existing silhouette).
     ("dresses",     JUMPSUIT_KEYWORDS),
+    ("dresses",     ["dress", "gown"]),
     ("bottoms",     ["skirt", "trouser", "pant", "short", "jean", "legging",
                      "culotte", "capri"]),
-    ("dresses",     ["dress", "gown"]),
+    ("outerwear",   ["coat", "jacket", "blazer", "cardigan", "trench", "parka",
+                     "anorak", "overcoat", "puffer"]),
+    ("shoes",       ["shoe", "boot", "sandal", "mule", "flat", "sneaker", "heel",
+                     "loafer", "pump", "clog", "slipper", "ballet"]),
+    # Compound forms (handbag/hairband/headband/crossbody...) are listed explicitly
+    # because word-boundary matching won't find 'bag'/'hair' inside them — and we
+    # deliberately don't want the bare 'hair' substring (it would catch "mohair").
+    ("accessories", ["bag", "handbag", "crossbody", "backpack", "tote", "clutch",
+                      "pouch", "purse", "scarf", "necklace", "earring", "bracelet",
+                      "ring", "pendant", "hat", "cap", "beret", "belt", "sunglass",
+                      "jewel", "hair", "hairband", "headband", "hairclip", "barrette",
+                      "scrunchie", "glove", "wallet"]),
     # Swim + intimates → 'tops' (best existing bucket; flag for a future real
     # 'swim'/'intimates' category). Checked before the generic tops keywords so a
     # bikini/bralette is categorized intentionally, not via a stray "set"/"tube".
@@ -239,9 +244,17 @@ def fetch_json(url, timeout=25):
 
 
 def infer_category(product_type, title):
+    # Word-boundary match (reuses the junk filter's _word_in) so a keyword only
+    # hits a whole word: 'ring' no longer matches inside "...ring"/"earring",
+    # 'hair' no longer matches inside "mohair", 'top' not inside "stop". This,
+    # plus the garment-before-accessories ordering above, is the P1-15 fix.
+    # Examples now classified correctly:
+    #   "Sleeper Linen Maxi Dress"  -> dresses   (was 'accessories' via 'ring')
+    #   "Cashmere Blanket"          -> tops fallback, NOT 'tops' via a substring
+    #   "Mohair Sweater"            -> tops       (was 'accessories' via 'hair')
     hay = f"{product_type} {title}".lower()
     for cat, kws in CATEGORY_RULES:
-        if any(k in hay for k in kws):
+        if any(_word_in(k, hay) for k in kws):
             return cat
     return "tops"
 
@@ -382,6 +395,10 @@ def _image_ok(url, timeout=6):
                 if status not in (200, 206):
                     return False
                 ctype = (resp.headers.get("Content-Type") or "").lower()
+                # P1-16: reject HEIC/HEIF — expo-image can't reliably decode them
+                # on-device, so they render as blank tiles. Accept other image/*.
+                if ctype.startswith("image/heic") or ctype.startswith("image/heif"):
+                    return False
                 return ctype.startswith("image/")
         except Exception:
             continue
