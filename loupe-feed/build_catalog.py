@@ -669,23 +669,11 @@ def main():
             summary.append(f"  {brand:<22}  SKIP ({type(e).__name__})")
         time.sleep(0.5)  # be polite
 
-    # Carry forward any brand that returned NOTHING this run but existed in the last
-    # good catalog — reuse its previous products (already normalized + monetized) so
-    # a momentary failure never drops the brand. seen_ids guards against duplicates.
-    carried_total = 0
-    for entry in cfg["brands"]:
-        brand = entry["brand"]
-        if brand in by_brand:
-            continue
-        carried = [p for p in prev_by_brand.get(brand, []) if p.get("id") and p["id"] not in seen_ids]
-        if carried:
-            for p in carried:
-                seen_ids.add(p["id"])
-            by_brand[brand] = carried
-            carried_total += len(carried)
-            summary.append(f"  {brand:<22} {len(carried):>3} items (carried)")
-    if carried_total:
-        summary.append(f"  -> carried forward {carried_total} items for brands that briefly failed")
+    # NOTE: carry-forward for brands that returned nothing this run now happens at
+    # the LABEL level (Shopify vendor), with a grace window, AFTER the curated merge
+    # below — see "Grace window" further down. Doing it per-label rather than per
+    # configured store keeps niche designers sold through multi-brand boutiques from
+    # flickering in and out of the catalog from one day to the next.
 
     # Round-robin interleave across brands so the published feed is never grouped
     # brand-by-brand (the app shuffles too, but a mixed feed is the right default
@@ -722,6 +710,57 @@ def main():
             summary.append(f"  {'(curated)':<22} {added:>3} items")
         except (ValueError, OSError) as e:
             summary.append(f"  (curated)              SKIP ({type(e).__name__})")
+
+    # ── Grace window: keep niche LABELS from flickering out ────────────────────
+    # A product's "brand" is its Shopify vendor, so multi-brand boutiques (concept
+    # stores) contribute many labels from a single configured domain. Because we pull
+    # only a capped slice of each store's in-stock items, the exact set of long-tail
+    # labels that surfaces shifts a little every run — so a label with one or two
+    # pieces would otherwise blink in and out. We stamp every LIVE product with
+    # `lastSeenAt`, then carry any label that was in the last good catalog but is
+    # MISSING today forward — as long as it was live within GRACE_DAYS. Pieces gone
+    # longer than that age out on their own, so a genuinely-dead label still leaves.
+    GRACE_DAYS = 7
+    now = datetime.now(timezone.utc)
+    now_iso = now.strftime("%Y-%m-%dT%H:%M:%SZ")
+
+    # Mark everything pulled live this run (scraped + curated) as seen right now.
+    for _p in products:
+        _p["lastSeenAt"] = now_iso
+
+    def _seen_within(p, days):
+        """True if p was last live within `days` (falls back to addedAt)."""
+        stamp = p.get("lastSeenAt") or p.get("addedAt")
+        if not stamp:
+            return False
+        try:
+            dt = datetime.strptime(stamp, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
+        except ValueError:
+            return False
+        return (now - dt) <= timedelta(days=days)
+
+    present_labels = {(p.get("brand") or "").strip() for p in products}
+    grace_labels = grace_items = 0
+    for label, prev_items in prev_by_brand.items():
+        if not label or label in present_labels:
+            continue
+        kept = []
+        for p in prev_items:
+            pid = p.get("id")
+            if not pid or pid in seen_ids:
+                continue
+            if _seen_within(p, GRACE_DAYS):
+                seen_ids.add(pid)
+                kept.append(p)  # keep its existing lastSeenAt — do NOT refresh it
+        if kept:
+            products.extend(kept)
+            grace_labels += 1
+            grace_items += len(kept)
+    if grace_items:
+        summary.append(
+            f"  -> grace-carried {grace_items} items across {grace_labels} labels "
+            f"(live within {GRACE_DAYS}d, missing today)"
+        )
 
     # ── Drop products whose image won't actually render (no blank tiles) ───────
     # Validate concurrently (I/O-bound). SAFETY is evaluated PER BRAND: if a
@@ -802,8 +841,7 @@ def main():
         summary.append(f"  -> de-duped {len(products) - len(_deduped)} same-name repeats")
     products = _deduped
 
-    now = datetime.now(timezone.utc)
-    now_iso = now.strftime("%Y-%m-%dT%H:%M:%SZ")
+    # `now` / `now_iso` were already computed in the grace-window step above.
     # Products that existed before we started stamping dates are backdated so the
     # FIRST run after this upgrade doesn't flag the entire catalog as "new".
     backdated_iso = (now - timedelta(days=30)).strftime("%Y-%m-%dT%H:%M:%SZ")
