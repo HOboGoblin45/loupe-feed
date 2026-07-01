@@ -790,6 +790,12 @@ def main():
             pid = p.get("id")
             if not pid or pid in seen_ids:
                 continue
+            # Re-validate against the CURRENT junk filter (title + price; carried
+            # items no longer carry product_type). A tightening of is_junk() then
+            # purges old junk within ONE cycle instead of lingering the whole grace
+            # window — e.g. a size-chart / gift-card SKU that slipped through before.
+            if is_junk(p.get("name"), p.get("price")):
+                continue
             if _seen_within(p, GRACE_DAYS):
                 seen_ids.add(pid)
                 kept.append(p)  # keep its existing lastSeenAt — do NOT refresh it

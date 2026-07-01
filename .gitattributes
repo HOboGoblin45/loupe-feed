@@ -1,0 +1,10 @@
+# Normalize line endings to LF for all text files so committing from a Windows
+# clone (autocrlf) can never rewrite an entire CI-generated file with CRLF and
+# clobber the freshest catalog.json / embeddings.json the GitHub Action wrote.
+* text=auto eol=lf
+*.json text eol=lf
+*.py   text eol=lf
+*.yml  text eol=lf
+*.yaml text eol=lf
+*.md   text eol=lf
+*.html text eol=lf
