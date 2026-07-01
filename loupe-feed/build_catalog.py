@@ -53,8 +53,8 @@ USER_AGENT = (
 # We deliberately DO NOT look at Shopify tags: a live-feed audit found tags carry
 # merch/policy words on ordinary garments (salereturnpolicy, womenssizechart,
 # sample-sale, gift-under-100), so matching tags would drop hundreds of real
-# items. Title + product_type only. (Brand Taottao/tattao ships size-chart
-# IMAGES on real garments -- images are never inspected here, so it stays safe.)
+# items. Title + product_type only. (Images are never inspected here, so a brand
+# that ships size-chart PHOTOS as product images is unaffected by this text filter.)
 JUNK_TITLE_PHRASES = [
     # Gift cards / vouchers / store credit
     "gift card", "gift cards", "gift voucher", "gift certificate", "e-gift",
@@ -226,6 +226,17 @@ MAINSTREAM_BRANDS = {
         "The Row", "Khaite", "Toteme", "Totême", "Ganni", "Dries Van Noten",
         "Proenza Schouler", "Coperni", "Staud", "Cult Gaia", "Phoebe Philo",
         "Frankies Bikinis", "LA Apparel", "Los Angeles Apparel",
+    ]
+}
+
+
+# Brands removed from the feed entirely by founder decision. Normalized keys, so
+# accent/spacing variants match. A removed brand is dropped no matter how it
+# enters — a direct storefront OR a multi-brand reseller's vendor field — and is
+# also stripped from curated merges and grace-window carry-forward before write.
+EXCLUDE_BRANDS = {
+    _norm_brand(b) for b in [
+        "Taottao",
     ]
 }
 
@@ -568,6 +579,10 @@ def normalize(product, brand, domain, fx, multi_brand=False):
         vendor = (product.get("vendor") or "").strip()
         if vendor and vendor.lower() not in ("", "frontpage"):
             display_brand = vendor
+    # Brand removed from the feed entirely (founder decision) — drop it regardless
+    # of which storefront it entered through (direct or reseller vendor field).
+    if _norm_brand(display_brand) in EXCLUDE_BRANDS:
+        return None
     product_type = product.get("product_type", "")
     category = infer_category(product_type, title)
     colors = infer_colors(title, product.get("options"),
@@ -887,6 +902,15 @@ def main():
     if len(_deduped) != len(products):
         summary.append(f"  -> de-duped {len(products) - len(_deduped)} same-name repeats")
     products = _deduped
+
+    # Safety net: guarantee removed brands never ship, even if carried forward from
+    # the previous catalog or merged in from curated.json (normalize() already drops
+    # them from the live pull; this catches every other path in one place).
+    if EXCLUDE_BRANDS:
+        _before_excl = len(products)
+        products = [p for p in products if _norm_brand(p.get("brand")) not in EXCLUDE_BRANDS]
+        if len(products) != _before_excl:
+            summary.append(f"  -> removed {_before_excl - len(products)} products from excluded brands")
 
     # `now` / `now_iso` were already computed in the grace-window step above.
     # Products that existed before we started stamping dates are backdated so the
