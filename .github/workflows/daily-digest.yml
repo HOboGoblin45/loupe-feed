@@ -1,0 +1,52 @@
+name: Loupe daily digest
+
+# ONE sale + size-restock push per user per day, server-side (so users who
+# aren't in the app still hear about drops on pieces they saved). The logic in
+# loupe-feed/price_drop_push.py mirrors the app's src/lib/dresserAlerts.ts, so the
+# push, the in-app "Sale & restock alerts" screen and the Dresser badge always
+# agree. It NEVER sends more than one push per user per day (profiles
+# .last_marketing_push_at), never re-sends an unchanged digest
+# (last_marketing_push_sig), sends nothing on a quiet day, and skips users who
+# were active in-app in the last 2 days (they already get the on-device 11am
+# digest — no double). Missing SUPABASE secrets or un-migrated columns → safe no-op.
+
+on:
+  schedule:
+    - cron: "0 17 * * *"   # daily 17:00 UTC (~1pm ET / 10am PT)
+  workflow_dispatch:
+    inputs:
+      dryrun:
+        description: "Dry run — compute + print what WOULD send, but send nothing"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+# Never overlap runs (a slow run + the next cron could double-send before the
+# per-user stamp lands).
+concurrency:
+  group: loupe-daily-digest
+  cancel-in-progress: false
+
+jobs:
+  digest:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Send daily sale/restock digest
+        run: python loupe-feed/price_drop_push.py
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          # Optional — an Expo access token hardens push auth. Safe if unset.
+          EXPO_ACCESS_TOKEN: ${{ secrets.EXPO_ACCESS_TOKEN }}
+          # Manual dry runs pass dryrun=true; scheduled runs send for real.
+          DIGEST_DRYRUN: ${{ inputs.dryrun && '1' || '' }}
