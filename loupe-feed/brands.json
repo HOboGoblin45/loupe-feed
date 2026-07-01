@@ -1,6 +1,6 @@
 {
   "_comment": "Curated niche brands for the Loupe live catalog feed. Each runs on Shopify, which exposes a public /products.json endpoint (no auth). 'currency' is the store's base currency \u2014 the scraper converts to USD. 'perBrand' caps how many products are pulled from each brand to keep the catalog curated. To add a brand: confirm https://<domain>/products.json returns JSON, then add an entry. Bot-protected stores (return empty) are simply skipped at runtime.",
-  "fx_to_usd": {"USD": 1.0, "AUD": 0.66, "EUR": 1.08, "GBP": 1.27, "CAD": 0.73, "NZD": 0.61, "SEK": 0.092, "DKK": 0.145},
+  "fx_to_usd": {"USD": 1.0, "AUD": 0.66, "EUR": 1.08, "GBP": 1.27, "CAD": 0.73, "NZD": 0.61, "SEK": 0.092, "DKK": 0.145, "EGP": 0.02},
   "perBrand": 60,
   "brands": [
     { "brand": "Deiji Studios",             "domain": "deijistudios.com",              "currency": "AUD" },
@@ -99,7 +99,7 @@
     { "brand": "Mpaz Studio",               "domain": "mpazstudio.com",                "currency": "USD" },
     { "brand": "Carmen Says",               "domain": "carmensays.com",                "currency": "EUR" },
     { "brand": "Oddli",                     "domain": "oddli.com",                     "currency": "USD" },
-    { "brand": "DémodéMODÉ",                   "domain": "demodemode.com",                "currency": "USD" },
+    { "brand": "DémodéMODÉ",                "domain": "demodemode.com",                "currency": "USD" },
     { "brand": "Ganni",                     "domain": "ganni.com",                     "currency": "USD" },
     { "brand": "My Mum Made It",            "domain": "mymum-madeit.com",              "currency": "AUD" },
     { "brand": "Trashy Clothing",           "domain": "trashyclothing.shop",           "currency": "USD" },
@@ -139,6 +139,22 @@
     { "brand": "ALOHAS",                    "domain": "alohas.io",                     "currency": "EUR" },
     { "brand": "Yuni Buffa",                "domain": "yunibuffa.com",                 "currency": "USD" },
     { "brand": "Sentaler",                  "domain": "sentaler.com",                  "currency": "CAD" },
-    { "brand": "Mackage",                   "domain": "mackage.com",                   "currency": "USD" }
+    { "brand": "Mackage",                   "domain": "mackage.com",                   "currency": "USD" },
+    { "brand": "Yellow the Label",          "domain": "yellowthelabel.com",            "currency": "USD" },
+    { "brand": "1XBLUE",                    "domain": "1xblue.com",                    "currency": "GBP" },
+    { "brand": "Pärlemor",             "domain": "parlemor.co.uk",                "currency": "GBP" },
+    { "brand": "Eckhaus Latta",             "domain": "checkout.eckhauslatta.com",     "currency": "USD" },
+    { "brand": "Anonie",                    "domain": "shopanonie.com",                "currency": "USD" },
+    { "brand": "Lauren Manoogian",          "domain": "laurenmanoogian.com",           "currency": "USD" },
+    { "brand": "Blanch Wear",               "domain": "blanchwear.com",                "currency": "AUD" },
+    { "brand": "Nuovo Paris",               "domain": "nuovo-paris.com",               "currency": "EUR" },
+    { "brand": "Maketh Thou",               "domain": "makeththou.com",                "currency": "USD" },
+    { "brand": "C'est Nous",                "domain": "cestnous.co",                   "currency": "EUR" },
+    { "brand": "Allina Liu",                "domain": "allinaliu.com",                 "currency": "USD" },
+    { "brand": "Marge Sherwood",            "domain": "global.margesherwood.com",      "currency": "USD" },
+    { "brand": "Nokshi New York",           "domain": "nokshinewyork.com",             "currency": "USD" },
+    { "brand": "RLT",                       "domain": "shoprlt.com",                   "currency": "USD" },
+    { "brand": "At First Sight Studio",     "domain": "atfirstsightstudio.com",        "currency": "EUR" },
+    { "brand": "Rota",                      "domain": "rotapieces.com",                "currency": "EGP" }
   ]
 }

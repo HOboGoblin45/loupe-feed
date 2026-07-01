@@ -41,28 +41,52 @@ USER_AGENT = (
     "(KHTML, like Gecko) Chrome/124.0 Safari/537.36"
 )
 
-# ── Junk / non-product filter ─────────────────────────────────────────────────
-# Real Shopify stores publish a lot of non-garment "products" through
-# /products.json — gift cards, shipping/insurance/route add-ons, deposits,
-# fabric swatches, sticker/sample packs, gift wrap, warranties. They have
-# images and prices, so they pass normalize()'s basic checks and surface as
-# junk swipe cards. We reject any product whose title contains one of these
-# phrases (case-insensitive, word-aware so "shipping" matches but "ship" inside
-# "relationship" does not). A second, softer rule drops anything cheap that ALSO
-# reads like an add-on — this catches "Route Package Protection $0.98" style
-# items without nuking genuinely cheap real products (a $12 hair clip stays).
+# -- Junk / non-product filter -------------------------------------------------
+# Real Shopify stores publish non-garment "products" via /products.json: gift
+# cards, returns/refunds, shipping/insurance/route add-ons, deposits, fabric
+# swatches, sample/sticker packs, gift wrap, warranties, and standalone
+# SIZE-CHART / size-guide listings. They have images and prices, so they pass
+# normalize()'s basic checks and surface as junk swipe cards. We reject a product
+# when its TITLE or its PRODUCT_TYPE matches one of these phrases (word-aware).
+# A softer rule drops anything cheap that ALSO reads like an add-on.
+#
+# We deliberately DO NOT look at Shopify tags: a live-feed audit found tags carry
+# merch/policy words on ordinary garments (salereturnpolicy, womenssizechart,
+# sample-sale, gift-under-100), so matching tags would drop hundreds of real
+# items. Title + product_type only. (Brand Taottao/tattao ships size-chart
+# IMAGES on real garments -- images are never inspected here, so it stays safe.)
 JUNK_TITLE_PHRASES = [
-    "gift card", "e-gift", "egift", "e gift card", "shipping", "insurance",
-    "protection", "route", "checkout+", "checkout plus", "sticker", "sample",
-    "deposit", "swatch", "donation", "gift wrap", "gift-wrap", "warranty",
-    "add-on", "add on", "addon", "pre-order deposit", "store credit",
+    # Gift cards / vouchers / store credit
+    "gift card", "gift cards", "gift voucher", "gift certificate", "e-gift",
+    "egift", "e gift card", "e-gift card", "digital gift", "store credit",
+    # Returns / refunds / exchange-fee utility SKUs
+    "return", "returns", "refund", "refunds", "restocking",
+    # Shipping / insurance / protection add-ons (specific protection phrases only,
+    # never bare "protection" -- that would nuke "UV/Sun Protection" swimwear)
+    "shipping", "insurance", "package protection", "shipping protection",
+    "order protection", "purchase protection", "route protection", "route",
+    "checkout+", "checkout plus",
+    # Standalone size-chart / size-guide "products"
+    "size chart", "size charts", "size guide", "sizing", "sizing guide",
+    "fit guide", "measurement guide",
+    # Swatches / fabric samples / stickers / deposits / donations / wrap / warranty
+    # (never bare "sample" -- that would nuke "Sample Sale" garments)
+    "sticker", "fabric sample", "sample pack", "free sample", "swatch",
+    "deposit", "pre-order deposit", "donation", "gift wrap", "gift-wrap",
+    "warranty", "add-on", "add on", "addon",
 ]
-# Cheaper than this AND matching an add-on word → almost certainly not a garment.
+# Product_type values that are unambiguous utility SKUs (Shopify sets these
+# literally: "Gift Cards", "return", "return,package_protection", "Shipping").
+JUNK_PRODUCT_TYPE_PHRASES = [
+    "gift card", "gift cards", "gift voucher", "voucher", "return", "returns",
+    "refund", "package protection", "shipping", "insurance", "store credit",
+    "donation", "warranty", "e-gift", "egift",
+]
+# Cheaper than this AND matching an add-on word -> almost certainly not a garment.
 JUNK_PRICE_FLOOR = 15
 JUNK_ADDON_WORDS = [
-    "shipping", "insurance", "protection", "route", "swatch", "sample",
-    "sticker", "deposit", "donation", "gift", "warranty", "add-on", "add on",
-    "addon", "wrap", "credit",
+    "shipping", "insurance", "route", "swatch", "sticker", "deposit",
+    "donation", "gift", "warranty", "add-on", "add on", "addon", "wrap", "credit",
 ]
 
 
@@ -72,15 +96,30 @@ def _word_in(needle, hay):
     return re.search(r"(?<![a-z0-9])" + re.escape(needle) + r"(?:s|es)?(?![a-z0-9])", hay) is not None
 
 
-def is_junk(title, price):
-    """True if a product looks like a non-garment add-on / utility SKU."""
+def _normalize_type(product_type):
+    """Lowercase a product_type and fold separators (comma, underscore, slash,
+    hyphen) to spaces so word matching reads 'return,package_protection' as the
+    words 'return' and 'package protection'."""
+    return re.sub(r"[^a-z0-9]+", " ", str(product_type or "").lower()).strip()
+
+
+def is_junk(title, price, product_type=""):
+    """True if a product looks like a non-garment add-on / utility SKU.
+
+    Checks the TITLE and the PRODUCT_TYPE only -- never Shopify tags (tags carry
+    policy/merch words that live on real garments).
+    """
     hay = (title or "").lower()
     if not hay:
         return True
     for phrase in JUNK_TITLE_PHRASES:
         if _word_in(phrase, hay):
             return True
-    # Cheap + add-on-flavored title → drop (keeps real low-priced products).
+    ptype = _normalize_type(product_type)
+    if ptype:
+        for phrase in JUNK_PRODUCT_TYPE_PHRASES:
+            if _word_in(phrase, ptype):
+                return True
     if price is not None and price < JUNK_PRICE_FLOOR:
         if any(_word_in(w, hay) for w in JUNK_ADDON_WORDS):
             return True
@@ -516,8 +555,10 @@ def normalize(product, brand, domain, fx, multi_brand=False):
     price = round(raw_price * fx)
     if price <= 0:
         return None
-    # Drop gift cards, shipping/insurance/route add-ons, swatches, samples, etc.
-    if is_junk(title, price):
+    product_type = product.get("product_type", "")
+    # Drop gift cards, returns/refunds, shipping/insurance add-ons, size charts,
+    # swatches, samples, deposits, etc. Checks title AND product_type (never tags).
+    if is_junk(title, price, product_type):
         return None
     # Multi-brand boutiques (e.g. Arete Studios) resell many designers under one
     # storefront. Label each item with its REAL vendor when present, falling back
