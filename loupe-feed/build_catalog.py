@@ -64,7 +64,10 @@ JUNK_TITLE_PHRASES = [
     # Shipping / insurance / protection add-ons (specific protection phrases only,
     # never bare "protection" -- that would nuke "UV/Sun Protection" swimwear)
     "shipping", "insurance", "package protection", "shipping protection",
-    "order protection", "purchase protection", "route protection", "route",
+    "order protection", "purchase protection", "route protection",
+    # NOTE: bare "route" deliberately NOT here — it killed real titles like
+    # "Route 66 Jacket". Cheap Route-insurance SKUs are still caught by the
+    # price-gated JUNK_ADDON_WORDS list below (they are always a few dollars).
     "checkout+", "checkout plus",
     # Standalone size-chart / size-guide "products"
     "size chart", "size charts", "size guide", "sizing", "sizing guide",
@@ -942,6 +945,9 @@ def main():
     # and inflated the payload ~30% against jsDelivr's ~20MB/file ceiling. The
     # app never reads this by eye; use scripts or jq locally.
     OUT_FILE.write_text(json.dumps(catalog, separators=(",", ":"), ensure_ascii=False), encoding="utf-8")
+    # Version stamp for the app-side download probe (see update_meta.py).
+    from update_meta import write_meta
+    write_meta()
 
     print("Loupe catalog build")
     print("\n".join(summary))

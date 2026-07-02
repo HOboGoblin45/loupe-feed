@@ -72,6 +72,10 @@ jobs:
           APPROVAL_BASE_URL: ${{ secrets.APPROVAL_BASE_URL }}
           APPROVAL_HMAC_SECRET: ${{ secrets.APPROVAL_HMAC_SECRET }}
 
+      - name: Junk-filter regression fixtures
+        working-directory: loupe-feed
+        run: python test_junk_filter.py
+
       - name: Build catalog
         run: python loupe-feed/build_catalog.py
         env:
@@ -90,7 +94,7 @@ jobs:
             echo "No catalog changes."
             exit 0
           fi
-          git add loupe-feed/brands.json loupe-feed/catalog.json
+          git add loupe-feed/brands.json loupe-feed/catalog.json loupe-feed/catalog.meta.json
           git commit -m "chore: refresh catalog $(date -u +%Y-%m-%d)"
           # Even though concurrency serializes our own runs, a human commit (or a
           # brands.json push) can land between checkout and push. Rebase onto the
@@ -130,3 +134,4 @@ jobs:
         run: |
           curl -fsS "https://purge.jsdelivr.net/gh/HOboGoblin45/loupe-feed@main/loupe-feed/catalog.json" || true
           curl -fsS "https://purge.jsdelivr.net/gh/HOboGoblin45/loupe-feed@main/loupe-feed/embeddings.json" || true
+          curl -fsS "https://purge.jsdelivr.net/gh/HOboGoblin45/loupe-feed@main/loupe-feed/catalog.meta.json" || true
