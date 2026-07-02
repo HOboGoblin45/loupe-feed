@@ -249,40 +249,94 @@ def effective_cap(brand, per_brand):
     the feed stays indie-forward; everyone else keeps the full perBrand budget."""
     return MAINSTREAM_CAP if _norm_brand(brand) in MAINSTREAM_BRANDS else per_brand
 
-# ── Sovrn Commerce affiliate wrapping ─────────────────────────────────────────
-# When SOVRN_API_KEY is set (a GitHub Actions secret, injected as an env var),
-# every product's affiliateUrl is wrapped in a Sovrn "Redirect API" link so the
-# click is attributed to Loupe and earns commission. When the key is absent
-# (e.g. local runs, or before the Sovrn account is approved), links pass through
-# unchanged — the app still sends users straight to the brand's product page, so
-# nothing breaks. This is a server-side switch: add the secret, the next catalog
-# build monetizes all brands at once with no app update.
+# ── Affiliate wrapping: per-brand programs + Sovrn catch-all ──────────────────
+# Two layers, both server-side switches (env vars via GitHub Actions secrets),
+# so monetization changes never require an app update:
 #
-# Format (Sovrn Redirect API): https://redirect.viglink.com/?key=<KEY>&u=<dest>&cuid=<id>
-#   key  = your Commerce API key (Platform → Commerce → Settings → "Key" icon)
-#   u    = the destination URL, percent-encoded
-#   cuid = optional Custom Tracking ID (<=32 alphanumeric chars) for reporting
-# Confirm this exact format against one link from the dashboard's "Create Links"
-# tool before going wide; the base/params are isolated here so it's a one-line tweak.
-# TODO: verify the exact redirect format against a Sovrn dashboard "Create Links"
-# output before enabling the key (base host + param names). The base/params are
-# isolated here so confirming it is a one-line change.
+#   1. BRAND_AFFILIATE_TEMPLATES — JSON object mapping brand name → that brand's
+#      own affiliate deep-link template (Rakuten / Awin / Impact / FlexOffers /
+#      ShopMy…). The literal token {url} is replaced with the percent-encoded
+#      destination. Brand keys match case/spacing-insensitively (_norm_brand).
+#      Example value:
+#        {"Damson Madder": "https://www.awin1.com/cread.php?awinmid=114966&awinaffid=YOURID&ued={url}",
+#         "Ganni": "https://click.linksynergy.com/deeplink?id=YOURID&mid=XXXX&murl={url}"}
+#      Direct programs pay 3–10x Sovrn's effective rate, so they take precedence.
+#
+#   2. SOVRN_API_KEY — the catch-all: any brand WITHOUT a template is wrapped in
+#      a Sovrn Redirect API link (https://redirect.viglink.com/?key=<KEY>&u=<dest>
+#      &cuid=<id>). When neither env var is set (local runs, pre-approval), links
+#      pass through unchanged and the app still opens the brand's product page.
+#
+# Precedence: brand template > Sovrn > raw. Idempotent for both layers. A
+# carried-forward or curated product that is still Sovrn-wrapped is UNWRAPPED
+# and re-wrapped the first build after its brand's template lands.
 SOVRN_API_KEY = os.environ.get("SOVRN_API_KEY", "").strip()
 SOVRN_REDIRECT_BASE = "https://redirect.viglink.com/"
 SOVRN_CUID = os.environ.get("SOVRN_CUID", "loupeapp").strip()
 
 
-def monetize(url):
-    """Wrap a destination URL in a Sovrn affiliate redirect when a key is set.
+def _load_brand_templates():
+    """Parse BRAND_AFFILIATE_TEMPLATES (JSON env var) → {_norm_brand: template}.
 
-    Idempotent: a URL that is ALREADY a Sovrn redirect is returned unchanged, so
-    re-running the build (or re-wrapping curated links that were saved already
-    wrapped) can never double-wrap into redirect.viglink.com/?...&u=redirect...
+    Fail-soft: malformed JSON or entries without a {url} token are skipped with
+    a warning — a bad template must never take the whole catalog build down.
     """
+    raw = os.environ.get("BRAND_AFFILIATE_TEMPLATES", "").strip()
+    if not raw:
+        return {}
+    try:
+        data = json.loads(raw)
+    except ValueError:
+        print("WARNING: BRAND_AFFILIATE_TEMPLATES is not valid JSON - ignoring it.")
+        return {}
+    if not isinstance(data, dict):
+        print("WARNING: BRAND_AFFILIATE_TEMPLATES must be a JSON object - ignoring it.")
+        return {}
+    templates = {}
+    for brand_name, tpl in data.items():
+        if isinstance(tpl, str) and "{url}" in tpl:
+            templates[_norm_brand(brand_name)] = tpl
+        else:
+            print(f"WARNING: affiliate template for {brand_name!r} lacks a {{url}} token - skipped.")
+    return templates
+
+
+BRAND_AFFILIATE_TEMPLATES = _load_brand_templates()
+
+
+def _sovrn_unwrap(url):
+    """Return the original destination if url is a Sovrn redirect, else url unchanged."""
+    if isinstance(url, str) and url.startswith(SOVRN_REDIRECT_BASE):
+        query = urllib.parse.parse_qs(urllib.parse.urlparse(url).query)
+        dest = query.get("u", [""])[0]
+        if dest:
+            return dest
+    return url
+
+
+def monetize(url, brand=None):
+    """Wrap a destination URL for affiliate attribution.
+
+    Precedence: the brand's own program template (BRAND_AFFILIATE_TEMPLATES) →
+    Sovrn catch-all (SOVRN_API_KEY) → unchanged. Idempotent: URLs already
+    wrapped by the applicable layer are returned as-is, so re-running the build
+    (or re-wrapping curated links saved wrapped) can never double-wrap.
+    """
+    if not isinstance(url, str) or not url:
+        return url
+
+    tpl = BRAND_AFFILIATE_TEMPLATES.get(_norm_brand(brand)) if brand else None
+    if tpl:
+        prefix = tpl.split("{url}", 1)[0]
+        if prefix and url.startswith(prefix):
+            return url  # already wrapped with this brand's own template
+        dest = _sovrn_unwrap(url)  # direct program beats the Sovrn catch-all
+        return tpl.replace("{url}", urllib.parse.quote(dest, safe=""))
+
     if not SOVRN_API_KEY:
         return url
     # Already wrapped (e.g. a curated link or a carried-forward product) → leave it.
-    if isinstance(url, str) and url.startswith(SOVRN_REDIRECT_BASE):
+    if url.startswith(SOVRN_REDIRECT_BASE):
         return url
     params = {"key": SOVRN_API_KEY, "u": url}
     if SOVRN_CUID:
@@ -600,7 +654,7 @@ def normalize(product, brand, domain, fx, multi_brand=False):
         "imageUrl": img,
         "sizes": available_sizes(product),
         "images": gallery_images(product),
-        "affiliateUrl": monetize(f"https://{domain}/products/{handle}"),
+        "affiliateUrl": monetize(f"https://{domain}/products/{handle}", display_brand),
     }
 
 
@@ -763,7 +817,7 @@ def main():
                     continue
                 seen_ids.add(pid)
                 if p.get("affiliateUrl"):
-                    p["affiliateUrl"] = monetize(p["affiliateUrl"])
+                    p["affiliateUrl"] = monetize(p["affiliateUrl"], p.get("brand"))
                 products.append(p)
                 added += 1
             summary.append(f"  {'(curated)':<22} {added:>3} items")

@@ -72,15 +72,21 @@ jobs:
           APPROVAL_BASE_URL: ${{ secrets.APPROVAL_BASE_URL }}
           APPROVAL_HMAC_SECRET: ${{ secrets.APPROVAL_HMAC_SECRET }}
 
-      - name: Junk-filter regression fixtures
+      - name: Regression fixtures (junk filter + affiliate wrapper)
         working-directory: loupe-feed
-        run: python test_junk_filter.py
+        run: |
+          python test_junk_filter.py
+          python test_affiliate_wrappers.py
 
       - name: Build catalog
         run: python loupe-feed/build_catalog.py
         env:
           SOVRN_API_KEY: ${{ secrets.SOVRN_API_KEY }}
           SOVRN_CUID: ${{ secrets.SOVRN_CUID }}
+          # Per-brand affiliate deep-link templates (JSON: brand -> template with
+          # a {url} token). Takes precedence over Sovrn per brand. Add via repo
+          # Settings -> Secrets as direct-program approvals land (Rakuten/Awin/...).
+          BRAND_AFFILIATE_TEMPLATES: ${{ secrets.BRAND_AFFILIATE_TEMPLATES }}
 
       - name: Commit if changed
         run: |
