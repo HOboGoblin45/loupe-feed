@@ -938,7 +938,10 @@ def main():
         "count": len(products),
         "products": products,
     }
-    OUT_FILE.write_text(json.dumps(catalog, indent=2, ensure_ascii=False), encoding="utf-8")
+    # Compact separators: pretty-printing made every daily commit a full-file diff
+    # and inflated the payload ~30% against jsDelivr's ~20MB/file ceiling. The
+    # app never reads this by eye; use scripts or jq locally.
+    OUT_FILE.write_text(json.dumps(catalog, separators=(",", ":"), ensure_ascii=False), encoding="utf-8")
 
     print("Loupe catalog build")
     print("\n".join(summary))

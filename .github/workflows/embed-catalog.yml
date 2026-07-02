@@ -30,3 +30,7 @@ jobs:
           git add loupe-feed/embeddings.json
           git diff --quiet --cached || git commit -m "chore: refresh catalog image embeddings"
           git push
+      - name: Purge jsDelivr cache
+        continue-on-error: true
+        run: |
+          curl -fsS "https://purge.jsdelivr.net/gh/HOboGoblin45/loupe-feed@main/loupe-feed/embeddings.json" || true

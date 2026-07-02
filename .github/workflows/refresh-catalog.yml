@@ -121,3 +121,12 @@ jobs:
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+
+      - name: Purge jsDelivr cache
+        # The committed catalog is served via cdn.jsdelivr.net, which caches
+        # aggressively; without a purge, devices keep the old feed for hours.
+        # Best-effort - never fail the run over a CDN hiccup.
+        continue-on-error: true
+        run: |
+          curl -fsS "https://purge.jsdelivr.net/gh/HOboGoblin45/loupe-feed@main/loupe-feed/catalog.json" || true
+          curl -fsS "https://purge.jsdelivr.net/gh/HOboGoblin45/loupe-feed@main/loupe-feed/embeddings.json" || true
