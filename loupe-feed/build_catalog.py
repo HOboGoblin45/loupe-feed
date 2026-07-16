@@ -811,7 +811,16 @@ def main():
         the next page (Shopify returns products with id > since_id)."""
         # Shopify hard-caps page size at 250; asking for more is silently clamped.
         limit = min(max(int(limit), 1), 250)
-        qs = f"limit={limit}"
+        # country=US pins Shopify Markets stores to their US-market presentment.
+        # Without it, /products.json prices follow the REQUESTER's geo: from CI /
+        # datacenter IPs, Brooke Callahan served 485 (AED presentment) for a top
+        # whose US price is $130 — shipped to users as "$485". A 2026-07-15 audit
+        # found 54/153 stores geo-priced this way; with country=US they return
+        # the merchant's real US price in USD (those brands are tagged USD in
+        # brands.json). Non-Markets stores ignore the param entirely and keep
+        # publishing their base currency, which the per-brand `currency` + fx
+        # table still converts as before.
+        qs = f"limit={limit}&country=US"
         if since_id is not None:
             qs += f"&since_id={since_id}"
         last = None

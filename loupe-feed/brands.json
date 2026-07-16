@@ -36,7 +36,7 @@
     {
       "brand": "Paloma Wool",
       "domain": "palomawool.com",
-      "currency": "EUR"
+      "currency": "USD"
     },
     {
       "brand": "Lisa Says Gah",
@@ -46,7 +46,7 @@
     {
       "brand": "Conner Ives",
       "domain": "connerives.com",
-      "currency": "GBP"
+      "currency": "USD"
     },
     {
       "brand": "Sir the Label",
@@ -71,7 +71,7 @@
     {
       "brand": "Musier Paris",
       "domain": "www.musier-paris.com",
-      "currency": "EUR"
+      "currency": "USD"
     },
     {
       "brand": "The Frankie Shop",
@@ -81,7 +81,7 @@
     {
       "brand": "Baserange",
       "domain": "baserange.com",
-      "currency": "EUR"
+      "currency": "USD"
     },
     {
       "brand": "Brooke Callahan",
@@ -106,7 +106,7 @@
     {
       "brand": "MISBHV",
       "domain": "misbhv.com",
-      "currency": "EUR"
+      "currency": "USD"
     },
     {
       "brand": "Ciao Lucia",
@@ -126,7 +126,7 @@
     {
       "brand": "Damson Madder",
       "domain": "damsonmadder.com",
-      "currency": "GBP"
+      "currency": "USD"
     },
     {
       "brand": "Stine Goya",
@@ -146,7 +146,7 @@
     {
       "brand": "Anni Lu",
       "domain": "anni-lu.com",
-      "currency": "EUR"
+      "currency": "USD"
     },
     {
       "brand": "Martha Calvo",
@@ -171,7 +171,7 @@
     {
       "brand": "Alighieri",
       "domain": "alighieri.com",
-      "currency": "GBP"
+      "currency": "USD"
     },
     {
       "brand": "Mondo Mondo",
@@ -196,7 +196,7 @@
     {
       "brand": "Fruity Booty",
       "domain": "fruitybooty.co.uk",
-      "currency": "GBP"
+      "currency": "USD"
     },
     {
       "brand": "Belle Anna",
@@ -206,7 +206,7 @@
     {
       "brand": "Gimaguas",
       "domain": "gimaguas.com",
-      "currency": "EUR"
+      "currency": "USD"
     },
     {
       "brand": "Los Angeles Apparel",
@@ -216,7 +216,7 @@
     {
       "brand": "Flore Flore",
       "domain": "flore-flore.com",
-      "currency": "EUR"
+      "currency": "USD"
     },
     {
       "brand": "EB Denim",
@@ -231,17 +231,17 @@
     {
       "brand": "Jeanerica",
       "domain": "jeanerica.com",
-      "currency": "SEK"
+      "currency": "USD"
     },
     {
       "brand": "Lexxola",
       "domain": "lexxola.com",
-      "currency": "GBP"
+      "currency": "USD"
     },
     {
       "brand": "DMY Studios",
       "domain": "dmystudios.com",
-      "currency": "GBP"
+      "currency": "USD"
     },
     {
       "brand": "Bonnie Clyde",
@@ -266,12 +266,12 @@
     {
       "brand": "Rat and Boa",
       "domain": "ratandboa.com",
-      "currency": "GBP"
+      "currency": "USD"
     },
     {
       "brand": "Niihai",
       "domain": "niihai.com",
-      "currency": "GBP"
+      "currency": "USD"
     },
     {
       "brand": "Eliou",
@@ -306,7 +306,7 @@
     {
       "brand": "A Bronze Age",
       "domain": "abronzeage.com",
-      "currency": "CAD"
+      "currency": "USD"
     },
     {
       "brand": "Martine Rose",
@@ -331,7 +331,7 @@
     {
       "brand": "Aeyde",
       "domain": "aeyde.com",
-      "currency": "EUR"
+      "currency": "USD"
     },
     {
       "brand": "Marland Backus",
@@ -341,12 +341,12 @@
     {
       "brand": "Mode Mischief",
       "domain": "modemischief.com",
-      "currency": "AUD"
+      "currency": "USD"
     },
     {
       "brand": "Wolf Circus",
       "domain": "www.wolfcircus.com",
-      "currency": "CAD"
+      "currency": "USD"
     },
     {
       "brand": "Fashion Brand Company",
@@ -356,7 +356,7 @@
     {
       "brand": "Apres Studio",
       "domain": "apresstudio.com.au",
-      "currency": "AUD"
+      "currency": "USD"
     },
     {
       "brand": "Buci NYC",
@@ -381,17 +381,17 @@
     {
       "brand": "Little Yarn",
       "domain": "littleyarn.com.au",
-      "currency": "AUD"
+      "currency": "USD"
     },
     {
       "brand": "Mais x Frida",
       "domain": "maisxfrida.com",
-      "currency": "EUR"
+      "currency": "USD"
     },
     {
       "brand": "Susmie's",
       "domain": "susmies.com",
-      "currency": "EUR"
+      "currency": "USD"
     },
     {
       "brand": "Mirchi by Kim",
@@ -416,7 +416,7 @@
     {
       "brand": "Susamusa",
       "domain": "susamusa.com",
-      "currency": "GBP"
+      "currency": "USD"
     },
     {
       "brand": "Le Febour",
@@ -426,7 +426,7 @@
     {
       "brand": "Maem Disko",
       "domain": "maemdisko.com",
-      "currency": "AUD"
+      "currency": "USD"
     },
     {
       "brand": "Tae Park",
@@ -451,7 +451,7 @@
     {
       "brand": "NUUK Jewelry",
       "domain": "nuukjewellery.com",
-      "currency": "EUR"
+      "currency": "USD"
     },
     {
       "brand": "Phoebe Philo",
@@ -466,7 +466,7 @@
     {
       "brand": "Toteme",
       "domain": "toteme-studio.com",
-      "currency": "SEK"
+      "currency": "USD"
     },
     {
       "brand": "Khaite",
@@ -476,7 +476,7 @@
     {
       "brand": "Dries Van Noten",
       "domain": "driesvannoten.com",
-      "currency": "EUR"
+      "currency": "USD"
     },
     {
       "brand": "Mpaz Studio",
@@ -486,7 +486,7 @@
     {
       "brand": "Carmen Says",
       "domain": "carmensays.com",
-      "currency": "EUR"
+      "currency": "USD"
     },
     {
       "brand": "Oddli",
@@ -536,12 +536,12 @@
     {
       "brand": "Ancegria",
       "domain": "ancegria.com",
-      "currency": "AUD"
+      "currency": "USD"
     },
     {
       "brand": "Nuri Studios",
       "domain": "nuristudios.com",
-      "currency": "GBP"
+      "currency": "USD"
     },
     {
       "brand": "Nafsika Skourti",
@@ -551,12 +551,12 @@
     {
       "brand": "Other Normal",
       "domain": "othernormal.com.au",
-      "currency": "AUD"
+      "currency": "USD"
     },
     {
       "brand": "Peachy Den",
       "domain": "peachyden.co.uk",
-      "currency": "GBP"
+      "currency": "USD"
     },
     {
       "brand": "By Gianna",
@@ -566,7 +566,7 @@
     {
       "brand": "Gaudir Swim",
       "domain": "gaudirswim.com",
-      "currency": "EUR"
+      "currency": "USD"
     },
     {
       "brand": "INSIS",
@@ -581,7 +581,7 @@
     {
       "brand": "Attega",
       "domain": "attegastudio.com",
-      "currency": "EUR"
+      "currency": "USD"
     },
     {
       "brand": "Moro Joyas",
@@ -591,27 +591,27 @@
     {
       "brand": "Studio Nani",
       "domain": "studio-nani.com",
-      "currency": "EUR"
+      "currency": "USD"
     },
     {
       "brand": "Paris Georgia",
       "domain": "shop.parisgeorgia.com",
-      "currency": "NZD"
+      "currency": "USD"
     },
     {
       "brand": "Of Planet Earth",
       "domain": "ofplanet.earth",
-      "currency": "GBP"
+      "currency": "USD"
     },
     {
       "brand": "Hand Over",
       "domain": "h-andover.com",
-      "currency": "EUR"
+      "currency": "USD"
     },
     {
       "brand": "Feners",
       "domain": "feners.com",
-      "currency": "EUR"
+      "currency": "USD"
     },
     {
       "brand": "Aknvas",
@@ -626,7 +626,7 @@
     {
       "brand": "Coperni",
       "domain": "coperni.com",
-      "currency": "EUR"
+      "currency": "USD"
     },
     {
       "brand": "Proenza Schouler",
@@ -682,7 +682,7 @@
     {
       "brand": "ALOHAS",
       "domain": "alohas.io",
-      "currency": "EUR"
+      "currency": "USD"
     },
     {
       "brand": "Yuni Buffa",
@@ -692,7 +692,7 @@
     {
       "brand": "Sentaler",
       "domain": "sentaler.com",
-      "currency": "CAD"
+      "currency": "USD"
     },
     {
       "brand": "Mackage",
@@ -707,12 +707,12 @@
     {
       "brand": "1XBLUE",
       "domain": "1xblue.com",
-      "currency": "GBP"
+      "currency": "USD"
     },
     {
       "brand": "Pärlemor",
       "domain": "parlemor.co.uk",
-      "currency": "GBP"
+      "currency": "USD"
     },
     {
       "brand": "Eckhaus Latta",
@@ -737,7 +737,7 @@
     {
       "brand": "Nuovo Paris",
       "domain": "nuovo-paris.com",
-      "currency": "EUR"
+      "currency": "USD"
     },
     {
       "brand": "Maketh Thou",
@@ -747,7 +747,7 @@
     {
       "brand": "C'est Nous",
       "domain": "cestnous.co",
-      "currency": "EUR"
+      "currency": "USD"
     },
     {
       "brand": "Allina Liu",
@@ -772,7 +772,7 @@
     {
       "brand": "At First Sight Studio",
       "domain": "atfirstsightstudio.com",
-      "currency": "EUR"
+      "currency": "USD"
     },
     {
       "brand": "Notte",
@@ -781,4 +781,3 @@
     }
   ]
 }
-
