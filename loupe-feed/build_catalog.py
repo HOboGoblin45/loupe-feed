@@ -167,8 +167,10 @@ CATEGORY_RULES = [
     # Compound forms (handbag/hairband/headband/crossbody...) are listed explicitly
     # because word-boundary matching won't find 'bag'/'hair' inside them — and we
     # deliberately don't want the bare 'hair' substring (it would catch "mohair").
+    # 'scarves' is listed explicitly: _word_in's plural tolerance is +s/+es, so
+    # the irregular f→ves plural never matches the 'scarf' keyword on its own.
     ("accessories", ["bag", "handbag", "crossbody", "backpack", "tote", "clutch",
-                      "pouch", "purse", "scarf", "necklace", "earring", "bracelet",
+                      "pouch", "purse", "scarf", "scarves", "necklace", "earring", "bracelet",
                       "ring", "pendant", "brooch", "anklet", "cufflink", "hat", "cap", "beret", "belt", "sunglass",
                       "jewel", "hair", "hairband", "headband", "hairclip", "barrette",
                       "scrunchie", "glove", "wallet"]),
@@ -350,19 +352,102 @@ def fetch_json(url, timeout=25):
         return json.loads(resp.read().decode("utf-8"))
 
 
-def infer_category(product_type, title):
-    # Word-boundary match (reuses the junk filter's _word_in) so a keyword only
-    # hits a whole word: 'ring' no longer matches inside "...ring"/"earring",
-    # 'hair' no longer matches inside "mohair", 'top' not inside "stop". This,
-    # plus the garment-before-accessories ordering above, is the P1-15 fix.
-    # Examples now classified correctly:
-    #   "Sleeper Linen Maxi Dress"  -> dresses   (was 'accessories' via 'ring')
-    #   "Cashmere Blanket"          -> tops fallback, NOT 'tops' via a substring
-    #   "Mohair Sweater"            -> tops       (was 'accessories' via 'hair')
-    hay = f"{product_type} {title}".lower()
+# "dress" used as an ADJECTIVE names a different garment — route it there BEFORE
+# the generic dresses rule ("Dress Pants" are bottoms, not a dress). _word_in's
+# plural tolerance covers "dress pants" / "dress shirts" / "dress shoes".
+_DRESS_ADJECTIVE = [
+    ("bottoms", ["dress pant", "dress trouser", "dress short"]),
+    ("tops",    ["dress shirt", "dress blouse"]),
+    ("shoes",   ["dress shoe", "dress boot", "dress sandal", "dress heel"]),
+]
+
+# Compound one-word dresses ("Sundress", "Maxidress", "Slipdress", "Shirtdress")
+# end in -dress but never contain "dress" as a standalone word, so the keyword
+# rules miss them (they fell to the tops fallback — Aniqa's wrong-filter report).
+# Match any word ENDING in dress/dresses while excluding the English words that
+# merely contain it (address / redress / headdress).
+_DRESS_SUFFIX_RE = re.compile(
+    r"(?<![a-z0-9])(?!address|redress|headdress)[a-z]*dress(?:es)?(?![a-z0-9])", re.I
+)
+
+
+def _category_from_keywords(hay):
+    """Category from title/type keywords, or None — the CALLER owns the fallback.
+    Word-boundary match (the junk filter's _word_in) so a keyword only hits a
+    whole word ('ring' never matches inside 'earring', 'hair' not in 'mohair'),
+    with +s/+es plural tolerance; garment rules run before accessories (P1-15).
+    Examples:
+      "Sleeper Linen Maxi Dress"  -> dresses   (not 'accessories' via 'ring')
+      "Mohair Sweater"            -> tops      (not 'accessories' via 'hair')
+      "Sundress" / "Maxidress"    -> dresses   (compound suffix)
+      "Dress Pants" / "Dress Shirt" -> bottoms / tops (adjective override)
+      "Cashmere Blanket"          -> None      (caller decides the fallback)
+    """
+    for cat, phrases in _DRESS_ADJECTIVE:
+        if any(_word_in(p, hay) for p in phrases):
+            return cat
+    if _DRESS_SUFFIX_RE.search(hay):
+        return "dresses"
     for cat, kws in CATEGORY_RULES:
         if any(_word_in(k, hay) for k in kws):
             return cat
+    return None
+
+
+# Shopify TAGS a store sets that map cleanly onto the app's 6 categories.
+# Consulted ONLY when the title + product_type carry no category word (see
+# infer_category), so a stray collection tag can never override a real garment
+# title. This rescues stylistically-named accessories: Marge Sherwood's bags
+# ("BRICK soup", "HEART CHARM", product_type "" or "ACC") are tagged BAG /
+# SHOULDER / ACC — they belong in accessories, not the tops fallback. Junk /
+# policy tags never match a category keyword, so they can't mis-classify.
+_TAG_CATEGORY = {
+    "accessory": "accessories", "accessories": "accessories", "acc": "accessories",
+    "jewelry": "accessories", "jewellery": "accessories", "fine jewelry": "accessories",
+    "bag": "accessories", "bags": "accessories", "handbag": "accessories",
+    "handbags": "accessories", "bag acc": "accessories", "bag charm": "accessories",
+    "belts": "accessories", "hats": "accessories", "scarves": "accessories",
+    "sunglasses": "accessories",
+    "dress": "dresses", "dresses": "dresses", "gown": "dresses", "gowns": "dresses",
+    "bottom": "bottoms", "bottoms": "bottoms", "pants": "bottoms", "trousers": "bottoms",
+    "skirts": "bottoms", "denim": "bottoms", "jeans": "bottoms", "shorts": "bottoms",
+    "outerwear": "outerwear", "coats": "outerwear", "jackets": "outerwear",
+    "outer": "outerwear", "coats & jackets": "outerwear", "coats and jackets": "outerwear",
+    "shoes": "shoes", "footwear": "shoes", "boots": "shoes", "sandals": "shoes",
+    "heels": "shoes", "sneakers": "shoes",
+    "top": "tops", "tops": "tops", "knitwear": "tops", "knits": "tops",
+    "sweaters": "tops", "sweaters and knitwear": "tops", "shirts": "tops",
+    "tees": "tops", "t-shirts": "tops", "blouses": "tops", "swim": "tops",
+    "swimwear": "tops", "intimates": "tops", "lingerie": "tops", "loungewear": "tops",
+}
+
+
+def category_from_tags(tags):
+    """Infer a category from Shopify product TAGS — a signal stores DO set even
+    when the title/type say nothing. Exact whole-tag hit first, then keyword
+    matching on the joined tag text ('shoulder bags', 'bag charm'). Returns None
+    when the tags say nothing about category."""
+    if not tags:
+        return None
+    tag_list = tags if isinstance(tags, list) else str(tags).split(",")
+    norm = [str(t).strip().lower() for t in tag_list if str(t).strip()]
+    for t in norm:
+        if t in _TAG_CATEGORY:
+            return _TAG_CATEGORY[t]
+    return _category_from_keywords(" ".join(norm))
+
+
+def infer_category(product_type, title, tags=None):
+    # 1. Title + product_type — the primary, most trustworthy signal.
+    cat = _category_from_keywords(f"{product_type} {title}".lower())
+    if cat:
+        return cat
+    # 2. No garment word anywhere in the title/type — lean on the store's OWN
+    #    tags before falling back (fixes tag-labeled bags/jewelry landing in tops).
+    cat = category_from_tags(tags)
+    if cat:
+        return cat
+    # 3. Nothing anywhere → tops (the app's safest 'cover' bucket).
     return "tops"
 
 
@@ -456,28 +541,49 @@ def base_name(title):
     return " ".join(words).strip() or (title or "").strip().lower()
 
 
-def first_image(product):
-    imgs = product.get("images") or []
-    for im in imgs:
+# Size-chart graphics detected from their OWN filename / alt text — stores name
+# them literally (size-chart.jpg, alt="Size Guide"). We never inspect pixels.
+_SIZECHART_IMG_RE = re.compile(
+    r"size[-_ ]?(?:chart|charts|guide|table|ref)|sizing|measurement|how[-_ ]?to[-_ ]?measure|fit[-_ ]?guide",
+    re.I,
+)
+
+
+def _is_size_chart_img(im):
+    """True when an image record's src filename or alt text says size chart."""
+    hay = f"{im.get('src') or ''} {im.get('alt') or ''}"
+    return _SIZECHART_IMG_RE.search(hay) is not None
+
+
+def _product_image_srcs(product):
+    """All image srcs with real product photos FIRST and size-chart graphics
+    pushed to the END. Some stores list the chart as images[0], which used to
+    become the tile hero (Aniqa's size-chart-photos report). A chart still
+    survives as the last resort for a product whose ONLY image is a chart, so
+    nothing renders blank."""
+    real, charts = [], []
+    for im in product.get("images") or []:
         src = im.get("src")
-        if src:
-            return src
-    return None
+        if not src:
+            continue
+        (charts if _is_size_chart_img(im) else real).append(src)
+    return real + charts
+
+
+def first_image(product):
+    srcs = _product_image_srcs(product)
+    return srcs[0] if srcs else None
 
 
 def gallery_images(product, n=5):
-    """Up to `n` image src's for the product gallery (hero first, deduped)."""
+    """Up to `n` image src's for the product gallery (hero first, deduped,
+    size-chart graphics only as a last resort)."""
     out = []
     seen = set()
-    hero = first_image(product)
-    if hero and hero not in seen:
-        seen.add(hero)
-        out.append(hero)
-    for im in product.get("images") or []:
+    for src in _product_image_srcs(product):
         if len(out) >= n:
             break
-        src = im.get("src")
-        if src and src not in seen:
+        if src not in seen:
             seen.add(src)
             out.append(src)
     return out[:n]
@@ -641,9 +747,13 @@ def normalize(product, brand, domain, fx, multi_brand=False):
     if _norm_brand(display_brand) in EXCLUDE_BRANDS:
         return None
     product_type = product.get("product_type", "")
-    category = infer_category(product_type, title)
+    category = infer_category(product_type, title, product.get("tags"))
     colors = infer_colors(title, product.get("options"),
                           tags=product.get("tags"), product_type=product_type)
+    # Product-level availability: True if ANY variant is in stock. Disambiguates
+    # sizes == [] (a one-size item) from a genuine sell-out — the app renders
+    # "Out of Stock" in the sizes slot only on an explicit false.
+    is_available = any(v.get("available") for v in (product.get("variants") or []))
     return {
         "id": f"{slugify(display_brand)}-{handle}",
         "brand": display_brand,
@@ -654,6 +764,7 @@ def normalize(product, brand, domain, fx, multi_brand=False):
         "imageUrl": img,
         "sizes": available_sizes(product),
         "images": gallery_images(product),
+        "available": is_available,
         "affiliateUrl": monetize(f"https://{domain}/products/{handle}", display_brand),
     }
 
@@ -777,7 +888,19 @@ def main():
             # Flag brands that exhausted their store without filling `cap` — usually
             # a small catalog, heavy junk/variant filtering, or a too-low page walk.
             short = " (under cap — store exhausted)" if got < cap else ""
-            summary.append(f"  {brand:<22} {got:>3} items{short}")
+            # Currency sanity: price = raw × fx[brands.json currency], so a wrong
+            # per-brand currency mis-prices the WHOLE brand by the FX factor. An
+            # absurd median USD price is that mistake's unmistakable signature —
+            # flag it in the run log so the bad brands.json line names itself.
+            # (<$12 median: a weak-currency store mistagged strong, or vice versa;
+            # >$2500 median is exempt for mainstream houses, which really do that.)
+            flag = ""
+            if bucket:
+                _prices = sorted(p["price"] for p in bucket)
+                _med = _prices[len(_prices) // 2]
+                if _med < 12 or (_med > 2500 and _norm_brand(brand) not in MAINSTREAM_BRANDS):
+                    flag = f"  ⚠ CHECK CURRENCY (median ${_med}, currency={entry.get('currency', 'USD')})"
+            summary.append(f"  {brand:<22} {got:>3} items{short}{flag}")
         except (urllib.error.URLError, urllib.error.HTTPError, ValueError, TimeoutError) as e:
             summary.append(f"  {brand:<22}  SKIP ({type(e).__name__})")
         time.sleep(0.5)  # be polite
