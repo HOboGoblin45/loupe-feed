@@ -242,6 +242,10 @@ MAINSTREAM_BRANDS = {
 EXCLUDE_BRANDS = {
     _norm_brand(b) for b in [
         "Taottao",
+        # Removed 2026-07-15 (founder decision). Deleting a brand from brands.json
+        # alone lets its items ride the grace-window carry-forward for days — the
+        # exclusion list is what makes removal IMMEDIATE and source-agnostic.
+        "Rota",
     ]
 }
 
