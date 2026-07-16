@@ -41,51 +41,65 @@ USER_AGENT = (
     "(KHTML, like Gecko) Chrome/124.0 Safari/537.36"
 )
 
-# -- Junk / non-product filter -------------------------------------------------
-# Real Shopify stores publish non-garment "products" via /products.json: gift
-# cards, returns/refunds, shipping/insurance/route add-ons, deposits, fabric
-# swatches, sample/sticker packs, gift wrap, warranties, and standalone
-# SIZE-CHART / size-guide listings. They have images and prices, so they pass
-# normalize()'s basic checks and surface as junk swipe cards. We reject a product
-# when its TITLE or its PRODUCT_TYPE matches one of these phrases (word-aware).
-# A softer rule drops anything cheap that ALSO reads like an add-on.
+# ── Junk / non-product filter ─────────────────────────────────────────────────
+# Real Shopify stores publish a lot of non-garment "products" through
+# /products.json — gift cards, returns/refunds, shipping/insurance/route add-ons,
+# deposits, fabric swatches, sample/sticker packs, gift wrap, warranties, and
+# standalone SIZE-CHART / size-guide listings. They have images and prices, so
+# they pass normalize()'s basic checks and surface as junk swipe cards. We reject
+# a product when its TITLE or its PRODUCT_TYPE matches one of these phrases
+# (case-insensitive, word-aware so "shipping" matches but "ship" inside
+# "relationship" does not). A second, softer rule drops anything cheap that ALSO
+# reads like an add-on — this catches "Route Package Protection $0.98" style
+# items without nuking genuinely cheap real products (a $12 hair clip stays).
 #
-# We deliberately DO NOT look at Shopify tags: a live-feed audit found tags carry
-# merch/policy words on ordinary garments (salereturnpolicy, womenssizechart,
-# sample-sale, gift-under-100), so matching tags would drop hundreds of real
-# items. Title + product_type only. (Images are never inspected here, so a brand
-# that ships size-chart PHOTOS as product images is unaffected by this text filter.)
+# We deliberately DO NOT look at Shopify `tags`. A live-feed audit found tags
+# routinely carry merchandising/policy words on ordinary garments —
+# "salereturnpolicy", "no-returns:2025-…", "womenssizechart", "sample-sale",
+# "gift-under-100" — so matching tags would wrongly drop hundreds of real items
+# (~90 Lisa Says Gah + ~165 Damson Madder pieces in one audit). Title + type only.
+#
+# Real examples this catches (from the live feeds): Priscavera "Free Unlimited
+# Return" ($3.98, type=return) and "Gift Card" ($150); Mirror Palais "Gift Card"
+# (type="Gift Cards"); Sir the Label "Shipping Insurance" ($3); Lisa Says Gah
+# "Easy Returns" ($2.49, type="return,package_protection").
+#
+# NOTE on brand "Taottao" (resold via Arete Studios): its garments legitimately
+# include a size-chart IMAGE in their photo gallery. That's an image, not a title
+# or product_type, so title/type matching never touches those real products —
+# which is exactly why we do NOT try to detect size charts from image content.
 JUNK_TITLE_PHRASES = [
     # Gift cards / vouchers / store credit
     "gift card", "gift cards", "gift voucher", "gift certificate", "e-gift",
     "egift", "e gift card", "e-gift card", "digital gift", "store credit",
-    # Returns / refunds / exchange-fee utility SKUs
+    # Returns / refunds / exchange-fee utility SKUs (not garments)
     "return", "returns", "refund", "refunds", "restocking",
-    # Shipping / insurance / protection add-ons (specific protection phrases only,
-    # never bare "protection" -- that would nuke "UV/Sun Protection" swimwear)
+    # Shipping / insurance / protection add-ons. NB: use SPECIFIC protection
+    # phrases, never bare "protection" — that would nuke "UV/Sun Protection"
+    # swimwear. Route/shipping/insurance already catch the real add-ons.
     "shipping", "insurance", "package protection", "shipping protection",
-    "order protection", "purchase protection", "route protection",
-    # NOTE: bare "route" deliberately NOT here — it killed real titles like
-    # "Route 66 Jacket". Cheap Route-insurance SKUs are still caught by the
-    # price-gated JUNK_ADDON_WORDS list below (they are always a few dollars).
+    "order protection", "purchase protection", "route protection", "route",
     "checkout+", "checkout plus",
     # Standalone size-chart / size-guide "products"
     "size chart", "size charts", "size guide", "sizing", "sizing guide",
     "fit guide", "measurement guide",
-    # Swatches / fabric samples / stickers / deposits / donations / wrap / warranty
-    # (never bare "sample" -- that would nuke "Sample Sale" garments)
+    # Swatches / fabric samples / stickers / deposits / donations / wrap / warranty.
+    # NB: use "fabric sample"/"sample pack"/"free sample", never bare "sample" —
+    # bare "sample" would nuke legitimate "Sample Sale" garments.
     "sticker", "fabric sample", "sample pack", "free sample", "swatch",
     "deposit", "pre-order deposit", "donation", "gift wrap", "gift-wrap",
     "warranty", "add-on", "add on", "addon",
 ]
-# Product_type values that are unambiguous utility SKUs (Shopify sets these
-# literally: "Gift Cards", "return", "return,package_protection", "Shipping").
+# Product_type values that are unambiguous utility SKUs. Shopify stores set these
+# literally ("Gift Cards", "return", "return,package_protection", "Shipping").
+# Matched word-aware against a separator-normalized product_type (see
+# _normalize_type) so "return,package_protection" and "Gift Cards" both hit.
 JUNK_PRODUCT_TYPE_PHRASES = [
     "gift card", "gift cards", "gift voucher", "voucher", "return", "returns",
     "refund", "package protection", "shipping", "insurance", "store credit",
     "donation", "warranty", "e-gift", "egift",
 ]
-# Cheaper than this AND matching an add-on word -> almost certainly not a garment.
+# Cheaper than this AND matching an add-on word → almost certainly not a garment.
 JUNK_PRICE_FLOOR = 15
 JUNK_ADDON_WORDS = [
     "shipping", "insurance", "route", "swatch", "sticker", "deposit",
@@ -96,21 +110,29 @@ JUNK_ADDON_WORDS = [
 def _word_in(needle, hay):
     """True if `needle` appears in `hay` on word boundaries (handles multi-word
     phrases). Avoids matching e.g. 'ship' inside 'relationship'."""
-    return re.search(r"(?<![a-z0-9])" + re.escape(needle) + r"(?:s|es)?(?![a-z0-9])", hay) is not None
+    return re.search(r"(?<![a-z0-9])" + re.escape(needle) + r"(?![a-z0-9])", hay) is not None
+
+
+def _word_in_plural(needle, hay):
+    """Like _word_in but also matches a simple plural (needle+s / needle+es), so
+    category keywords catch plural titles: 'skirt'->'skirts', 'boot'->'boots',
+    'dress'->'dresses', 'earring'->'earrings', 'sandal'->'sandals'. Used for
+    CATEGORY matching only — the junk filter keeps exact phrases on purpose."""
+    return re.search(r"(?<![a-z0-9])" + re.escape(needle) + r"(?:e?s)?(?![a-z0-9])", hay) is not None
 
 
 def _normalize_type(product_type):
     """Lowercase a product_type and fold separators (comma, underscore, slash,
-    hyphen) to spaces so word matching reads 'return,package_protection' as the
-    words 'return' and 'package protection'."""
+    hyphen) to spaces so word-aware matching reads 'return,package_protection'
+    as the words 'return' and 'package protection'."""
     return re.sub(r"[^a-z0-9]+", " ", str(product_type or "").lower()).strip()
 
 
 def is_junk(title, price, product_type=""):
     """True if a product looks like a non-garment add-on / utility SKU.
 
-    Checks the TITLE and the PRODUCT_TYPE only -- never Shopify tags (tags carry
-    policy/merch words that live on real garments).
+    Checks the TITLE and the PRODUCT_TYPE only — never Shopify tags (tags carry
+    policy/merchandising words that live on real garments; see the note above).
     """
     hay = (title or "").lower()
     if not hay:
@@ -123,6 +145,7 @@ def is_junk(title, price, product_type=""):
         for phrase in JUNK_PRODUCT_TYPE_PHRASES:
             if _word_in(phrase, ptype):
                 return True
+    # Cheap + add-on-flavored title → drop (keeps real low-priced products).
     if price is not None and price < JUNK_PRICE_FLOOR:
         if any(_word_in(w, hay) for w in JUNK_ADDON_WORDS):
             return True
@@ -154,6 +177,12 @@ SWIM_INTIMATES_KEYWORDS = [
 ]
 JUMPSUIT_KEYWORDS = ["jumpsuit", "romper", "playsuit", "overall", "boilersuit",
                      "unitard", "catsuit"]
+# Garment categories are listed BEFORE accessories so a real garment signal wins
+# over an incidental accessory substring (e.g. "Linen Maxi Dress" should be
+# 'dresses', not 'accessories' via the 'ring'→"...ring" / 'hair'→"mohair" trap).
+# Combined with word-boundary matching in infer_category(), this fixes both the
+# substring false-positives (blanket → 'tops', maxi dress → 'accessories') and
+# the priority ordering when a title carries two signals.
 CATEGORY_RULES = [
     # One-piece full-body garments map to 'dresses' (closest existing silhouette).
     ("dresses",     JUMPSUIT_KEYWORDS),
@@ -163,13 +192,13 @@ CATEGORY_RULES = [
     ("outerwear",   ["coat", "jacket", "blazer", "cardigan", "trench", "parka",
                      "anorak", "overcoat", "puffer"]),
     ("shoes",       ["shoe", "boot", "sandal", "mule", "flat", "sneaker", "heel",
-                     "loafer", "pump", "clog", "slipper"]),
+                     "loafer", "pump", "clog", "slipper", "ballet"]),
     # Compound forms (handbag/hairband/headband/crossbody...) are listed explicitly
     # because word-boundary matching won't find 'bag'/'hair' inside them — and we
     # deliberately don't want the bare 'hair' substring (it would catch "mohair").
     ("accessories", ["bag", "handbag", "crossbody", "backpack", "tote", "clutch",
-                      "pouch", "purse", "scarf", "necklace", "earring", "bracelet",
-                      "ring", "pendant", "brooch", "anklet", "cufflink", "hat", "cap", "beret", "belt", "sunglass",
+                      "pouch", "purse", "scarf", "scarves", "necklace", "earring", "bracelet",
+                      "ring", "pendant", "hat", "cap", "beret", "belt", "sunglass",
                       "jewel", "hair", "hairband", "headband", "hairclip", "barrette",
                       "scrunchie", "glove", "wallet"]),
     # Swim + intimates → 'tops' (best existing bucket; flag for a future real
@@ -233,110 +262,45 @@ MAINSTREAM_BRANDS = {
 }
 
 
-# Brands removed from the feed entirely by founder decision. Normalized keys, so
-# accent/spacing variants match. A removed brand is dropped no matter how it
-# enters — a direct storefront OR a multi-brand reseller's vendor field — and is
-# also stripped from curated merges and grace-window carry-forward before write.
-EXCLUDE_BRANDS = {
-    _norm_brand(b) for b in [
-        "Taottao",
-    ]
-}
-
-
 def effective_cap(brand, per_brand):
     """Per-brand product cap: mainstream houses are capped at MAINSTREAM_CAP so
     the feed stays indie-forward; everyone else keeps the full perBrand budget."""
     return MAINSTREAM_CAP if _norm_brand(brand) in MAINSTREAM_BRANDS else per_brand
 
-# ── Affiliate wrapping: per-brand programs + Sovrn catch-all ──────────────────
-# Two layers, both server-side switches (env vars via GitHub Actions secrets),
-# so monetization changes never require an app update:
+# ── Sovrn Commerce affiliate wrapping ─────────────────────────────────────────
+# When SOVRN_API_KEY is set (a GitHub Actions secret, injected as an env var),
+# every product's affiliateUrl is wrapped in a Sovrn "Redirect API" link so the
+# click is attributed to Loupe and earns commission. When the key is absent
+# (e.g. local runs, or before the Sovrn account is approved), links pass through
+# unchanged — the app still sends users straight to the brand's product page, so
+# nothing breaks. This is a server-side switch: add the secret, the next catalog
+# build monetizes all brands at once with no app update.
 #
-#   1. BRAND_AFFILIATE_TEMPLATES — JSON object mapping brand name → that brand's
-#      own affiliate deep-link template (Rakuten / Awin / Impact / FlexOffers /
-#      ShopMy…). The literal token {url} is replaced with the percent-encoded
-#      destination. Brand keys match case/spacing-insensitively (_norm_brand).
-#      Example value:
-#        {"Damson Madder": "https://www.awin1.com/cread.php?awinmid=114966&awinaffid=YOURID&ued={url}",
-#         "Ganni": "https://click.linksynergy.com/deeplink?id=YOURID&mid=XXXX&murl={url}"}
-#      Direct programs pay 3–10x Sovrn's effective rate, so they take precedence.
-#
-#   2. SOVRN_API_KEY — the catch-all: any brand WITHOUT a template is wrapped in
-#      a Sovrn Redirect API link (https://redirect.viglink.com/?key=<KEY>&u=<dest>
-#      &cuid=<id>). When neither env var is set (local runs, pre-approval), links
-#      pass through unchanged and the app still opens the brand's product page.
-#
-# Precedence: brand template > Sovrn > raw. Idempotent for both layers. A
-# carried-forward or curated product that is still Sovrn-wrapped is UNWRAPPED
-# and re-wrapped the first build after its brand's template lands.
+# Format (Sovrn Redirect API): https://redirect.viglink.com/?key=<KEY>&u=<dest>&cuid=<id>
+#   key  = your Commerce API key (Platform → Commerce → Settings → "Key" icon)
+#   u    = the destination URL, percent-encoded
+#   cuid = optional Custom Tracking ID (<=32 alphanumeric chars) for reporting
+# Confirm this exact format against one link from the dashboard's "Create Links"
+# tool before going wide; the base/params are isolated here so it's a one-line tweak.
+# TODO: verify the exact redirect format against a Sovrn dashboard "Create Links"
+# output before enabling the key (base host + param names). The base/params are
+# isolated here so confirming it is a one-line change.
 SOVRN_API_KEY = os.environ.get("SOVRN_API_KEY", "").strip()
 SOVRN_REDIRECT_BASE = "https://redirect.viglink.com/"
 SOVRN_CUID = os.environ.get("SOVRN_CUID", "loupeapp").strip()
 
 
-def _load_brand_templates():
-    """Parse BRAND_AFFILIATE_TEMPLATES (JSON env var) → {_norm_brand: template}.
+def monetize(url):
+    """Wrap a destination URL in a Sovrn affiliate redirect when a key is set.
 
-    Fail-soft: malformed JSON or entries without a {url} token are skipped with
-    a warning — a bad template must never take the whole catalog build down.
+    Idempotent: a URL that is ALREADY a Sovrn redirect is returned unchanged, so
+    re-running the build (or re-wrapping curated links that were saved already
+    wrapped) can never double-wrap into redirect.viglink.com/?...&u=redirect...
     """
-    raw = os.environ.get("BRAND_AFFILIATE_TEMPLATES", "").strip()
-    if not raw:
-        return {}
-    try:
-        data = json.loads(raw)
-    except ValueError:
-        print("WARNING: BRAND_AFFILIATE_TEMPLATES is not valid JSON - ignoring it.")
-        return {}
-    if not isinstance(data, dict):
-        print("WARNING: BRAND_AFFILIATE_TEMPLATES must be a JSON object - ignoring it.")
-        return {}
-    templates = {}
-    for brand_name, tpl in data.items():
-        if isinstance(tpl, str) and "{url}" in tpl:
-            templates[_norm_brand(brand_name)] = tpl
-        else:
-            print(f"WARNING: affiliate template for {brand_name!r} lacks a {{url}} token - skipped.")
-    return templates
-
-
-BRAND_AFFILIATE_TEMPLATES = _load_brand_templates()
-
-
-def _sovrn_unwrap(url):
-    """Return the original destination if url is a Sovrn redirect, else url unchanged."""
-    if isinstance(url, str) and url.startswith(SOVRN_REDIRECT_BASE):
-        query = urllib.parse.parse_qs(urllib.parse.urlparse(url).query)
-        dest = query.get("u", [""])[0]
-        if dest:
-            return dest
-    return url
-
-
-def monetize(url, brand=None):
-    """Wrap a destination URL for affiliate attribution.
-
-    Precedence: the brand's own program template (BRAND_AFFILIATE_TEMPLATES) →
-    Sovrn catch-all (SOVRN_API_KEY) → unchanged. Idempotent: URLs already
-    wrapped by the applicable layer are returned as-is, so re-running the build
-    (or re-wrapping curated links saved wrapped) can never double-wrap.
-    """
-    if not isinstance(url, str) or not url:
-        return url
-
-    tpl = BRAND_AFFILIATE_TEMPLATES.get(_norm_brand(brand)) if brand else None
-    if tpl:
-        prefix = tpl.split("{url}", 1)[0]
-        if prefix and url.startswith(prefix):
-            return url  # already wrapped with this brand's own template
-        dest = _sovrn_unwrap(url)  # direct program beats the Sovrn catch-all
-        return tpl.replace("{url}", urllib.parse.quote(dest, safe=""))
-
     if not SOVRN_API_KEY:
         return url
     # Already wrapped (e.g. a curated link or a carried-forward product) → leave it.
-    if url.startswith(SOVRN_REDIRECT_BASE):
+    if isinstance(url, str) and url.startswith(SOVRN_REDIRECT_BASE):
         return url
     params = {"key": SOVRN_API_KEY, "u": url}
     if SOVRN_CUID:
@@ -350,62 +314,128 @@ def fetch_json(url, timeout=25):
         return json.loads(resp.read().decode("utf-8"))
 
 
-def infer_category(product_type, title):
-    # Word-boundary match (reuses the junk filter's _word_in) so a keyword only
-    # hits a whole word: 'ring' no longer matches inside "...ring"/"earring",
-    # 'hair' no longer matches inside "mohair", 'top' not inside "stop". This,
-    # plus the garment-before-accessories ordering above, is the P1-15 fix.
-    # Examples now classified correctly:
-    #   "Sleeper Linen Maxi Dress"  -> dresses   (was 'accessories' via 'ring')
-    #   "Cashmere Blanket"          -> tops fallback, NOT 'tops' via a substring
-    #   "Mohair Sweater"            -> tops       (was 'accessories' via 'hair')
-    hay = f"{product_type} {title}".lower()
-    for cat, kws in CATEGORY_RULES:
-        if any(_word_in(k, hay) for k in kws):
+# "dress" used as an ADJECTIVE names a *different* garment — "dress pants" are
+# bottoms, "dress shirt" is a top, "dress shoes" are shoes. These must beat the
+# generic 'dress' -> dresses rule, so they're checked first.
+_DRESS_ADJECTIVE = [
+    ("bottoms",     ["dress pant", "dress pants", "dress trouser", "dress short", "dress shorts"]),
+    ("tops",        ["dress shirt", "dress top"]),
+    ("shoes",       ["dress shoe", "dress shoes", "dress boot", "dress sandal", "dress heel"]),
+    ("accessories", ["dress sock", "dress socks", "dress belt"]),
+]
+# Compound ONE-WORD dresses the word-boundary matcher misses because 'dress' isn't
+# a standalone word inside them: sundress, maxidress, minidress, slipdress,
+# shirtdress, midi-dress. A whole word ENDING in 'dress' is a dress — excluding the
+# ordinary English words that also end that way (address/redress) and headdress
+# (an accessory), so those never get mis-filed as dresses.
+_DRESS_SUFFIX_RE = re.compile(r"(?<![a-z0-9])(?!address|redress|headdress)[a-z]*dress(?![a-z0-9])", re.I)
+
+
+# Shopify TAGS a store sets that map cleanly onto our 6 categories. Consulted ONLY
+# when the title + product_type give no category (see infer_category) — so a bag
+# tagged 'BAG'/'ACC' or jewelry tagged 'JEWELRY' is classified from the store's own
+# label instead of falling into the 'tops' bucket. Junk/policy tags never appear
+# here and never match a category keyword, so they can't mis-classify anything.
+_TAG_CATEGORY = {
+    "accessory": "accessories", "accessories": "accessories", "acc": "accessories",
+    "jewelry": "accessories", "jewellery": "accessories", "fine jewelry": "accessories",
+    "bag": "accessories", "bags": "accessories", "handbag": "accessories",
+    "handbags": "accessories", "bag acc": "accessories", "bag charm": "accessories",
+    "belts": "accessories", "hats": "accessories", "scarves": "accessories", "sunglasses": "accessories",
+    "dress": "dresses", "dresses": "dresses", "gown": "dresses", "gowns": "dresses",
+    "bottom": "bottoms", "bottoms": "bottoms", "pants": "bottoms", "trousers": "bottoms",
+    "skirts": "bottoms", "denim": "bottoms", "jeans": "bottoms", "shorts": "bottoms",
+    "outerwear": "outerwear", "coats": "outerwear", "jackets": "outerwear", "outer": "outerwear",
+    "coats & jackets": "outerwear", "coats and jackets": "outerwear",
+    "shoes": "shoes", "footwear": "shoes", "boots": "shoes", "sandals": "shoes",
+    "heels": "shoes", "sneakers": "shoes",
+    "top": "tops", "tops": "tops", "knitwear": "tops", "knits": "tops", "sweaters": "tops",
+    "sweaters and knitwear": "tops", "shirts": "tops", "tees": "tops", "t-shirts": "tops",
+    "blouses": "tops", "swim": "tops", "swimwear": "tops", "intimates": "tops",
+    "lingerie": "tops", "loungewear": "tops",
+}
+
+
+def _category_from_keywords(hay):
+    """Return a category if the title/type keyword rules match `hay`, else None (NO
+    'tops' fallback here — the caller decides what to do on a miss). Word-boundary +
+    plural-aware, garment-before-accessories: 'ring' won't match inside 'earring',
+    'skirts' classifies like 'skirt', 'sundress'->dresses, 'dress pants'->bottoms."""
+    for cat, phrases in _DRESS_ADJECTIVE:      # dress pants/shirt/shoes -> real garment
+        if any(_word_in_plural(p, hay) for p in phrases):
             return cat
+    if _DRESS_SUFFIX_RE.search(hay):           # sundress / maxidress / slipdress
+        return "dresses"
+    for cat, kws in CATEGORY_RULES:
+        if any(_word_in_plural(k, hay) for k in kws):
+            return cat
+    return None
+
+
+def category_from_tags(tags):
+    """Infer a category from Shopify product TAGS — a signal stores DO set even when
+    the title/type carry no garment word (a bag tagged 'BAG', jewelry tagged 'ACC').
+    Exact whole-tag category hit first, then keyword matching on the joined tag text
+    ('bag charm', 'shoulder bags'). Returns None when the tags say nothing."""
+    if not tags:
+        return None
+    tag_list = tags if isinstance(tags, list) else str(tags).split(",")
+    norm = [str(t).strip().lower() for t in tag_list if str(t).strip()]
+    for t in norm:
+        if t in _TAG_CATEGORY:
+            return _TAG_CATEGORY[t]
+    return _category_from_keywords(" ".join(norm))
+
+
+def infer_category(product_type, title, tags=None):
+    # 1. Title + product_type — the primary, most trustworthy signal.
+    cat = _category_from_keywords(f"{product_type} {title}".lower())
+    if cat:
+        return cat
+    # 2. No garment word in the title/type — lean on Shopify's OWN tags before the
+    #    fallback. This rescues stylistically-named accessories: a bag titled
+    #    "BRICK soup" tagged 'BAG' now lands in accessories, not the tops fallback.
+    cat = category_from_tags(tags)
+    if cat:
+        return cat
+    # 3. Nothing anywhere → tops (the app's safest 'cover' bucket).
     return "tops"
 
 
 def infer_colors(title, options, tags=None, product_type=""):
-    """Infer up to 2 color tags for the colorway actually shown.
-
-    Filter-accuracy fix: a Shopify product lists EVERY colorway it sells in its
-    variant color option, but the catalog shows ONE image (one colorway). Reading
-    all variant values tags a black-pictured top that also comes in pink as 'pink'
-    so it wrongly surfaces under the Pink filter. So read the SHOWN colorway from
-    the title/product_type FIRST, and only fall back to tags + variant color
-    values when the title names no color at all."""
-    def _from(hay):
-        found = []
-        for tag, kws in COLOR_RULES:
-            if any(k in hay for k in kws):
-                found.append(tag)
-        if any(h in hay for h in MULTICOLOR_HINTS):
-            found.append("multicolor")
-        seen, out = set(), []
-        for c in found:
-            if c in VALID_COLORS and c not in seen:
-                seen.add(c)
-                out.append(c)
-        return out[:2]
-    # 1) The colorway the image shows is almost always named in the title.
-    title_hay = (title or "").lower()
+    """Infer up to 2 color tags. Color almost never lives in the title alone — it
+    lives in the variant color option, the product tags, and sometimes the
+    product_type. We read all of them so the catch-all 'neutral' fallback only
+    fires when there's genuinely no color signal anywhere."""
+    hay = (title or "").lower()
     if product_type:
-        title_hay += " " + str(product_type).lower()
-    shown = _from(title_hay)
-    if shown:
-        return shown
-    # 2) Untitled colorway -> fall back to tags + the variant color values.
-    fb = ""
+        hay += " " + str(product_type).lower()
+    # Shopify `tags` may be a comma string or a list — normalize either way.
     if tags:
-        fb += " " + (tags.lower() if isinstance(tags, str)
-                     else " ".join(str(t).lower() for t in tags))
+        if isinstance(tags, str):
+            hay += " " + tags.lower()
+        else:
+            hay += " " + " ".join(str(t).lower() for t in tags)
+    # Pull values from EVERY option whose name looks like a color/colour option,
+    # not just the first. Variant values are where the color usually is.
     for opt in options or []:
         name = (opt.get("name") or "").lower()
         if "color" in name or "colour" in name:
-            fb += " " + " ".join(str(v).lower() for v in opt.get("values", []))
-    out = _from(fb)
-    return out if out else ["neutral"]
+            hay += " " + " ".join(str(v).lower() for v in opt.get("values", []))
+    found = []
+    for tag, kws in COLOR_RULES:
+        if any(k in hay for k in kws):
+            found.append(tag)
+    if any(h in hay for h in MULTICOLOR_HINTS):
+        found.append("multicolor")
+    # de-dup, keep order, cap at 2. VALID_COLORS guards against emitting any tag
+    # the app can't filter (e.g. there is no 'gray' tag — grey maps to 'neutral').
+    seen, out = set(), []
+    for c in found:
+        if c in VALID_COLORS and c not in seen:
+            seen.add(c)
+            out.append(c)
+    return out[:2] if out else ["neutral"]
 
 
 def slugify(brand):
@@ -456,27 +486,44 @@ def base_name(title):
     return " ".join(words).strip() or (title or "").strip().lower()
 
 
-def first_image(product):
+# Some stores include a size-chart / measurement graphic among a product's photos
+# — sometimes as image #1. It's a real image (passes _image_ok), but it must never
+# be the tile hero and shouldn't lead the swipe gallery. We detect it from the
+# image's OWN filename/alt text (reliable: stores name them "size-chart.jpg",
+# alt="Size Guide") — never from pixel content (see the Taottao note up top).
+_SIZECHART_IMG_RE = re.compile(
+    r"size[\s._%-]*chart|size[\s._%-]*guide|sizing|size[\s._%-]*ref|measurement|"
+    r"measuring|how[\s._%-]*to[\s._%-]*measure|fit[\s._%-]*guide|size[\s._%-]*table|sizechart",
+    re.I,
+)
+
+
+def _is_size_chart_img(im):
+    return bool(_SIZECHART_IMG_RE.search(f"{im.get('src', '')} {im.get('alt', '')}"))
+
+
+def _product_image_srcs(product):
+    """Product image src's with size-chart graphics pushed to the END, so the hero
+    and gallery lead with real product photos. A chart survives only as a last
+    resort (a product whose ONLY image is a chart still renders, not blank)."""
     imgs = product.get("images") or []
-    for im in imgs:
-        src = im.get("src")
-        if src:
-            return src
-    return None
+    real   = [im.get("src") for im in imgs if im.get("src") and not _is_size_chart_img(im)]
+    charts = [im.get("src") for im in imgs if im.get("src") and _is_size_chart_img(im)]
+    return real + charts
+
+
+def first_image(product):
+    srcs = _product_image_srcs(product)
+    return srcs[0] if srcs else None
 
 
 def gallery_images(product, n=5):
-    """Up to `n` image src's for the product gallery (hero first, deduped)."""
-    out = []
-    seen = set()
-    hero = first_image(product)
-    if hero and hero not in seen:
-        seen.add(hero)
-        out.append(hero)
-    for im in product.get("images") or []:
+    """Up to `n` image src's for the product gallery (real photos first, size
+    charts pushed to the end, deduped)."""
+    out, seen = [], set()
+    for src in _product_image_srcs(product):
         if len(out) >= n:
             break
-        src = im.get("src")
         if src and src not in seen:
             seen.add(src)
             out.append(src)
@@ -636,14 +683,14 @@ def normalize(product, brand, domain, fx, multi_brand=False):
         vendor = (product.get("vendor") or "").strip()
         if vendor and vendor.lower() not in ("", "frontpage"):
             display_brand = vendor
-    # Brand removed from the feed entirely (founder decision) — drop it regardless
-    # of which storefront it entered through (direct or reseller vendor field).
-    if _norm_brand(display_brand) in EXCLUDE_BRANDS:
-        return None
-    product_type = product.get("product_type", "")
-    category = infer_category(product_type, title)
+    category = infer_category(product_type, title, product.get("tags"))
     colors = infer_colors(title, product.get("options"),
                           tags=product.get("tags"), product_type=product_type)
+    # Product-level availability: True if ANY variant is in stock. This disambiguates
+    # sizes==[] (which otherwise means either "sized item, fully sold out" OR "one-size
+    # item with no size option"). The app uses this to show "Out of Stock" on the tile
+    # (in place of the sizes line) only when the whole product is unbuyable.
+    is_available = any(v.get("available") for v in (product.get("variants") or []))
     return {
         "id": f"{slugify(display_brand)}-{handle}",
         "brand": display_brand,
@@ -653,8 +700,9 @@ def normalize(product, brand, domain, fx, multi_brand=False):
         "colorTags": colors,
         "imageUrl": img,
         "sizes": available_sizes(product),
+        "available": is_available,
         "images": gallery_images(product),
-        "affiliateUrl": monetize(f"https://{domain}/products/{handle}", display_brand),
+        "affiliateUrl": monetize(f"https://{domain}/products/{handle}"),
     }
 
 
@@ -774,19 +822,47 @@ def main():
                     break  # enough — don't fetch further pages
             if bucket:
                 by_brand[brand] = bucket
+            # Price-sanity flag: a WRONG per-brand `currency` in brands.json mis-prices
+            # EVERY item from that brand by the FX factor, so an absurd median USD price
+            # almost always means the currency is wrong (e.g. a store that publishes USD
+            # tagged EGP shows ~2% of the real price; a weak-currency store tagged USD
+            # shows a huge number). Surfaced in the run log (never filtered) so a human
+            # can eyeball it. Mainstream houses are legitimately expensive, so they're
+            # exempt from the high-side check.
+            price_flag = ""
+            prices = sorted(p["price"] for p in bucket if isinstance(p.get("price"), (int, float)))
+            if prices:
+                med = prices[len(prices) // 2]
+                cur = entry.get("currency", "USD")
+                if med < 12:
+                    price_flag = f"   ⚠ CHECK CURRENCY (median ${med} — very low for {cur})"
+                elif med > 2500 and _norm_brand(brand) not in MAINSTREAM_BRANDS:
+                    price_flag = f"   ⚠ CHECK CURRENCY (median ${med} — very high for {cur})"
             # Flag brands that exhausted their store without filling `cap` — usually
             # a small catalog, heavy junk/variant filtering, or a too-low page walk.
             short = " (under cap — store exhausted)" if got < cap else ""
-            summary.append(f"  {brand:<22} {got:>3} items{short}")
+            summary.append(f"  {brand:<22} {got:>3} items{short}{price_flag}")
         except (urllib.error.URLError, urllib.error.HTTPError, ValueError, TimeoutError) as e:
             summary.append(f"  {brand:<22}  SKIP ({type(e).__name__})")
         time.sleep(0.5)  # be polite
 
-    # NOTE: carry-forward for brands that returned nothing this run now happens at
-    # the LABEL level (Shopify vendor), with a grace window, AFTER the curated merge
-    # below — see "Grace window" further down. Doing it per-label rather than per
-    # configured store keeps niche designers sold through multi-brand boutiques from
-    # flickering in and out of the catalog from one day to the next.
+    # Carry forward any brand that returned NOTHING this run but existed in the last
+    # good catalog — reuse its previous products (already normalized + monetized) so
+    # a momentary failure never drops the brand. seen_ids guards against duplicates.
+    carried_total = 0
+    for entry in cfg["brands"]:
+        brand = entry["brand"]
+        if brand in by_brand:
+            continue
+        carried = [p for p in prev_by_brand.get(brand, []) if p.get("id") and p["id"] not in seen_ids]
+        if carried:
+            for p in carried:
+                seen_ids.add(p["id"])
+            by_brand[brand] = carried
+            carried_total += len(carried)
+            summary.append(f"  {brand:<22} {len(carried):>3} items (carried)")
+    if carried_total:
+        summary.append(f"  -> carried forward {carried_total} items for brands that briefly failed")
 
     # Round-robin interleave across brands so the published feed is never grouped
     # brand-by-brand (the app shuffles too, but a mixed feed is the right default
@@ -817,69 +893,12 @@ def main():
                     continue
                 seen_ids.add(pid)
                 if p.get("affiliateUrl"):
-                    p["affiliateUrl"] = monetize(p["affiliateUrl"], p.get("brand"))
+                    p["affiliateUrl"] = monetize(p["affiliateUrl"])
                 products.append(p)
                 added += 1
             summary.append(f"  {'(curated)':<22} {added:>3} items")
         except (ValueError, OSError) as e:
             summary.append(f"  (curated)              SKIP ({type(e).__name__})")
-
-    # ── Grace window: keep niche LABELS from flickering out ────────────────────
-    # A product's "brand" is its Shopify vendor, so multi-brand boutiques (concept
-    # stores) contribute many labels from a single configured domain. Because we pull
-    # only a capped slice of each store's in-stock items, the exact set of long-tail
-    # labels that surfaces shifts a little every run — so a label with one or two
-    # pieces would otherwise blink in and out. We stamp every LIVE product with
-    # `lastSeenAt`, then carry any label that was in the last good catalog but is
-    # MISSING today forward — as long as it was live within GRACE_DAYS. Pieces gone
-    # longer than that age out on their own, so a genuinely-dead label still leaves.
-    GRACE_DAYS = 7
-    now = datetime.now(timezone.utc)
-    now_iso = now.strftime("%Y-%m-%dT%H:%M:%SZ")
-
-    # Mark everything pulled live this run (scraped + curated) as seen right now.
-    for _p in products:
-        _p["lastSeenAt"] = now_iso
-
-    def _seen_within(p, days):
-        """True if p was last live within `days` (falls back to addedAt)."""
-        stamp = p.get("lastSeenAt") or p.get("addedAt")
-        if not stamp:
-            return False
-        try:
-            dt = datetime.strptime(stamp, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
-        except ValueError:
-            return False
-        return (now - dt) <= timedelta(days=days)
-
-    present_labels = {(p.get("brand") or "").strip() for p in products}
-    grace_labels = grace_items = 0
-    for label, prev_items in prev_by_brand.items():
-        if not label or label in present_labels:
-            continue
-        kept = []
-        for p in prev_items:
-            pid = p.get("id")
-            if not pid or pid in seen_ids:
-                continue
-            # Re-validate against the CURRENT junk filter (title + price; carried
-            # items no longer carry product_type). A tightening of is_junk() then
-            # purges old junk within ONE cycle instead of lingering the whole grace
-            # window — e.g. a size-chart / gift-card SKU that slipped through before.
-            if is_junk(p.get("name"), p.get("price")):
-                continue
-            if _seen_within(p, GRACE_DAYS):
-                seen_ids.add(pid)
-                kept.append(p)  # keep its existing lastSeenAt — do NOT refresh it
-        if kept:
-            products.extend(kept)
-            grace_labels += 1
-            grace_items += len(kept)
-    if grace_items:
-        summary.append(
-            f"  -> grace-carried {grace_items} items across {grace_labels} labels "
-            f"(live within {GRACE_DAYS}d, missing today)"
-        )
 
     # ── Drop products whose image won't actually render (no blank tiles) ───────
     # Validate concurrently (I/O-bound). SAFETY is evaluated PER BRAND: if a
@@ -942,34 +961,8 @@ def main():
             if total_dropped:
                 summary.append(f"  -> dropped {total_dropped} items whose image did not load")
 
-    # Final de-dup: collapse identical brand+name repeats. A piece is sometimes
-    # listed once per colorway with the COLOR NOT in its title, so several entries
-    # share the exact same brand + name (different handles -> ids). The id de-dup
-    # can't catch these, and they read as the SAME card shown twice. Keep the FIRST
-    # of each identical (brand, name); differently-named colorways stay, so variety
-    # is preserved.
-    _seen_bn = set()
-    _deduped = []
-    for prod in products:
-        _bn = ((prod.get("brand") or "").strip().lower(), (prod.get("name") or "").strip().lower())
-        if _bn in _seen_bn:
-            continue
-        _seen_bn.add(_bn)
-        _deduped.append(prod)
-    if len(_deduped) != len(products):
-        summary.append(f"  -> de-duped {len(products) - len(_deduped)} same-name repeats")
-    products = _deduped
-
-    # Safety net: guarantee removed brands never ship, even if carried forward from
-    # the previous catalog or merged in from curated.json (normalize() already drops
-    # them from the live pull; this catches every other path in one place).
-    if EXCLUDE_BRANDS:
-        _before_excl = len(products)
-        products = [p for p in products if _norm_brand(p.get("brand")) not in EXCLUDE_BRANDS]
-        if len(products) != _before_excl:
-            summary.append(f"  -> removed {_before_excl - len(products)} products from excluded brands")
-
-    # `now` / `now_iso` were already computed in the grace-window step above.
+    now = datetime.now(timezone.utc)
+    now_iso = now.strftime("%Y-%m-%dT%H:%M:%SZ")
     # Products that existed before we started stamping dates are backdated so the
     # FIRST run after this upgrade doesn't flag the entire catalog as "new".
     backdated_iso = (now - timedelta(days=30)).strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -995,13 +988,7 @@ def main():
         "count": len(products),
         "products": products,
     }
-    # Compact separators: pretty-printing made every daily commit a full-file diff
-    # and inflated the payload ~30% against jsDelivr's ~20MB/file ceiling. The
-    # app never reads this by eye; use scripts or jq locally.
-    OUT_FILE.write_text(json.dumps(catalog, separators=(",", ":"), ensure_ascii=False), encoding="utf-8")
-    # Version stamp for the app-side download probe (see update_meta.py).
-    from update_meta import write_meta
-    write_meta()
+    OUT_FILE.write_text(json.dumps(catalog, indent=2, ensure_ascii=False), encoding="utf-8")
 
     print("Loupe catalog build")
     print("\n".join(summary))
