@@ -106,15 +106,31 @@ jobs:
           # brands.json push) can land between checkout and push. Rebase onto the
           # latest main and retry once on a non-fast-forward so an approved brand's
           # commit is never lost to a rejected push.
+          #
+          # 2026-07-15 hardening (the run-63 silent drop): when ANOTHER bot commit
+          # rewrote catalog.json between our checkout and push, the plain
+          # `pull --rebase` hit a content conflict, left HEAD parked on the new
+          # base, and `git push HEAD` then "succeeded" as an up-to-date NO-OP —
+          # the freshly built catalog was silently discarded while every step
+          # stayed green. Two fixes:
+          #   • `-X theirs`: in a REBASE, 'theirs' = the commit being replayed —
+          #     i.e. OUR just-generated catalog. Generated files should always
+          #     take the newest build, so auto-resolve conflicts in our favor.
+          #   • verify the push actually advanced the remote to OUR commit; a
+          #     no-op push now fails loudly instead of masquerading as success.
           branch="${GITHUB_REF_NAME:-main}"
           push_with_rebase() {
-            git pull --rebase --autostash origin "$branch"
-            git push origin "HEAD:$branch"
+            git rebase --abort >/dev/null 2>&1 || true   # clear any half-done rebase from a failed try
+            git pull --rebase --autostash -X theirs origin "$branch" || return 1
+            git push origin "HEAD:$branch" || return 1
+            # Confirm OUR catalog commit is what the remote now points at.
+            git fetch --quiet origin "$branch"
+            [[ "$(git rev-parse HEAD)" == "$(git rev-parse "origin/$branch")" ]] || return 1
           }
           if push_with_rebase; then
             echo "Catalog updated."
           else
-            echo "Push failed (likely non-fast-forward) — rebasing and retrying once."
+            echo "Push failed or did not land — rebasing and retrying once."
             sleep 3
             if push_with_rebase; then
               echo "Catalog updated on retry."
