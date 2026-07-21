@@ -778,6 +778,56 @@
       "brand": "Notte",
       "domain": "nottejewelry.com",
       "currency": "USD"
+    },
+    {
+      "brand": "The Line by K",
+      "domain": "thelinebyk.com",
+      "currency": "USD"
+    },
+    {
+      "brand": "Donde Esteban",
+      "domain": "dondeesteban.co",
+      "currency": "EUR"
+    },
+    {
+      "brand": "Szade",
+      "domain": "szade.com",
+      "currency": "USD"
+    },
+    {
+      "brand": "Marfa Stance",
+      "domain": "marfastance.com",
+      "currency": "USD"
+    },
+    {
+      "brand": "The Isla",
+      "domain": "the-isla.com",
+      "currency": "USD"
+    },
+    {
+      "brand": "6397",
+      "domain": "6397news.com",
+      "currency": "USD"
+    },
+    {
+      "brand": "Mali Marea",
+      "domain": "malimarea.com",
+      "currency": "USD"
+    },
+    {
+      "brand": "Olivia Hurst",
+      "domain": "oliviahurst.com",
+      "currency": "USD"
+    },
+    {
+      "brand": "28natelier",
+      "domain": "28natelier.com",
+      "currency": "USD"
+    },
+    {
+      "brand": "Darbary Paris",
+      "domain": "darbaryparis.com",
+      "currency": "EUR"
     }
   ]
 }
