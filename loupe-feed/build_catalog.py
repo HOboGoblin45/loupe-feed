@@ -1126,6 +1126,37 @@ def main():
         else:
             product["addedAt"] = now_iso
 
+    # ── Cutout merge (Look Builder) ────────────────────────────────────────────
+    # cutout_catalog.py publishes alpha-matted WebP cutouts on the orphan `cutouts`
+    # branch (jsDelivr-served) + a tiny id->{aspect,status} manifest. Stamp every
+    # product that has a READY cutout with its transparent-image URL so the Look
+    # Builder can float pieces on a colored artboard; anything missing/fallback
+    # renders as a framed tile app-side. Fetched from RAW (uncached) so a fresh
+    # cutout batch reflects on the next catalog build; fail-open (no manifest →
+    # no cutouts, the app already handles that).
+    try:
+        _cut_url = "https://raw.githubusercontent.com/HOboGoblin45/loupe-feed/cutouts/cutouts.json"
+        _cut_req = urllib.request.Request(_cut_url, headers={"User-Agent": USER_AGENT})
+        with urllib.request.urlopen(_cut_req, timeout=15) as _r:
+            _cut = json.loads(_r.read().decode("utf-8")).get("items", {})
+        _cut_n = 0
+        for product in products:
+            info = _cut.get(product["id"])
+            if not info:
+                continue
+            product["cutoutStatus"] = info.get("status", "fallback")
+            if info.get("status") == "ready":
+                product["cutoutUrl"] = (
+                    "https://cdn.jsdelivr.net/gh/HOboGoblin45/loupe-feed@cutouts/img/"
+                    f"{product['id']}.webp"
+                )
+                if info.get("aspect"):
+                    product["cutoutAspect"] = info["aspect"]
+                _cut_n += 1
+        summary.append(f"  -> merged {_cut_n} ready cutouts (of {len(_cut)} in manifest)")
+    except (urllib.error.URLError, urllib.error.HTTPError, ValueError, TimeoutError, OSError):
+        summary.append("  -> no cutout manifest yet (Look Builder falls back to framed tiles)")
+
     catalog = {
         "generatedAt": now_iso,
         "count": len(products),
