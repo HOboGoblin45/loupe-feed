@@ -82,14 +82,17 @@ def cut(img, session):
     import numpy as np
     a = np.asarray(alpha, dtype=np.float32) / 255.0
     coverage = float((a > 0.5).mean())
-    status = "ready" if 0.03 <= coverage <= 0.97 else "fallback"
-
+    aspect = round(w / h, 4)
+    if not (0.03 <= coverage <= 0.97):
+        # Unusable matte (near-empty, or nothing removed) — record the fallback so
+        # we don't retry it every run, but store NO file. The app renders a framed
+        # tile for fallbacks; an orphaned webp would just bloat the branch.
+        return None, aspect, "fallback"
     if w > MAX_W:
         trimmed = trimmed.resize((MAX_W, round(h * MAX_W / w)), Image.LANCZOS)
-        w, h = trimmed.size
     buf = io.BytesIO()
     trimmed.save(buf, format="WEBP", quality=85, method=6)
-    return buf.getvalue(), round(w / h, 4), status
+    return buf.getvalue(), aspect, "ready"
 
 
 def main():
@@ -114,32 +117,50 @@ def main():
     products = fetch_catalog()
     log(f"catalog: {len(products)} products · manifest already has {len(items)}")
 
-    # Prune manifest entries for products that left the catalog (keeps it lean and
-    # stops the app pointing cutoutUrls at delisted items).
+    changed = False
+
+    # Prune manifest entries for products that left the catalog — but GUARD it:
+    # a truncated/partial catalog fetch must never trigger a mass-deletion that the
+    # workflow then commits (wiping most cutouts). Only prune when the fetch looks
+    # complete and the removal is a small fraction of the manifest.
     live_ids = {p.get("id") for p in products if p.get("id")}
-    for gone in [pid for pid in items if pid not in live_ids]:
-        items.pop(gone, None)
-        f = img_dir / f"{gone}.webp"
-        if f.exists():
-            try:
-                f.unlink()
-            except OSError:
-                pass
+    gone_ids = [pid for pid in items if pid not in live_ids]
+    if gone_ids and len(products) >= 1000 and len(gone_ids) <= max(50, int(len(items) * 0.3)):
+        for gone in gone_ids:
+            items.pop(gone, None)
+            f = img_dir / f"{gone}.webp"
+            if f.exists():
+                try:
+                    f.unlink()
+                except OSError:
+                    pass
+        changed = True
+        log(f"pruned {len(gone_ids)} delisted from manifest")
+    elif gone_ids:
+        log(f"SKIP prune ({len(gone_ids)} would-remove, catalog={len(products)}) — looks partial, not committing deletions")
 
     todo = [p for p in products if p.get("id") and p.get("imageUrl") and p["id"] not in items]
     log(f"to cut this run: {min(len(todo), args.limit)} of {len(todo)} remaining")
     if not todo:
-        # Still rewrite the manifest header so the version stamp/count refresh.
-        _write_manifest(manifest_path, items)
-        log("nothing to do — backfill complete.")
+        # Only rewrite (and thus commit) when something actually changed, so a
+        # complete-backfill night doesn't churn a fresh timestamp commit forever.
+        if changed:
+            _write_manifest(manifest_path, items)
+        log("nothing to cut — backfill complete.")
+        Path(os.environ.get("GITHUB_OUTPUT", os.devnull)).open("a").write("remaining=0\n")
         return
 
     session = new_session(MODEL)
     t0 = time.time()
-    done = ok = fb = fail = 0
+    done = ok = fb = fail = attempts = 0
+    # Bound total attempts so a run of dead image URLs can't walk the whole catalog
+    # and blow the CI time budget (each fetch can hang to TIMEOUT). A run either
+    # reaches `limit` successes or gives up after limit*2 attempts, then COMMITS.
+    attempt_cap = args.limit * 2
     for p in todo:
-        if done >= args.limit:
+        if done >= args.limit or attempts >= attempt_cap:
             break
+        attempts += 1
         pid = p["id"]
         img = fetch_image(p["imageUrl"])
         if img is None:
@@ -153,20 +174,21 @@ def main():
             continue
         done += 1
         if webp is None:
-            # Record the fallback so we don't retry it every run (keeps backfill moving);
-            # the app renders a framed tile for status='fallback'.
-            items[pid] = {"aspect": p.get("cutoutAspect") or 0.8, "status": "fallback"}
+            # Record the fallback so we don't retry it every run (keeps backfill
+            # moving); the app renders a framed tile for status='fallback'.
+            items[pid] = {"aspect": aspect or 0.8, "status": "fallback"}
             fb += 1
         else:
             (img_dir / f"{pid}.webp").write_bytes(webp)
             items[pid] = {"aspect": aspect, "status": status}
-            ok += 1 if status == "ready" else 0
-            fb += 1 if status == "fallback" else 0
+            ok += 1
+        changed = True
         if done % 50 == 0:
-            log(f"  {done}/{min(len(todo), args.limit)} ready={ok} fallback={fb} fail={fail} {time.time()-t0:.0f}s")
+            log(f"  {done}/{min(len(todo), args.limit)} ready={ok} fallback={fb} fail={fail} attempts={attempts} {time.time()-t0:.0f}s")
 
-    _write_manifest(manifest_path, items)
-    remaining = len(todo) - done
+    if changed:
+        _write_manifest(manifest_path, items)
+    remaining = max(0, len(todo) - done)
     log(f"wrote manifest: {len(items)} total · this run ready={ok} fallback={fb} fail={fail} "
         f"({done} processed, {remaining} still remaining) {time.time()-t0:.0f}s")
     # Signal to the workflow whether another pass is worthwhile.
