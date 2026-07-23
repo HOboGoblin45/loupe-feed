@@ -81,10 +81,16 @@ jobs:
       - name: Build catalog
         run: python loupe-feed/build_catalog.py
         env:
-          SOVRN_API_KEY: ${{ secrets.SOVRN_API_KEY }}
-          SOVRN_CUID: ${{ secrets.SOVRN_CUID }}
+          # SOVRN UNWRAPPED (2026-07-23, Charlie-approved): the Sovrn/viglink
+          # account was DENIED, so wrapped links earned $0 while routing every
+          # click through a dead redirect — and post-Phia-scandal, indie fashion
+          # is hyper-alert to affiliate games. Omitting SOVRN_API_KEY makes
+          # build_catalog emit CLEAN DIRECT links (monetize() falls through).
+          # To re-enable if Sovrn ever approves useloupe.shop: restore
+          #   SOVRN_API_KEY: ${{ secrets.SOVRN_API_KEY }}
+          #   SOVRN_CUID: ${{ secrets.SOVRN_CUID }}
           # Per-brand affiliate deep-link templates (JSON: brand -> template with
-          # a {url} token). Takes precedence over Sovrn per brand. Add via repo
+          # a {url} token). Still active — takes precedence per brand. Add via repo
           # Settings -> Secrets as direct-program approvals land (Rakuten/Awin/...).
           BRAND_AFFILIATE_TEMPLATES: ${{ secrets.BRAND_AFFILIATE_TEMPLATES }}
 

@@ -80,8 +80,19 @@ bc = load({"SOVRN_API_KEY": "k123"})
 assert bc.monetize(None, "Ganni") is None
 assert bc.monetize("", "Ganni") == ""
 
+# ── 8. NO key → legacy Sovrn-wrapped links are UNWRAPPED to direct URLs ───────
+# (Sovrn account denied 2026-07-23: without this, carried-forward/curated
+# products would keep dead viglink redirects for weeks after key removal.)
+bc = load({})
+legacy = "https://redirect.viglink.com/?" + urllib.parse.urlencode(
+    {"key": "0fef505edead", "u": RAW, "cuid": "loupeapp"}
+)
+assert bc.monetize(legacy, "Peachy Den") == RAW
+assert bc.monetize(legacy) == RAW
+assert bc.monetize(RAW, "Peachy Den") == RAW  # raw stays raw, still
+
 # Leave the process env clean for anything running after us in the same shell.
 for key in ("SOVRN_API_KEY", "SOVRN_CUID", "BRAND_AFFILIATE_TEMPLATES"):
     os.environ.pop(key, None)
 
-print("test_affiliate_wrappers: 7 fixture groups passed")
+print("test_affiliate_wrappers: 8 fixture groups passed")

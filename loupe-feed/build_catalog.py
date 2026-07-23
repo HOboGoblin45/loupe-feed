@@ -340,7 +340,12 @@ def monetize(url, brand=None):
         return tpl.replace("{url}", urllib.parse.quote(dest, safe=""))
 
     if not SOVRN_API_KEY:
-        return url
+        # No catch-all key = affiliate wrapping is OFF (Sovrn account denied,
+        # 2026-07-23). UNWRAP any legacy Sovrn redirect instead of passing it
+        # through: carried-forward (grace-window) and curated products keep the
+        # affiliateUrl they were stored with, so without this the dead viglink
+        # wrappers would linger in the catalog for weeks after the key removal.
+        return _sovrn_unwrap(url)
     # Already wrapped (e.g. a curated link or a carried-forward product) → leave it.
     if url.startswith(SOVRN_REDIRECT_BASE):
         return url
