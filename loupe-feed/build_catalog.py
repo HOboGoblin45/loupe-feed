@@ -87,6 +87,11 @@ JUNK_PRODUCT_TYPE_PHRASES = [
 ]
 # Cheaper than this AND matching an add-on word -> almost certainly not a garment.
 JUNK_PRICE_FLOOR = 15
+# Below this (USD), a listing is a data artifact regardless of title — a placeholder,
+# deposit, mispriced sample, or lone accessory-tag row. Curated fashion doesn't retail
+# under $5, and a "$1" price on the brand directory reads as broken data to shoppers
+# and investors. Dropped unconditionally. (Real cheap items observed bottom out ~$6.)
+HARD_PRICE_FLOOR = 5
 JUNK_ADDON_WORDS = [
     "shipping", "insurance", "route", "swatch", "sticker", "deposit",
     "donation", "gift", "warranty", "add-on", "add on", "addon", "wrap", "credit",
@@ -114,6 +119,11 @@ def is_junk(title, price, product_type=""):
     """
     hay = (title or "").lower()
     if not hay:
+        return True
+    # Absolute price floor: a sub-$5 listing is junk on its own (placeholder/deposit/
+    # mispriced sample) — no add-on word required. Kills "$1" artifacts that otherwise
+    # surface as "from $1" on the brand directory.
+    if price is not None and price < HARD_PRICE_FLOOR:
         return True
     for phrase in JUNK_TITLE_PHRASES:
         if _word_in(phrase, hay):
