@@ -1247,6 +1247,20 @@ def main():
         "count": len(products),
         "products": products,
     }
+    # Optional remote RANKER config: if loupe-feed/ranker_config.json exists, embed
+    # it as catalog.ranker so the app can tune the Discover ranker weights (or KILL
+    # the multi-signal boost via {"enabled": false}) with no OTA. Absent/malformed →
+    # omit the block (the app falls back to its built-in defaults). Fail-open.
+    try:
+        _ranker_path = HERE / "ranker_config.json"
+        if _ranker_path.exists():
+            _ranker_cfg = json.loads(_ranker_path.read_text(encoding="utf-8"))
+            if isinstance(_ranker_cfg, dict):
+                _ranker_cfg.pop("_comment", None)
+                catalog["ranker"] = _ranker_cfg
+                summary.append(f"  -> embedded ranker config (version={_ranker_cfg.get('version')})")
+    except (ValueError, OSError) as e:
+        summary.append(f"  -> ranker_config.json present but unreadable ({type(e).__name__}); omitted")
     # Compact separators: pretty-printing made every daily commit a full-file diff
     # and inflated the payload ~30% against jsDelivr's ~20MB/file ceiling. The
     # app never reads this by eye; use scripts or jq locally.

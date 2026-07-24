@@ -1,0 +1,11 @@
+{
+  "_comment": "Remote Discover ranker config, embedded into catalog.json as `ranker` by build_catalog.py and read by the app (src/lib/rankerConfig.ts). Edit + push, then trigger the Refresh catalog workflow to ship WITHOUT an app update. KILL SWITCH: set enabled=false to revert the deck to long-term visual taste only. All weights clamped app-side [0,3]; negMargin/debugSampleRate [0,1]. Bump `version` on every change so telemetry (ranker_debug) attributes results to the right config.",
+  "enabled": true,
+  "wSession": 0.8,
+  "wNegative": 0.5,
+  "wPrice": 0.25,
+  "wEngagement": 0.25,
+  "negMargin": 0.08,
+  "debugSampleRate": 0.05,
+  "version": "2026-07-24-a"
+}
