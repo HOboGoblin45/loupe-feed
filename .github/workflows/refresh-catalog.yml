@@ -38,8 +38,12 @@ permissions:
 # which could drop a just-added brand. cancel-in-progress: false means an
 # in-flight run finishes (rather than being killed mid-commit) before the next
 # queued run starts.
+#
+# The group name (`loupe-main-writers`) is SHARED with embed-catalog.yml: both
+# workflows commit+push to `main` (catalog.json / embeddings.json / catalog.meta.json),
+# so they must never run concurrently and race the rebase/verify push.
 concurrency:
-  group: refresh-catalog
+  group: loupe-main-writers
   cancel-in-progress: false
 
 jobs:
@@ -102,7 +106,7 @@ jobs:
           # process_requests.py (Stage B) can edit brands.json; build_catalog.py
           # writes catalog.json. Commit both. new_brands.json is intentionally
           # NOT committed (it's gitignored, run-local handoff to the notify step).
-          if [[ -z "$(git status --porcelain loupe-feed/brands.json loupe-feed/catalog.json)" ]]; then
+          if [[ -z "$(git status --porcelain loupe-feed/brands.json loupe-feed/catalog.json loupe-feed/catalog.meta.json)" ]]; then
             echo "No catalog changes."
             exit 0
           fi

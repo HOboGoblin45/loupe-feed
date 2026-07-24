@@ -54,7 +54,10 @@ jobs:
         run: |
           set -e
           if git ls-remote --exit-code --heads origin cutouts >/dev/null 2>&1; then
-            git clone --branch cutouts --single-branch \
+            # --depth 1: the cutouts branch grows every night; we only ever append
+            # commits on top of its tip, so a shallow clone is enough and avoids
+            # re-downloading the whole (ever-growing) image history each run.
+            git clone --branch cutouts --single-branch --depth 1 \
               "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" cutrepo
           else
             mkdir cutrepo && cd cutrepo
@@ -82,6 +85,25 @@ jobs:
           fi
           git commit -m "cutouts: batch $(date -u +%Y-%m-%dT%H:%M:%SZ)"
           git push origin cutouts
+
+          # ── Pin support: record the pushed commit sha in the manifest ──────────
+          # jsDelivr caches the branch→commit mapping (and 404s) up to 12h, so a webp
+          # pushed here at 04:xx can 404 against yesterday's cached commit when the
+          # 08:00 catalog stamps it as @cutouts. Point the manifest at THIS commit
+          # (it contains every image just pushed) so build_catalog.py pins immutable
+          # @<sha> URLs. A tiny follow-up commit records it; best-effort — the cutouts
+          # are already live above, and build_catalog falls back to @cutouts if the
+          # sha is absent, so a hiccup here is non-fatal.
+          set +e
+          SHA="$(git rev-parse HEAD)"
+          python -c "import json,sys; p='cutouts.json'; m=json.load(open(p,encoding='utf-8')); m['sha']=sys.argv[1]; json.dump(m, open(p,'w',encoding='utf-8'), separators=(',',':'))" "$SHA"
+          git add cutouts.json
+          if ! git diff --quiet --cached; then
+            git commit -m "cutouts: record push sha $SHA for jsDelivr pinning" \
+              && git push origin cutouts \
+              || echo "WARNING: failed to record cutout sha (build_catalog falls back to @cutouts)"
+          fi
+          true
 
       - name: Purge jsDelivr (manifest only; image paths are unique so never stale)
         continue-on-error: true

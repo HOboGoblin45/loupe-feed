@@ -6,6 +6,14 @@ on:
 permissions:
   contents: write
 
+# Share ONE queue with every workflow that pushes to `main` (refresh-catalog) so a
+# long embed run (up to 3h) can't commit embeddings.json / catalog.meta.json
+# concurrently with the 08:00 catalog build and lose one side's write or publish a
+# mismatched sha. cancel-in-progress: false lets an in-flight run finish first.
+concurrency:
+  group: loupe-main-writers
+  cancel-in-progress: false
+
 jobs:
   embed:
     runs-on: ubuntu-latest
@@ -28,11 +36,41 @@ jobs:
         run: python update_meta.py
       - name: Commit embeddings.json
         run: |
+          set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add loupe-feed/embeddings.json loupe-feed/catalog.meta.json
-          git diff --quiet --cached || git commit -m "chore: refresh catalog image embeddings"
-          git push
+          if git diff --quiet --cached; then
+            echo "No embedding changes."
+            exit 0
+          fi
+          git commit -m "chore: refresh catalog image embeddings"
+          # A long embed run can race the 08:00 catalog commit. Rebase onto the
+          # latest main and VERIFY the remote actually advanced to OUR commit before
+          # declaring success — the same hardening refresh-catalog.yml uses (a plain
+          # push after a racing commit can "succeed" as an up-to-date no-op and
+          # silently drop the embeddings). -X theirs: in a rebase 'theirs' is OUR
+          # replayed commit, so generated files always take the newest build.
+          branch="${GITHUB_REF_NAME:-main}"
+          push_with_rebase() {
+            git rebase --abort >/dev/null 2>&1 || true   # clear any half-done rebase
+            git pull --rebase --autostash -X theirs origin "$branch" || return 1
+            git push origin "HEAD:$branch" || return 1
+            git fetch --quiet origin "$branch"
+            [[ "$(git rev-parse HEAD)" == "$(git rev-parse "origin/$branch")" ]] || return 1
+          }
+          if push_with_rebase; then
+            echo "Embeddings updated."
+          else
+            echo "Push failed or did not land — rebasing and retrying once."
+            sleep 3
+            if push_with_rebase; then
+              echo "Embeddings updated on retry."
+            else
+              echo "ERROR: embeddings push failed after retry." >&2
+              exit 1
+            fi
+          fi
       - name: Purge jsDelivr cache
         continue-on-error: true
         run: |

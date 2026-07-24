@@ -755,7 +755,6 @@ def normalize(product, brand, domain, fx, multi_brand=False):
     # of which storefront it entered through (direct or reseller vendor field).
     if _norm_brand(display_brand) in EXCLUDE_BRANDS:
         return None
-    product_type = product.get("product_type", "")
     category = infer_category(product_type, title, product.get("tags"))
     colors = infer_colors(title, product.get("options"),
                           tags=product.get("tags"), product_type=product_type)
@@ -795,6 +794,10 @@ def main():
     prev_ids = set()
     prev_added = {}
     prev_by_brand = {}
+    # id -> {cutoutUrl, cutoutStatus, cutoutAspect} from the previous catalog. Reused
+    # by the cutout merge below so a failed/implausible manifest fetch carries cutouts
+    # FORWARD instead of shipping a catalog that strips every product's cutoutUrl.
+    prev_cutouts = {}
     if OUT_FILE.exists():
         try:
             prev = json.loads(OUT_FILE.read_text(encoding="utf-8"))
@@ -806,6 +809,12 @@ def main():
                 if p.get("addedAt"):
                     prev_added[pid] = p["addedAt"]
                 prev_by_brand.setdefault(p.get("brand"), []).append(p)
+                if p.get("cutoutUrl") or p.get("cutoutStatus"):
+                    prev_cutouts[pid] = {
+                        "cutoutUrl": p.get("cutoutUrl"),
+                        "cutoutStatus": p.get("cutoutStatus"),
+                        "cutoutAspect": p.get("cutoutAspect"),
+                    }
         except (ValueError, OSError):
             pass
 
@@ -1011,6 +1020,11 @@ def main():
                 continue
             if _seen_within(p, GRACE_DAYS):
                 seen_ids.add(pid)
+                # Badge grace-carried items STALE: their price/sizes are frozen at
+                # last-good-scrape, so the app can flag them and the digest can avoid
+                # phantom "sale"/restock alerts off a frozen price (see
+                # price_drop_push.load_catalog / compute_alerts).
+                p["stale"] = True
                 kept.append(p)  # keep its existing lastSeenAt — do NOT refresh it
         if kept:
             products.extend(kept)
@@ -1137,13 +1151,54 @@ def main():
     # product that has a READY cutout with its transparent-image URL so the Look
     # Builder can float pieces on a colored artboard; anything missing/fallback
     # renders as a framed tile app-side. Fetched from RAW (uncached) so a fresh
-    # cutout batch reflects on the next catalog build; fail-open (no manifest →
-    # no cutouts, the app already handles that).
+    # cutout batch reflects on the next catalog build.
+    #
+    # FAIL-SAFE, NOT FAIL-WIPE: the build must NEVER ship a catalog that strips the
+    # cutoutUrls it had yesterday. A raw.githubusercontent hiccup (or an implausibly
+    # small manifest) used to be swallowed and the catalog committed with ZERO
+    # cutoutUrls — every product lost its cutout for ≥24h. So on any fetch failure OR
+    # when the freshly-merged "ready" count collapses to <50% of yesterday's, we
+    # RE-STAMP each still-present product from prev_cutouts (harvested from the prior
+    # catalog above) instead of shipping stripped. The build still succeeds either way.
+    #
+    # URL PINNING: jsDelivr caches the branch→commit mapping (and 404s) up to 12h, so
+    # a webp pushed at 04:xx and stamped @cutouts in the 08:00 catalog can 404 against
+    # yesterday's cached commit. When the manifest records the push commit `sha`
+    # (cutout-catalog.yml writes it), pin URLs to the immutable @<sha>; otherwise fall
+    # back to @cutouts (back-compat with manifests written before that change).
+    _prev_ready = sum(1 for v in prev_cutouts.values() if v.get("cutoutUrl"))
+
+    def _carry_prev_cutouts():
+        """Re-stamp still-present products from the previous catalog's cutouts,
+        never clobbering a fresh stamp already applied this run. Returns the number
+        of cutoutUrls carried forward."""
+        carried = 0
+        for product in products:
+            if product.get("cutoutUrl"):
+                continue  # keep a fresh (or grace-carried) stamp
+            info = prev_cutouts.get(product["id"])
+            if not info:
+                continue
+            if info.get("cutoutStatus"):
+                product["cutoutStatus"] = info["cutoutStatus"]
+            if info.get("cutoutUrl"):
+                product["cutoutUrl"] = info["cutoutUrl"]
+                if info.get("cutoutAspect"):
+                    product["cutoutAspect"] = info["cutoutAspect"]
+                carried += 1
+        return carried
+
     try:
         _cut_url = "https://raw.githubusercontent.com/HOboGoblin45/loupe-feed/cutouts/cutouts.json"
         _cut_req = urllib.request.Request(_cut_url, headers={"User-Agent": USER_AGENT})
         with urllib.request.urlopen(_cut_req, timeout=15) as _r:
-            _cut = json.loads(_r.read().decode("utf-8")).get("items", {})
+            _cut_manifest = json.loads(_r.read().decode("utf-8"))
+        _cut = _cut_manifest.get("items", {}) if isinstance(_cut_manifest, dict) else {}
+        # Prefer the immutable push commit; fall back to the @cutouts branch ref.
+        _cut_sha = (_cut_manifest.get("sha") or _cut_manifest.get("commit")) \
+            if isinstance(_cut_manifest, dict) else None
+        _cut_ref = _cut_sha if _cut_sha else "cutouts"
+        _cut_base = f"https://cdn.jsdelivr.net/gh/HOboGoblin45/loupe-feed@{_cut_ref}/img/"
         _cut_n = 0
         for product in products:
             info = _cut.get(product["id"])
@@ -1151,16 +1206,41 @@ def main():
                 continue
             product["cutoutStatus"] = info.get("status", "fallback")
             if info.get("status") == "ready":
-                product["cutoutUrl"] = (
-                    "https://cdn.jsdelivr.net/gh/HOboGoblin45/loupe-feed@cutouts/img/"
-                    f"{product['id']}.webp"
-                )
+                product["cutoutUrl"] = f"{_cut_base}{product['id']}.webp"
                 if info.get("aspect"):
                     product["cutoutAspect"] = info["aspect"]
                 _cut_n += 1
-        summary.append(f"  -> merged {_cut_n} ready cutouts (of {len(_cut)} in manifest)")
+        # Plausibility guard: a healthy manifest never loses half its ready cutouts
+        # overnight (the backfill only grows). A collapse means a partial/empty
+        # publish — carry yesterday's cutouts forward rather than stripping them.
+        if _prev_ready and _cut_n < 0.5 * _prev_ready:
+            _carried = _carry_prev_cutouts()
+            print(
+                f"WARNING: cutout manifest unavailable/implausible (merged {_cut_n} "
+                f"ready vs {_prev_ready} previously) — carried {_carried} cutoutUrls "
+                f"from previous catalog",
+                file=sys.stderr,
+            )
+            summary.append(
+                f"  -> merged {_cut_n} ready cutouts but that is <50% of the previous "
+                f"{_prev_ready}; carried {_carried} forward (implausible manifest)"
+            )
+        else:
+            summary.append(
+                f"  -> merged {_cut_n} ready cutouts (of {len(_cut)} in manifest, "
+                f"pinned @{_cut_sha[:7] if _cut_sha else 'cutouts'})"
+            )
     except (urllib.error.URLError, urllib.error.HTTPError, ValueError, TimeoutError, OSError):
-        summary.append("  -> no cutout manifest yet (Look Builder falls back to framed tiles)")
+        _carried = _carry_prev_cutouts()
+        print(
+            f"WARNING: cutout manifest unavailable/implausible (fetch failed) — "
+            f"carried {_carried} cutoutUrls from previous catalog",
+            file=sys.stderr,
+        )
+        summary.append(
+            f"  -> cutout manifest fetch failed; carried {_carried} cutoutUrls from "
+            f"previous catalog (no fail-wipe)"
+        )
 
     catalog = {
         "generatedAt": now_iso,

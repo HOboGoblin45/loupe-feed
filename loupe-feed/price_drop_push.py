@@ -130,6 +130,14 @@ def compute_alerts(items, live_by_id):
         if not live:
             continue
         seen.add(pid)
+        # NOTE (stale / grace-carried items): live.get("stale") is True when the item
+        # is missing from the current scrape and its price/sizes are FROZEN (see
+        # build_catalog.py grace-window). A frozen price can manufacture a phantom
+        # "sale" vs price_at_save. We deliberately do NOT drop stale items here yet:
+        # this digest MUST mirror the app's src/lib/dresserAlerts.ts (see file header),
+        # else the push and the in-app "Sale & restock alerts" screen would disagree.
+        # TODO: add the SAME stale-skip to dresserAlerts.ts, then enable it here:
+        #   if live.get("stale"): continue
 
         sale = None
         if is_meaningful_price_drop(live.get("price"), it.get("price_at_save")):
@@ -251,7 +259,12 @@ def sb_all(path, params, page=1000):
 
 
 def load_catalog():
-    """{product_id: {price, sizes, brand, name}} from the published catalog."""
+    """{product_id: {price, sizes, brand, name, stale}} from the published catalog.
+
+    `stale` mirrors build_catalog.py's grace-carry flag: the item is missing from the
+    live scrape and its price/sizes are FROZEN at last-good-scrape. Comparing a frozen
+    price to a user's price_at_save can manufacture a phantom "sale", so the flag is
+    carried here for compute_alerts to consult (see the note there)."""
     data = _req(CATALOG_URL)
     products = data.get("products", data) if isinstance(data, dict) else data
     out = {}
@@ -264,6 +277,7 @@ def load_catalog():
             "sizes": p.get("sizes") or [],
             "brand": p.get("brand") or "",
             "name": p.get("name") or "",
+            "stale": bool(p.get("stale")),
         }
     return out
 
@@ -316,7 +330,18 @@ def pushed_today(at_iso):
 
 
 def recently_active(at_iso, days=ACTIVE_SKIP_DAYS):
-    """True when the user opened the app within `days` (→ on-device digest covers them)."""
+    """True when the user opened the app within `days` (→ on-device digest covers them).
+
+    NOTE (self-throttle risk): `at_iso` is profiles.updated_at (see load_users), used
+    here as an activity proxy. If a Supabase touch-trigger bumps updated_at on ANY row
+    write — including this script's own last_marketing_push_* stamp — then a user we
+    push today looks "active" for the next `days` and gets skipped, throttling the
+    digest with our OWN writes. Mitigations in place: the stamping PATCH writes ONLY
+    the marketing columns, and pushed_today()+signature already gate re-sends.
+    TODO: when profiles gains a dedicated activity column (e.g. last_active_at /
+    last_seen_at that is NOT bumped by service-role marketing writes), switch
+    load_users' `active_at` select to read that instead of updated_at.
+    """
     if days <= 0 or not at_iso:
         return False
     try:
@@ -331,18 +356,36 @@ def recently_active(at_iso, days=ACTIVE_SKIP_DAYS):
 
 
 def send_expo_pushes(messages):
-    sent = 0
+    """POST digests to Expo in ≤100-message batches.
+
+    Returns (succeeded_idx, tickets):
+      • succeeded_idx — the set of message indices whose batch POST was accepted by
+        Expo. main() stamps the 1/day marketing cap ONLY for these users, so a user
+        in a FAILED batch is retried next run instead of being marked "pushed" and
+        skipped until their digest content changes (the old code stamped everyone).
+      • tickets — per-message Expo response tickets, aligned to `messages` (None where
+        the batch failed), so main() can null out DeviceNotRegistered push_tokens.
+    """
+    succeeded_idx = set()
+    tickets = [None] * len(messages)
     headers = {"Content-Type": "application/json", "Accept": "application/json"}
     if EXPO_ACCESS_TOKEN:
         headers["Authorization"] = f"Bearer {EXPO_ACCESS_TOKEN}"
     for i in range(0, len(messages), 100):
         batch = messages[i : i + 100]
         try:
-            _req(EXPO_PUSH_URL, method="POST", headers=headers, body=batch)
-            sent += len(batch)
+            resp = _req(EXPO_PUSH_URL, method="POST", headers=headers, body=batch)
+            succeeded_idx.update(range(i, i + len(batch)))
+            # Expo replies {"data": [ {status, id?, message?, details?}, ... ]} in
+            # batch order — keep each ticket so DeviceNotRegistered can be actioned.
+            data = resp.get("data") if isinstance(resp, dict) else None
+            if isinstance(data, list):
+                for j, ticket in enumerate(data):
+                    if i + j < len(tickets):
+                        tickets[i + j] = ticket
         except urllib.error.URLError as e:
             print(f"  ! Expo push batch failed: {e}", file=sys.stderr)
-    return sent
+    return succeeded_idx, tickets
 
 
 def build_digests(users, items, catalog):
@@ -398,16 +441,43 @@ def main():
             print(f"  → {m['title']} | {m['body']}")
         return
 
-    sent = send_expo_pushes(messages)
-    print(f"Sent {sent} digest push(es).")
+    succeeded_idx, tickets = send_expo_pushes(messages)
+    print(f"Sent {len(succeeded_idx)} of {len(messages)} digest push(es).")
 
+    # `messages`, `stamps` and `tickets` are index-aligned (build_digests appends to
+    # messages/stamps in lockstep; send_expo_pushes returns tickets aligned to
+    # messages). Two rules when recording the result:
+    #   1. Only stamp the 1/day marketing cap for users whose batch actually sent —
+    #      a failed batch is retried next run rather than silently marked "pushed".
+    #   2. If Expo reports a token as DeviceNotRegistered, null out push_token so we
+    #      stop pushing to a dead device (and do NOT stamp — nothing was delivered).
     now_iso = datetime.now(timezone.utc).isoformat()
-    for uid, sig in stamps:
+    for i, (uid, sig) in enumerate(stamps):
+        ticket = tickets[i] if i < len(tickets) else None
+        if isinstance(ticket, dict) and ticket.get("status") == "error":
+            details = ticket.get("details") or {}
+            if details.get("error") == "DeviceNotRegistered":
+                try:
+                    sb(
+                        "profiles",
+                        method="PATCH",
+                        params=f"id=eq.{uid}",
+                        body={"push_token": None},
+                        extra_headers={"Prefer": "return=minimal"},
+                    )
+                except urllib.error.URLError as e:
+                    print(f"  ! token clear failed for {uid}: {e}", file=sys.stderr)
+                continue  # dead token — delivered nothing, so don't stamp the cap
+        if i not in succeeded_idx:
+            continue  # batch POST failed — leave unstamped so it retries next run
         try:
             sb(
                 "profiles",
                 method="PATCH",
                 params=f"id=eq.{uid}",
+                # Marketing columns ONLY. If a DB touch-trigger bumps profiles.updated_at
+                # on write, keeping this PATCH minimal limits the recently_active()
+                # self-throttle flagged there (never PATCH unrelated profile fields).
                 body={"last_marketing_push_at": now_iso, "last_marketing_push_sig": sig},
                 extra_headers={"Prefer": "return=minimal"},
             )
