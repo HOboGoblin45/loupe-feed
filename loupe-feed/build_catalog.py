@@ -256,6 +256,9 @@ EXCLUDE_BRANDS = {
         # alone lets its items ride the grace-window carry-forward for days — the
         # exclusion list is what makes removal IMMEDIATE and source-agnostic.
         "Rota",
+        # Removed 2026-07-29 (founder decision).
+        "Mackage",
+        "Marfa Stance",
     ]
 }
 
