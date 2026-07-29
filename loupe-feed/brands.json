@@ -27,6 +27,7 @@
       "siteUrl": "https://geminishop.com",
       "cap": 400,
       "perVendorCap": 24,
+      "pageDelaySeconds": 1.5,
       "productTypes": ["womens"],
       "inStockOnly": true,
       "utm": "utm_source=loupe&utm_medium=app&utm_campaign=gemini",

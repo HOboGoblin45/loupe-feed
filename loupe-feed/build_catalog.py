@@ -1016,6 +1016,14 @@ def main():
                     rgot += 1
                 if rgot >= rcap:
                     break
+                # PACE the partner walk. A retailer needs many more pages than a
+                # brand (we filter ~75% of a general boutique's catalog away), and
+                # Shopify answers a fast burst with 429 `local_rate_limited` — the
+                # first CI run harvested only 89 of ~400 items because of exactly
+                # that. This sleep runs BETWEEN page fetches (the generator only
+                # advances when this loop body finishes), which is what keeps the
+                # walk under the throttle.
+                time.sleep(float(r.get("pageDelaySeconds", 1.5)))
             retailer_counts[rid] = rgot
             if rgot:
                 retailer_meta[rid] = {k: v for k, v in r.items()
