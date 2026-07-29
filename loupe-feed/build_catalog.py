@@ -1019,7 +1019,8 @@ def main():
             retailer_counts[rid] = rgot
             if rgot:
                 retailer_meta[rid] = {k: v for k, v in r.items()
-                                      if k in ("name", "tint", "siteUrl", "store")}
+                                      if k in ("name", "tint", "tintBorder", "tintInk",
+                                               "siteUrl", "store")}
             summary.append(f"  {('[retailer] ' + str(r.get('name', rid))):<22} "
                            f"{rgot:>3} items across {len(per_vendor)} labels")
         except (urllib.error.URLError, urllib.error.HTTPError, ValueError, TimeoutError) as e:
