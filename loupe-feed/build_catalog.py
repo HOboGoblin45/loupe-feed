@@ -205,8 +205,13 @@ COLOR_RULES = [
     ("neutral", ["cream", "ecru", "beige", "natural", "sand", "stone", "oat", "wheat",
                  "bone", "nude", "off-white", "butter", "vanilla", "grey", "gray", "charcoal", "silver"]),
 ]
-MULTICOLOR_HINTS = ["print", "floral", "stripe", "check", "gingham", "multi", "foulard",
-                    "patchwork", "rainbow", "tie-dye", "leopard", "animal", "paisley", "ditsy"]
+# Word-boundary matched (see infer_colors), with only +s/+es plural tolerance —
+# so the -ed/-y INFLECTIONS have to be listed explicitly or real signal is lost
+# ("Long printed skirt" and "Striped Tee" would stop reading as multicolour).
+MULTICOLOR_HINTS = ["print", "printed", "floral", "stripe", "striped", "check", "checked",
+                    "gingham", "multi", "multicolor", "multicolour", "foulard",
+                    "patchwork", "rainbow", "tie-dye", "tie dye", "leopard", "animal",
+                    "paisley", "ditsy", "polka dot", "polka", "plaid", "tartan"]
 
 VALID_COLORS = {"black", "white", "pink", "blue", "green", "brown", "red", "neutral", "multicolor"}
 
@@ -381,6 +386,14 @@ _DRESS_ADJECTIVE = [
     ("bottoms", ["dress pant", "dress trouser", "dress short"]),
     ("tops",    ["dress shirt", "dress blouse"]),
     ("shoes",   ["dress shoe", "dress boot", "dress sandal", "dress heel"]),
+    # SLEEVE-LENGTH override (added 2026-07-29). "short" is a legitimate bottoms
+    # keyword, but it is ALSO a sleeve length, and the bottoms rule is evaluated
+    # before tops/outerwear — so "Short Sleeve Top", "Louis Polo Short Sleeve" and
+    # "Short Sleeve Hoodie" were all filed as BOTTOMS (11 of 12 such items in the
+    # live catalog). Same class of collision as "Flat Knit Sweater" vs shoes.
+    ("tops",      ["short sleeve", "short-sleeve", "long sleeve", "long-sleeve",
+                   "flat knit", "cap sleeve"]),
+    ("outerwear", ["short trench", "short coat", "short jacket"]),
 ]
 
 # Compound one-word dresses ("Sundress", "Maxidress", "Slipdress", "Shirtdress")
@@ -484,10 +497,22 @@ def infer_colors(title, options, tags=None, product_type=""):
     values when the title names no color at all."""
     def _from(hay):
         found = []
+        # WORD-BOUNDARY matching (fixed 2026-07-29). Plain substring matching had
+        # every colour keyword firing inside unrelated words, and because only the
+        # first 2 tags survive, the phantom tag also EVICTED the real colour —
+        # corrupting the Colour filter and the colour signal the taste engine
+        # learns from. Measured on the live catalog before the fix:
+        #   'tan'  ⊂ tank   -> 166/167 tanks tagged BROWN
+        #   'oat'  ⊂ coat   ->   67/69 coats tagged NEUTRAL
+        #   'sand' ⊂ sandal ->   23/23 sandals tagged NEUTRAL
+        #   'red'  ⊂ tiered/embroidered/tailored/gathered/layered/flared…
+        #                   ->  441 tagged RED, 302 of them with no real 'red'
+        # _word_in() handles hyphens as boundaries, so 'off-white' and 'tie-dye'
+        # still match, and it tolerates a trailing s/es.
         for tag, kws in COLOR_RULES:
-            if any(k in hay for k in kws):
+            if any(_word_in(k, hay) for k in kws):
                 found.append(tag)
-        if any(h in hay for h in MULTICOLOR_HINTS):
+        if any(_word_in(h, hay) for h in MULTICOLOR_HINTS):
             found.append("multicolor")
         seen, out = set(), []
         for c in found:
@@ -921,7 +946,15 @@ def main():
         """
         for n in range(1, max_pages + 1):
             try:
-                data = fetch_json(f"https://{domain}/products.json?limit={page_limit}&page={n}")
+                # country=US is NOT optional: a Shopify Markets store serves the
+                # REQUESTER's geo presentment without it, and the 2026-07-15 audit
+                # found 54/153 stores doing exactly that (a $130 top shipped as
+                # "$485"). Partner items are the ones where a wrong price damages a
+                # real business relationship, so the retailer path needs the same
+                # guard the brand path has.
+                data = fetch_json(
+                    f"https://{domain}/products.json?limit={page_limit}&page={n}&country=US"
+                )
             except (urllib.error.URLError, urllib.error.HTTPError, ValueError, TimeoutError):
                 # One bad page (usually a 429) must not cost us the whole store.
                 yield None
@@ -1010,7 +1043,12 @@ def main():
                 if _med < 12 or (_med > 2500 and _norm_brand(brand) not in MAINSTREAM_BRANDS):
                     flag = f"  ⚠ CHECK CURRENCY (median ${_med}, currency={entry.get('currency', 'USD')})"
             summary.append(f"  {brand:<22} {got:>3} items{short}{flag}")
-        except (urllib.error.URLError, urllib.error.HTTPError, ValueError, TimeoutError) as e:
+        except Exception as e:  # noqa: BLE001 — see the retailer handler below
+            # One flaky store must never abort the whole build. urllib's error
+            # classes do NOT cover mid-read failures (ConnectionResetError,
+            # RemoteDisconnected, IncompleteRead, ssl.SSLError), which is how a
+            # single reset could take down a run that had already scraped ~150
+            # brands. Log the skip and continue.
             summary.append(f"  {brand:<22}  SKIP ({type(e).__name__})")
         time.sleep(0.5)  # be polite
 
@@ -1027,12 +1065,15 @@ def main():
         rid, rdomain = r.get("id"), r.get("domain")
         if not rid or not rdomain or not r.get("enabled", True):
             continue
-        rfx = fx_table.get(r.get("currency", "USD"), 1.0)
-        rcap = int(r.get("cap", 400))
-        vcap = int(r.get("perVendorCap", 24))
         per_vendor, rbase_counts = {}, {}
         rgot = 0
         try:
+            # Parsed INSIDE the try: a typo'd "cap": "400 items" in brands.json is
+            # a data error by a non-engineer, and it must cost this partner — not
+            # the entire daily catalog build.
+            rfx = fx_table.get(r.get("currency", "USD"), 1.0)
+            rcap = int(r.get("cap", 400))
+            vcap = int(r.get("perVendorCap", 24))
             # Page-based walk (see scrape_retailer_pages): a retailer needs the
             # whole store paged through, and `since_id` silently collapses on a
             # newest-first store. 250 = Shopify's max page size.
@@ -1075,7 +1116,12 @@ def main():
             summary.append(f"  {('[retailer] ' + str(r.get('name', rid))):<22} "
                            f"{rgot:>3} items across {len(per_vendor)} labels "
                            f"({r_pages} pages{_fail})")
-        except (urllib.error.URLError, urllib.error.HTTPError, ValueError, TimeoutError) as e:
+        except Exception as e:  # noqa: BLE001
+            # Broad ON PURPOSE. urllib only wraps OSError raised during request();
+            # errors from getresponse()/read() (ConnectionResetError,
+            # RemoteDisconnected, IncompleteRead, ssl.SSLError) are NOT URLError and
+            # would otherwise escape main() and abort the whole daily refresh after
+            # ~150 brands were already scraped. This handler only logs and moves on.
             summary.append(f"  {('[retailer] ' + str(r.get('name', rid))):<22}  SKIP ({type(e).__name__})")
         time.sleep(0.5)
 

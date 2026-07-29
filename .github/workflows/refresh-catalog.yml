@@ -81,6 +81,7 @@ jobs:
         run: |
           python test_junk_filter.py
           python test_affiliate_wrappers.py
+          python test_color_category.py
 
       - name: Build catalog
         run: python loupe-feed/build_catalog.py
