@@ -12,6 +12,33 @@
     "EGP": 0.02
   },
   "perBrand": 60,
+  "_retailers_comment": "PARTNER RETAILERS — real shops we've partnered with that stock many designers. Items keep the DESIGNER as the brand (the taste engine learns designers, not shops) and carry a 'retailer' stamp the app resolves against catalog.retailers for the tile tint, badge and in-app store block. 'productTypes' scopes what we ingest (Loupe is a women's app — a boutique also sells menswear, candles and books). 'perVendorCap' stops one high-volume label eating the whole allocation. Set 'enabled': false to switch a partnership off in one edit — items disappear on the next refresh, no app release needed.",
+  "retailers": [
+    {
+      "id": "gemini",
+      "enabled": true,
+      "name": "Gemini",
+      "domain": "geminishop.com",
+      "currency": "USD",
+      "tint": "#89b0f0",
+      "siteUrl": "https://geminishop.com",
+      "cap": 400,
+      "perVendorCap": 24,
+      "productTypes": ["womens"],
+      "inStockOnly": true,
+      "utm": "utm_source=loupe&utm_medium=app&utm_campaign=gemini",
+      "store": {
+        "name": "Gemini",
+        "city": "Chicago",
+        "address": "1911 W. Division St., Chicago, IL 60622",
+        "hours": "Mon–Sat 11am–6pm · Sun 11am–5pm",
+        "phone": "+17733941034",
+        "phoneDisplay": "(773) 394-1034",
+        "mapUrl": "https://www.google.com/maps/search/?api=1&query=1911+W+Division+St+Chicago+IL+60622",
+        "instagram": "https://www.instagram.com/shopgeminishop/"
+      }
+    }
+  ],
   "brands": [
     {
       "brand": "Deiji Studios",

@@ -741,7 +741,7 @@ def first_price(product):
     return None
 
 
-def normalize(product, brand, domain, fx, multi_brand=False):
+def normalize(product, brand, domain, fx, multi_brand=False, retailer=None):
     title = (product.get("title") or "").strip()
     handle = product.get("handle")
     img = first_image(product)
@@ -756,6 +756,19 @@ def normalize(product, brand, domain, fx, multi_brand=False):
     # swatches, samples, deposits, etc. Checks title AND product_type (never tags).
     if is_junk(title, price, product_type):
         return None
+    # ── Partner RETAILER scoping ──────────────────────────────────────────────
+    # A retailer source is a real shop (e.g. Gemini, Chicago) whose whole catalog
+    # we do NOT want: Loupe is a women's app, and a shop also sells menswear,
+    # candles, books and kitchenware. Keep only the product types the partnership
+    # covers, and only what's actually purchasable — a partner tile that leads to
+    # a sold-out page is worse than no tile.
+    if retailer:
+        wanted = [str(t).strip().lower() for t in (retailer.get("productTypes") or [])]
+        if wanted and str(product_type or "").strip().lower() not in wanted:
+            return None
+        if retailer.get("inStockOnly", True):
+            if not any(v.get("available") for v in (product.get("variants") or [])):
+                return None
     # Multi-brand boutiques (e.g. Arete Studios) resell many designers under one
     # storefront. Label each item with its REAL vendor when present, falling back
     # to the store name — so the app shows the designer, not the shop, as the brand.
@@ -775,8 +788,21 @@ def normalize(product, brand, domain, fx, multi_brand=False):
     # sizes == [] (a one-size item) from a genuine sell-out — the app renders
     # "Out of Stock" in the sizes slot only on an explicit false.
     is_available = any(v.get("available") for v in (product.get("variants") or []))
-    return {
-        "id": f"{slugify(display_brand)}-{handle}",
+    product_url = f"https://{domain}/products/{handle}"
+    if retailer:
+        # Partner links stay CLEAN and go straight to the retailer's own product
+        # page (never re-wrapped by an affiliate network), with a UTM so the shop
+        # can see Loupe traffic and orders in their own analytics. That attribution
+        # is the evidence the partnership renews on.
+        utm = str(retailer.get("utm") or "").lstrip("?&")
+        affiliate = f"{product_url}?{utm}" if utm else product_url
+    else:
+        affiliate = monetize(product_url, display_brand)
+    out = {
+        # Namespace retailer ids so the same designer stocked BOTH direct and at a
+        # partner shop can't collide on id (different stores, different handles).
+        "id": (f"{retailer['id']}-{slugify(display_brand)}-{handle}" if retailer
+               else f"{slugify(display_brand)}-{handle}"),
         "brand": display_brand,
         "name": title,
         "price": price,
@@ -786,8 +812,13 @@ def normalize(product, brand, domain, fx, multi_brand=False):
         "sizes": available_sizes(product),
         "images": gallery_images(product),
         "available": is_available,
-        "affiliateUrl": monetize(f"https://{domain}/products/{handle}", display_brand),
+        "affiliateUrl": affiliate,
     }
+    if retailer:
+        # Resolved by the app against catalog.retailers -> tile tint, badge, and
+        # the store block (address / hours / map / call) on the product page.
+        out["retailer"] = retailer["id"]
+    return out
 
 
 def main():
@@ -944,6 +975,81 @@ def main():
         except (urllib.error.URLError, urllib.error.HTTPError, ValueError, TimeoutError) as e:
             summary.append(f"  {brand:<22}  SKIP ({type(e).__name__})")
         time.sleep(0.5)  # be polite
+
+    # ── Partner RETAILER sources ──────────────────────────────────────────────
+    # A retailer is a real shop we've partnered with (e.g. Gemini in Chicago) that
+    # stocks many designers. Unlike a brand entry we pull a LOT from one domain, so
+    # each label gets its own sub-cap — otherwise a single sock label (126 items)
+    # would eat the whole allocation and the partner would read as one-note.
+    # Items keep the DESIGNER as the brand (the taste engine learns designers, not
+    # shops) and carry a `retailer` stamp the app uses for the tint/badge/store block.
+    retailer_meta = {}
+    retailer_counts = {}
+    for r in cfg.get("retailers", []):
+        rid, rdomain = r.get("id"), r.get("domain")
+        if not rid or not rdomain or not r.get("enabled", True):
+            continue
+        rfx = fx_table.get(r.get("currency", "USD"), 1.0)
+        rcap = int(r.get("cap", 400))
+        vcap = int(r.get("perVendorCap", 24))
+        per_vendor, rbase_counts = {}, {}
+        rgot = 0
+        try:
+            for page in scrape_brand(rdomain, rcap * 4):  # over-fetch: most items filter out
+                for product in page:
+                    if rgot >= rcap:
+                        break
+                    norm = normalize(product, r.get("name", rid), rdomain, rfx,
+                                     multi_brand=True, retailer=r)
+                    if not norm or norm["id"] in seen_ids:
+                        continue
+                    label = norm["brand"]
+                    if per_vendor.get(label, 0) >= vcap:
+                        continue
+                    bkey = f"{label}|{base_name(norm['name'])}"
+                    if rbase_counts.get(bkey, 0) >= MAX_VARIANTS_PER_BASE:
+                        continue
+                    rbase_counts[bkey] = rbase_counts.get(bkey, 0) + 1
+                    per_vendor[label] = per_vendor.get(label, 0) + 1
+                    seen_ids.add(norm["id"])
+                    by_brand.setdefault(label, []).append(norm)
+                    rgot += 1
+                if rgot >= rcap:
+                    break
+            retailer_counts[rid] = rgot
+            if rgot:
+                retailer_meta[rid] = {k: v for k, v in r.items()
+                                      if k in ("name", "tint", "siteUrl", "store")}
+            summary.append(f"  {('[retailer] ' + str(r.get('name', rid))):<22} "
+                           f"{rgot:>3} items across {len(per_vendor)} labels")
+        except (urllib.error.URLError, urllib.error.HTTPError, ValueError, TimeoutError) as e:
+            summary.append(f"  {('[retailer] ' + str(r.get('name', rid))):<22}  SKIP ({type(e).__name__})")
+        time.sleep(0.5)
+
+    # Partner-wins de-duplication: when a partner shop stocks the SAME piece we also
+    # pull from the designer's own store, keep the partner's copy and drop the direct
+    # one — one tile per product, and the traffic goes to the partner (the agreed
+    # perk). Matched on brand + color-agnostic base title, so it survives the
+    # "- Black" / "in Cream" naming differences between two storefronts.
+    if retailer_meta:
+        partner_keys = set()
+        for label, items in by_brand.items():
+            for p in items:
+                if p.get("retailer"):
+                    partner_keys.add((_norm_brand(label), base_name(p["name"]).lower()))
+        if partner_keys:
+            dropped = 0
+            for label, items in by_brand.items():
+                kept = []
+                for p in items:
+                    if (not p.get("retailer")
+                            and (_norm_brand(label), base_name(p["name"]).lower()) in partner_keys):
+                        dropped += 1
+                        continue
+                    kept.append(p)
+                by_brand[label] = kept
+            if dropped:
+                summary.append(f"  -> partner-wins dedupe: dropped {dropped} duplicate direct listings")
 
     # NOTE: carry-forward for brands that returned nothing this run now happens at
     # the LABEL level (Shopify vendor), with a grace window, AFTER the curated merge
@@ -1260,6 +1366,18 @@ def main():
         "count": len(products),
         "products": products,
     }
+    # Partner retailers, keyed by the `retailer` stamp on a product. Stored ONCE
+    # here rather than repeated on every item (564 copies of an address is ~140KB
+    # of pure waste against jsDelivr's per-file ceiling). Only emitted for
+    # retailers that actually contributed items this run, so a failed partner
+    # scrape can never leave the app resolving a retailer with no products.
+    if retailer_meta:
+        live_rids = {p.get("retailer") for p in products if p.get("retailer")}
+        emit = {k: v for k, v in retailer_meta.items() if k in live_rids}
+        if emit:
+            catalog["retailers"] = emit
+            summary.append("  -> retailers: " + ", ".join(
+                f"{k} ({sum(1 for p in products if p.get('retailer') == k)} items)" for k in emit))
     # Optional remote RANKER config: if loupe-feed/ranker_config.json exists, embed
     # it as catalog.ranker so the app can tune the Discover ranker weights (or KILL
     # the multi-signal boost via {"enabled": false}) with no OTA. Absent/malformed →
