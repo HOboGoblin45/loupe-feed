@@ -15,7 +15,19 @@ CASES = [
     ("Sun Protection Hat", 45, "", False),          # 'protection' incident
     ("Sample Sale Tee", 30, "", False),             # 'sample' incident
     ("Route 66 Jacket", 180, "", False),            # bare-'route' over-drop (fixed 2026-07)
-    ("Dress", 1.0, "", False),                       # cheap but no add-on word
+    # HARD_PRICE_FLOOR ($5), added 2026-07-29. A sub-$5 listing is a data artifact
+    # (placeholder / deposit / mispriced sample) regardless of title — curated
+    # fashion doesn't retail under $5, and these surfaced as "from $1" on the
+    # public brand directory. This case previously expected False (the old policy:
+    # a cheap price only counted as junk ALONGSIDE an add-on word); the policy
+    # changed deliberately, so the fixture changed with it.
+    ("Dress", 1.0, "", True),                       # $1 "dress" = artifact, drop
+    ("Laces Oreo", 1, "", True),                    # real observed $1 row (Maguire)
+    # ...but the floor must not eat genuinely cheap REAL product. Observed live
+    # lows: Heaven Mayhem $6, Los Angeles Apparel $8, Anni Lu $10.
+    ("Beaded Ring", 6, "", False),
+    ("Cotton Socks", 8, "", False),
+    ("Enamel Charm", 5, "", False),                 # exactly at the floor = keep
     # Confirmed junk must stay junk.
     ("Gift Card", None, "", True),
     ("E-Gift Voucher", 50, "", True),
