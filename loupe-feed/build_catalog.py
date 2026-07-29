@@ -897,6 +897,44 @@ def main():
     # at PAGE_LIMIT per page is plenty to collect `cap` survivors.
     MAX_PAGES = 20
 
+    def scrape_retailer_pages(domain, page_limit, max_pages, delay):
+        """Yield successive products.json pages for a PARTNER RETAILER using
+        `page=N` pagination.
+
+        WHY NOT since_id (what scrape_brand uses):
+        `since_id` assumes products come back in ASCENDING id order — it takes the
+        last id on a page and asks for products greater than it. Shopify's public
+        products.json returns NEWEST FIRST, i.e. DESCENDING ids, for at least some
+        stores (verified on geminishop.com: 8326636077122, 8326636044354, …). The
+        last id on a page is then the SMALLEST, so the next request re-returns the
+        same items and the walk collapses after one page.
+
+        That's invisible for a brand — we only want ~60 items, which page one
+        satisfies — but a retailer needs the WHOLE store walked (we filter ~75% of
+        a general boutique away as menswear/goods/out-of-stock). Gemini yielded 89
+        of ~400 expected items for exactly this reason.
+
+        `page=N` is stable regardless of sort order. Pages are de-duplicated by
+        product id by the caller (via seen_ids), so an overlap can't double-count.
+        Yields None for a page that failed after retries, so the caller can SKIP it
+        and keep walking instead of losing the rest of the store.
+        """
+        for n in range(1, max_pages + 1):
+            try:
+                data = fetch_json(f"https://{domain}/products.json?limit={page_limit}&page={n}")
+            except (urllib.error.URLError, urllib.error.HTTPError, ValueError, TimeoutError):
+                # One bad page (usually a 429) must not cost us the whole store.
+                yield None
+                time.sleep(max(delay, 3.0))
+                continue
+            page = (data or {}).get("products", []) or []
+            if not page:
+                return
+            yield page
+            if len(page) < page_limit:
+                return  # short page → store exhausted
+            time.sleep(delay)
+
     def scrape_brand(domain, cap):
         """Yield successive products.json pages for a brand, walking `since_id`
         until a short/empty page (store exhausted) or MAX_PAGES. The caller stops
@@ -995,7 +1033,17 @@ def main():
         per_vendor, rbase_counts = {}, {}
         rgot = 0
         try:
-            for page in scrape_brand(rdomain, rcap * 4):  # over-fetch: most items filter out
+            # Page-based walk (see scrape_retailer_pages): a retailer needs the
+            # whole store paged through, and `since_id` silently collapses on a
+            # newest-first store. 250 = Shopify's max page size.
+            r_pages = 0
+            r_failed_pages = 0
+            for page in scrape_retailer_pages(rdomain, 250, 40,
+                                              float(r.get("pageDelaySeconds", 1.5))):
+                if page is None:
+                    r_failed_pages += 1
+                    continue  # skip the bad page, keep walking
+                r_pages += 1
                 for product in page:
                     if rgot >= rcap:
                         break
@@ -1016,21 +1064,17 @@ def main():
                     rgot += 1
                 if rgot >= rcap:
                     break
-                # PACE the partner walk. A retailer needs many more pages than a
-                # brand (we filter ~75% of a general boutique's catalog away), and
-                # Shopify answers a fast burst with 429 `local_rate_limited` — the
-                # first CI run harvested only 89 of ~400 items because of exactly
-                # that. This sleep runs BETWEEN page fetches (the generator only
-                # advances when this loop body finishes), which is what keeps the
-                # walk under the throttle.
-                time.sleep(float(r.get("pageDelaySeconds", 1.5)))
+                # NB: pacing lives INSIDE scrape_retailer_pages (between fetches),
+                # so there is deliberately no sleep here.
             retailer_counts[rid] = rgot
             if rgot:
                 retailer_meta[rid] = {k: v for k, v in r.items()
                                       if k in ("name", "tint", "tintBorder", "tintInk",
                                                "siteUrl", "store")}
+            _fail = f", {r_failed_pages} page(s) failed" if r_failed_pages else ""
             summary.append(f"  {('[retailer] ' + str(r.get('name', rid))):<22} "
-                           f"{rgot:>3} items across {len(per_vendor)} labels")
+                           f"{rgot:>3} items across {len(per_vendor)} labels "
+                           f"({r_pages} pages{_fail})")
         except (urllib.error.URLError, urllib.error.HTTPError, ValueError, TimeoutError) as e:
             summary.append(f"  {('[retailer] ' + str(r.get('name', rid))):<22}  SKIP ({type(e).__name__})")
         time.sleep(0.5)
