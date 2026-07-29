@@ -386,15 +386,35 @@ _DRESS_ADJECTIVE = [
     ("bottoms", ["dress pant", "dress trouser", "dress short"]),
     ("tops",    ["dress shirt", "dress blouse"]),
     ("shoes",   ["dress shoe", "dress boot", "dress sandal", "dress heel"]),
-    # SLEEVE-LENGTH override (added 2026-07-29). "short" is a legitimate bottoms
-    # keyword, but it is ALSO a sleeve length, and the bottoms rule is evaluated
-    # before tops/outerwear — so "Short Sleeve Top", "Louis Polo Short Sleeve" and
-    # "Short Sleeve Hoodie" were all filed as BOTTOMS (11 of 12 such items in the
-    # live catalog). Same class of collision as "Flat Knit Sweater" vs shoes.
-    ("tops",      ["short sleeve", "short-sleeve", "long sleeve", "long-sleeve",
-                   "flat knit", "cap sleeve"]),
-    ("outerwear", ["short trench", "short coat", "short jacket"]),
 ]
+
+# SLEEVE LENGTH IS NOT A GARMENT TYPE (added 2026-07-29, reworked same day).
+# "short" is a legitimate bottoms keyword but is ALSO a sleeve length, and bottoms
+# is evaluated before tops/outerwear — so "Short Sleeve Top", "Louis Polo Short
+# Sleeve" and "Short Sleeve Hoodie" were all filed as BOTTOMS (11 of 12 such items
+# in the live catalog). Same class as "flat" in "Flat Knit Sweater" vs shoes.
+#
+# ⚠️ Implemented as a REDACTION, not as a rule that returns a category. The first
+# attempt was a rule ("...sleeve" -> tops) and it hijacked every title containing a
+# sleeve phrase: "Lucia Keyhole Long Sleeve Mini Dress" and "Octavia Long Sleeve
+# Gown" would have flipped to `tops` on the next rebuild — the exact bug it was
+# written to fix, inverted. Any short-circuit here has that failure mode, because
+# the real garment noun can appear anywhere in the title. Deleting the phrase and
+# letting the normal rules run cannot: what's left is the garment.
+#   "Long Sleeve Mini Dress" -> "Mini Dress"  -> dresses
+#   "Octavia Long Sleeve Gown" -> "Octavia Gown" -> dresses
+#   "Short Sleeve Hoodie"    -> "Hoodie"      -> tops
+#   "Belted Short Trench Coat" -> "Belted Trench Coat" -> outerwear
+#   "Denim Shorts"           -> untouched     -> bottoms
+_SLEEVE_NOISE_RE = re.compile(
+    r"\b(?:short|long|cap|elbow|puff(?:ed)?|bell|balloon|bishop|dolman|raglan|"
+    r"flutter|three[- ]quarter|3/4)[- ]sleeve[sd]?\b"
+    r"|\bsleeveless\b"
+    r"|\bflat[- ]knit\b"
+    # "short" as a length modifier on an outer layer, not a pair of shorts.
+    r"|\bshort(?=\s+(?:trench|coat|jacket|blazer|cardigan|parka)\b)",
+    re.I,
+)
 
 # Compound one-word dresses ("Sundress", "Maxidress", "Slipdress", "Shirtdress")
 # end in -dress but never contain "dress" as a standalone word, so the keyword
@@ -418,14 +438,22 @@ def _category_from_keywords(hay):
       "Dress Pants" / "Dress Shirt" -> bottoms / tops (adjective override)
       "Cashmere Blanket"          -> None      (caller decides the fallback)
     """
+    # Delete sleeve length / knit construction FIRST so it can neither claim the
+    # item ("Long Sleeve Gown" is a gown) nor be misread as another garment
+    # ("Short Sleeve Top" is not a pair of shorts). See _SLEEVE_NOISE_RE.
+    stripped = _SLEEVE_NOISE_RE.sub(" ", hay)
     for cat, phrases in _DRESS_ADJECTIVE:
-        if any(_word_in(p, hay) for p in phrases):
+        if any(_word_in(p, stripped) for p in phrases):
             return cat
-    if _DRESS_SUFFIX_RE.search(hay):
+    if _DRESS_SUFFIX_RE.search(stripped):
         return "dresses"
     for cat, kws in CATEGORY_RULES:
-        if any(_word_in(k, hay) for k in kws):
+        if any(_word_in(k, stripped) for k in kws):
             return cat
+    # Nothing but the sleeve phrase to go on ("KEY SHORT SLEEVE IN BLACK").
+    # A garment described solely by its sleeves is a top.
+    if stripped != hay and _SLEEVE_NOISE_RE.search(hay):
+        return "tops"
     return None
 
 

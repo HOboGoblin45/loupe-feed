@@ -67,6 +67,16 @@ CATEGORY_CASES = [
     # ...but real shorts are still bottoms.
     ("Denim Shorts",                       "", "bottoms"),
     ("Pleated Short",                      "", "bottoms"),
+    # A GARMENT IS A DRESS FIRST, A SLEEVE LENGTH SECOND. The sleeve override was
+    # briefly placed with the dress-adjective rules, which run before the dress
+    # check — that would have flipped 14 live dresses/gowns to `tops`.
+    ("Lucia Keyhole Long Sleeve Mini Dress", "", "dresses"),
+    ("Naru Long Sleeve Dress Black",         "", "dresses"),
+    ("Long Sleeve Midi Dress",               "", "dresses"),
+    ("Octavia Long Sleeve Gown - Leopard",   "", "dresses"),
+    ("Cap Sleeve Gown",                      "", "dresses"),
+    ("The Short Sleeve Sequin Jersey Polo Maxi Dress", "", "dresses"),
+    ("Short Sleeve Sundress",                "", "dresses"),
     # Existing contracts must not regress.
     ("Sleeper Linen Maxi Dress",           "", "dresses"),
     ("Sundress",                           "", "dresses"),
