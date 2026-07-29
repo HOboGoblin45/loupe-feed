@@ -28,6 +28,7 @@
       "cap": 400,
       "perVendorCap": 24,
       "pageDelaySeconds": 1.5,
+      "_pagination_note": "Retailers are walked with page=N (scrape_retailer_pages), NOT the since_id walk brands use: Shopify's public products.json returns NEWEST FIRST (descending ids), so since_id — which asks for ids GREATER than the last one on a page — re-returns the same page and collapses the walk after one page. That capped Gemini at 89 of 400 items until 2026-07-29.",
       "productTypes": ["womens"],
       "inStockOnly": true,
       "utm": "utm_source=loupe&utm_medium=app&utm_campaign=gemini",
