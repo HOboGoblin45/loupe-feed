@@ -1,5 +1,5 @@
 {
-  "_comment": "Curated niche brands for the Loupe live catalog feed. Each runs on Shopify, which exposes a public /products.json endpoint (no auth). 'currency' is the store's base currency — the scraper converts to USD. 'perBrand' caps how many products are pulled from each brand to keep the catalog curated. To add a brand: confirm https://<domain>/products.json returns JSON, then add an entry. Bot-protected stores (return empty) are simply skipped at runtime.",
+  "_comment": "Curated niche brands for the Loupe live catalog feed. Each runs on Shopify, which exposes a public /products.json endpoint (no auth). 'currency' is the store's base currency — the scraper converts to USD. 'perBrand' caps how many products are pulled from each brand to keep the catalog curated. To add a brand: confirm https://<domain>/products.json returns JSON, then add an entry. Bot-protected stores (return empty) are simply skipped at runtime. To REMOVE a brand, delete its entry here AND add it to EXCLUDE_BRANDS in build_catalog.py — deleting it here alone lets its items ride the grace-window carry-forward for days and does not stop it re-entering via a multi-brand reseller's vendor field. Removed 2026-07-29: Mackage, Marfa Stance.",
   "fx_to_usd": {
     "USD": 1.0,
     "AUD": 0.66,
