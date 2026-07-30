@@ -1,5 +1,6 @@
 {
   "_comment": "Curated niche brands for the Loupe live catalog feed. Each runs on Shopify, which exposes a public /products.json endpoint (no auth). 'currency' is the store's base currency — the scraper converts to USD. 'perBrand' caps how many products are pulled from each brand to keep the catalog curated. To add a brand: confirm https://<domain>/products.json returns JSON, then add an entry. Bot-protected stores (return empty) are simply skipped at runtime. To REMOVE a brand, delete its entry here AND add it to EXCLUDE_BRANDS in build_catalog.py — deleting it here alone lets its items ride the grace-window carry-forward for days and does not stop it re-entering via a multi-brand reseller's vendor field. Removed 2026-07-29: Mackage, Marfa Stance.",
+  "_fx_comment": "Static FX rates -> USD. A WRONG per-brand 'currency' mis-prices that brand's ENTIRE catalog by the FX factor, so build_catalog.scrape_brand now probes https://<domain>/cart.js?country=US once per brand and prints a loud '⚠ CURRENCY MISMATCH' line in the run summary when the live currency differs from the value configured here. DKK 0.145 ≈ 1 DKK = 0.145 USD (the krone is pegged to the euro at ~7.46 DKK/EUR, so EUR 1.08 / 7.46 ≈ 0.145).",
   "fx_to_usd": {
     "USD": 1.0,
     "AUD": 0.66,
@@ -128,7 +129,8 @@
     {
       "brand": "SIEDRÉS",
       "domain": "siedres.com",
-      "currency": "USD"
+      "_currency_note": "Corrected 2026-07-29: was UNTAGGED (defaulted to USD) but siedres.com/cart.js?country=US reports EUR and products.json?country=US keeps publishing EUR — every SIEDRÉS price shipped 8% LOW.",
+      "currency": "EUR"
     },
     {
       "brand": "With Jéan",
@@ -163,7 +165,8 @@
     {
       "brand": "Stine Goya",
       "domain": "stinegoya.com",
-      "currency": "EUR"
+      "_currency_note": "Corrected 2026-07-29: was EUR, but stinegoya.com/cart.js?country=US reports DKK and products.json?country=US publishes DKK (Danish label, Copenhagen). At EUR the whole brand shipped 7.4x over: 'Beanie - Blue' raw 499 -> $539 instead of $72.",
+      "currency": "DKK"
     },
     {
       "brand": "Anna October",
@@ -188,7 +191,8 @@
     {
       "brand": "PDPAOLA",
       "domain": "pdpaola.com",
-      "currency": "EUR"
+      "_currency_note": "Corrected 2026-07-29: was EUR, but this is a Shopify Markets store — with country=US it serves its US presentment in USD (cart.js?country=US -> USD). Multiplying by the EUR rate DOUBLE-CONVERTED every price (+8%).",
+      "currency": "USD"
     },
     {
       "brand": "Agmes",
@@ -343,7 +347,8 @@
     {
       "brand": "Martine Rose",
       "domain": "martine-rose.com",
-      "currency": "GBP"
+      "_currency_note": "Corrected 2026-07-29: was GBP, but this is a Shopify Markets store — with country=US it serves its US presentment in USD (cart.js?country=US -> USD). Multiplying by the GBP rate DOUBLE-CONVERTED every price (+27%).",
+      "currency": "USD"
     },
     {
       "brand": "Tigra Tigra",

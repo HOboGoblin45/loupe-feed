@@ -173,6 +173,13 @@ def main():
             fail += 1
             continue
         done += 1
+        # FILENAME CONTRACT (do not change without changing build_catalog.py):
+        # the cutout is stored under the product's RAW id — accents and all
+        # (pärlemor-…, démodémodé-…) — and the manifest is keyed by that same raw
+        # id. build_catalog.py percent-encodes the id when it builds cutoutUrl
+        # (urllib.parse.quote(id, safe='')), which is the correct URL for exactly
+        # this file. Encoding the name on DISK too would double-encode the URL and
+        # 404 every accented cutout, so the raw form is deliberate.
         if webp is None:
             # Record the fallback so we don't retry it every run (keeps backfill
             # moving); the app renders a framed tile for status='fallback'.

@@ -1,6 +1,15 @@
 name: Embed Loupe catalog
 
 on:
+  # 02:00 UTC daily. Added 2026-07-29: this workflow was dispatch-ONLY, so nobody
+  # ran it — embeddings.json went 29 days stale and 3,907 of 8,314 live products
+  # (47%) had no vector at all, silently degrading "More like this", "Similar to
+  # your saves" and the visual boost in the Discover deck for half the catalog.
+  # 02:00 is clear of the 04:00 cutout run and the 08:00 catalog rebuild, and this
+  # workflow already shares the `loupe-main-writers` concurrency group with them,
+  # so an overrunning job queues instead of racing the push.
+  schedule:
+    - cron: "0 2 * * *"
   workflow_dispatch:
 
 permissions:

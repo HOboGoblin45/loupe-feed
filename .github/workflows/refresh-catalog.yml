@@ -23,8 +23,18 @@ on:
     - cron: "0 8 * * *"   # every day at 08:00 UTC
   workflow_dispatch: {}    # manual "Run workflow" button
   push:
+    # Rebuild immediately when ANY build INPUT changes — not just the brand list.
+    # Before 2026-07-29 this listed brands.json only, so a fix to build_catalog.py
+    # (a currency correction, a junk-filter tightening, a category rule) sat dark
+    # for up to 24h until the next 08:00 cron: the code was on main but the live
+    # catalog.json still carried the bug. Every file below is read by the build,
+    # so a change to any of them should publish a corrected catalog at once.
     paths:
-      - "loupe-feed/brands.json"   # rebuild immediately when the brand list changes
+      - "loupe-feed/brands.json"        # brand list, per-brand currency, retailers
+      - "loupe-feed/build_catalog.py"   # the build itself (filters, FX, categories)
+      - "loupe-feed/curated.json"       # hand-built products merged into the feed
+      - "loupe-feed/ranker_config.json" # embedded into catalog.ranker
+      - "loupe-feed/update_meta.py"     # writes catalog.meta.json (version probe)
   repository_dispatch:
     types: [brand-approved]        # the Edge Function fires this on Approve →
                                    # run the pipeline immediately (Stage B adds it)

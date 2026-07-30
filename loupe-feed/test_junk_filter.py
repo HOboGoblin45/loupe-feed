@@ -38,6 +38,38 @@ CASES = [
     ("", None, "", True),                            # empty title
     # product_type path.
     ("Nice Thing", 30, "gift card", True),
+
+    # ── Non-apparel GOODS (added 2026-07-29) ─────────────────────────────────
+    # Real, purchasable homeware/beauty/stationery a fashion label also sells.
+    # Every one of these was LIVE in the catalog, filed as `tops`.
+    ("Pistachio Perfume", 225, "", True),
+    ("Scout Candle", 68, "", True),
+    ("Archipelago Scented Candle", 60, "", True),
+    ("The Totemic Devotion Candlestick with Candles", 829, "", True),
+    ("Hand Over x Scalpers Mug Red", 25, "", True),
+    ("Terry Hand Towel", 34, "", True),
+    ("Oddli Notebook", 30, "", True),
+    ("Oddli Keychain", 20, "", True),
+    ("BRIDAL NOTECARD + ENVELOPE & SEAL", 6, "", True),
+    ("Sacred Ash Incense Cones", 62, "", True),
+    ("Debaser Pocket Perfume Spray", 80, "", True),
+    # Promo placeholder SKU, not a product (unconditional rule).
+    ("Free Scrunchie With Every Swim Item Purchased", 8, "", True),
+
+    # ...and the SURVIVORS. The non-apparel rule is GUARDED — it only fires when
+    # the title carries no garment noun — precisely so a real garment merely
+    # NAMED after one of those words lives. All of these are live product.
+    ("INCENSE SKORT CLAY", 98, "", False),      # Ghostboy: a skort, not incense
+    ("INCENSE TOP COAL", 126, "", False),
+    ("Candy Terry Swim Shorts", 120, "", False),
+    ("Candy Lover Bracelet", 60, "", False),
+    ("CANDY SUSPENDER MINI", 150, "", False),
+    ("HAND-EMBROIDERED PUZZLE COAT, SAND/RED", 900, "", False),
+    ("Roller Coaster", 200, "", False),          # Bonnie Clyde sunglasses
+    ("Linen Beach Towel", 60, "", False),        # only "hand towel" is junk
+    ("Bikini Cotton Terry Towel - Beach Day", 68, "", False),
+    ("Towel Upcycled Mini Shorts - 101", 120, "", False),
+    ("Notation Silk Dress", 300, "", False),     # 'notecard' must not match here
 ]
 
 

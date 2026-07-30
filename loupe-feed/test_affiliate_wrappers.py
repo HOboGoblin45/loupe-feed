@@ -91,8 +91,63 @@ assert bc.monetize(legacy, "Peachy Den") == RAW
 assert bc.monetize(legacy) == RAW
 assert bc.monetize(RAW, "Peachy Den") == RAW  # raw stays raw, still
 
+# ── 9. UTM attribution on EVERY outbound link (added 2026-07-29) ─────────────
+# Before this, only the 400 Gemini partner links carried a UTM: 7,914 of 8,314
+# clicks landed on a brand's store as plain "Direct" traffic, so a brand could
+# not see Loupe in their own analytics — the entire partnership pitch.
+bc = load({})
+UTM = "utm_source=loupe&utm_medium=referral&utm_campaign=app"
+assert bc.LOUPE_UTM == UTM
+
+# 9a. A bare URL gains the UTM with '?'.
+tagged = bc.add_utm(RAW)
+assert tagged == RAW + "?" + UTM, tagged
+
+# 9b. A URL that ALREADY has a query string gains it with '&' (and keeps its own).
+withq = "https://peachyden.com/products/kylie-dress?variant=42&ref=ig"
+t2 = bc.add_utm(withq)
+assert t2 == withq + "&" + UTM, t2
+assert "?variant=42&ref=ig&utm_source=loupe" in t2
+
+# 9c. IDEMPOTENT — running twice never duplicates.
+assert bc.add_utm(tagged) == tagged
+assert bc.add_utm(bc.add_utm(bc.add_utm(RAW))) == tagged
+assert t2.count("utm_source=") == 1 and bc.add_utm(t2).count("utm_source=") == 1
+
+# 9d. A more specific tag already on the URL WINS (partner links keep their own
+#     campaign) — we never overwrite an existing utm_* value.
+gemini = "https://geminishop.com/products/x?utm_source=loupe&utm_medium=app&utm_campaign=gemini"
+assert bc.add_utm(gemini) == gemini
+# ...and building a partner link from scratch reproduces exactly that string.
+assert bc.add_utm("https://geminishop.com/products/x",
+                  "utm_source=loupe&utm_medium=app&utm_campaign=gemini") == gemini
+
+# 9e. Composes with monetize(): no key -> clean direct link that KEEPS the UTM.
+assert bc.monetize(bc.add_utm(RAW), "Peachy Den") == tagged
+# ...with a brand template, the UTM survives inside the encoded destination.
+bc = load({"BRAND_AFFILIATE_TEMPLATES": json.dumps(AWIN_TPL)})
+dm = bc.monetize(bc.add_utm(DM_RAW), "Damson Madder")
+assert dm.startswith("https://www.awin1.com/cread.php?awinmid=114966")
+assert urllib.parse.quote(bc.add_utm(DM_RAW), safe="") in dm
+assert "utm_source%3Dloupe" in dm
+assert bc.monetize(dm, "Damson Madder") == dm          # still idempotent
+# ...and with the Sovrn catch-all, the UTM rides inside u=.
+bc = load({"SOVRN_API_KEY": "k123"})
+sv = bc.monetize(bc.add_utm(RAW), "Peachy Den")
+assert sv.startswith("https://redirect.viglink.com/?")
+assert urllib.parse.unquote(sv.split("u=", 1)[1].split("&", 1)[0]) == tagged
+
+# 9f. Fails soft on junk input (curated.json rows can carry anything).
+assert bc.add_utm(None) is None
+assert bc.add_utm("") == ""
+assert bc.add_utm(RAW, "") == RAW
+assert bc.add_utm(RAW, None) == RAW
+# A fragment is preserved and the query goes BEFORE it.
+frag = bc.add_utm("https://x.com/p/a#reviews")
+assert frag == "https://x.com/p/a?" + UTM + "#reviews", frag
+
 # Leave the process env clean for anything running after us in the same shell.
 for key in ("SOVRN_API_KEY", "SOVRN_CUID", "BRAND_AFFILIATE_TEMPLATES"):
     os.environ.pop(key, None)
 
-print("test_affiliate_wrappers: 8 fixture groups passed")
+print("test_affiliate_wrappers: 9 fixture groups passed")

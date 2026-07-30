@@ -42,6 +42,14 @@ def fetch_image(url):
 
 
 def main():
+    # ORPHANS ARE IMPOSSIBLE BY CONSTRUCTION: this is a full rebuild. The previous
+    # embeddings.json is never read — `ids` starts empty and only ever collects
+    # products present in TODAY's catalog.json — so any vector whose product has
+    # left the catalog is dropped simply by not being re-emitted. The 2,424
+    # orphans measured on 2026-07-29 (and the 3,907 catalog products with NO
+    # vector, 47%) were not a bug in this script: it had not run in 29 days
+    # because the workflow was workflow_dispatch-only. Fixed by the nightly
+    # 02:00 UTC cron in .github/workflows/embed-catalog.yml.
     cat = json.loads(CATALOG.read_text(encoding="utf-8"))
     products = cat.get("products", [])
     log(f"catalog: {len(products)} products")

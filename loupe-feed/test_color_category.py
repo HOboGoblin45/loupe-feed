@@ -83,6 +83,63 @@ CATEGORY_CASES = [
     ("Dress Pants",                        "", "bottoms"),
     ("Dress Shirt",                        "", "tops"),
     ("Mohair Sweater",                     "", "tops"),
+
+    # ── A DEFINITE title noun OUTRANKS the store's product_type (2026-07-29) ──
+    # Rules used to run on the joined f"{product_type} {title}", so whichever
+    # CATEGORY_RULES entry came first won — and product_type is at the front.
+    # These all shipped in the WRONG category on the live catalog.
+    ("Runway • Trinity Skirt",             "Dresses",          "bottoms"),
+    ("DUET SKIRT",                         "Skirts & Dresses", "bottoms"),
+    ("NESTING SKIRT",                      "Skirts & Dresses", "bottoms"),
+    ("FRINGED SLIP SKIRT | black silk",    "DRESSES SKIRTS",   "bottoms"),
+    ("Helmut Pants",                       "Dress",            "bottoms"),
+    ("Noomi Leather Hair Chocolate Dot",   "Shoes",            "accessories"),
+    ("Frida Flat Hair Pins in Silver",     "Accessories",      "accessories"),
+    ("RLT CLASSIC BELT | BRASS & BROWN",   "Pant",             "accessories"),
+    ("Short Hilda Earrings",               "Earrings",         "accessories"),
+    ("SHORT UZBEK CARDIGAN",               "SWEATER COAT",     "outerwear"),
+    ("Runway • Mitski Pointelle Cardigan", "Dresses",          "outerwear"),
+    ("Laris Sweater",                      "Jackets",          "tops"),
+    ("Varsity Logo Tee",                   "Bags",             "tops"),
+    ("Scarf tee white/ecru",               "Tops",             "tops"),
+    ("Draped scarf blouse desert",         "Blouses",          "tops"),
+    # 'skort' is a bottoms garment that shares no whole word with skirt/short.
+    ("Polka Dot Skort",                    "",                 "bottoms"),
+    ("Mini Volume Skort Khaki",            "Bottoms",          "bottoms"),
+    ("ELENORA MINI SKORT - STRAW",         "Skort",            "bottoms"),
+
+    # ── ...but an AMBIGUOUS title word must NOT outrank product_type ──────────
+    # "the title always wins" was measured over 21,803 live products: it fixed
+    # ~60 items and BROKE ~60, because half the keyword list names a detail or a
+    # silhouette, not a garment. Each of these is a real product that the naive
+    # version mis-filed; they are the reason for _WEAK_TITLE_KEYWORDS.
+    ("Cami | Tort & Burnt Honey",          "Sunglasses",   "accessories"),  # 'cami'
+    ("Small + Mini Dahlia Hoop Set",       "Earrings",     "accessories"),  # 'set'
+    ("Essential Tube Cuff",                "Bracelets",    "accessories"),  # 'tube'
+    ("T-lock leather top handle champagne", "Bags",        "accessories"),  # 'top'
+    ("KNIT BUCKET",                        "BAG",          "accessories"),  # 'knit'
+    ("Polar Green Set",                    "HAT",          "accessories"),  # 'set'
+    ("The Cami Slip: White Pointelle",     "Mini Dresses", "dresses"),      # 'cami'
+    ("Scoop Tank Mini",                    "Dresses",      "dresses"),      # 'tank'
+    ("Fine Halter Maxi",                   "Dresses",      "dresses"),      # 'halter'
+    ("Leda Long Sleeve",                   "Dresses",      "dresses"),      # sleeves only
+    ("Bra Strap Midi",                     "Dress",        "dresses"),      # 'bra'
+    ("Dannie Leather Zipped One Piece",    "Dresses",      "dresses"),      # 'one piece'
+    ("Arcadia Zip High Top - BLACK",       "SNEAKERS",     "shoes"),        # 'top'
+    ("Thong Wedge - Black",                "Shoes",        "shoes"),        # 'thong'
+    ("Scarf naplack slingbacks black",     "Shoes",        "shoes"),        # 'scarf'
+    ("Nomi Glove-Fit Flats",               "Shoes",        "shoes"),        # 'glove'
+    ("Cap Bloomers",                       "Shorts",       "bottoms"),      # 'cap'
+    ("The Boyshort: Black Cotton Jersey",  "Shorts",       "bottoms"),      # 'boyshort'
+    ("LOLA SET",                           "Skirts",       "bottoms"),      # 'set'
+    # 'shorts' PLURAL is a real pair of shorts and DOES outrank product_type;
+    # singular "Short" is a length modifier and does not. The split is exact.
+    ("Towel Upcycled Mini Shorts - Spiffy Polo", "Shorts", "bottoms"),
+    ("SOU - Belt detailed mini knit shorts",     "Knitwear", "bottoms"),
+    # "<noun> detail/trim/accent" is TRIM, never the garment.
+    ("DUNIE - stretch bodysuit with belt detail", "Jumpsuits", "tops"),
+    # calf/pony/curly hair is a MATERIAL, not a hair accessory.
+    ("Suede Back Curly Hair Zip Up River Vest",  "Jacket",  "outerwear"),
 ]
 
 

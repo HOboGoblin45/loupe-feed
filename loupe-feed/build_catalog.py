@@ -97,6 +97,33 @@ JUNK_ADDON_WORDS = [
     "donation", "gift", "warranty", "add-on", "add on", "addon", "wrap", "credit",
 ]
 
+# ── Non-apparel GOODS a fashion label also happens to sell (2026-07-29) ───────
+# Not utility SKUs — real, purchasable homeware/beauty/stationery. Loupe is a
+# clothing discovery app, so a scented candle or a branded mug in the swipe deck
+# reads as broken curation to a user and embarrassing to a demo. All of these
+# were live and filed as `tops`:
+#   "Pistachio Perfume" $225 · "Scout Candle" $68 · "Archipelago Scented Candle"
+#   $60 · "Hand Over x Scalpers Mug" · "Terry Hand Towel" $34 · "Oddli Notebook"
+#   $30 · "Oddli Keychain" $20 · "BRIDAL NOTECARD + ENVELOPE & SEAL" $6
+#   · 4 Alighieri candlesticks ($306–$829)
+#
+# ⚠ GUARDED, not absolute: these words are also used as *names* for real clothes.
+# Ghostboy sells an "INCENSE SKORT" and an "INCENSE TOP"; an absolute "incense"
+# rule deletes both. So a phrase here only condemns a listing when the title
+# carries NO garment noun at all (see is_junk). "Hand towel" — not bare "towel" —
+# because beach/kitchen/terry towels and towelling shorts are real product here.
+JUNK_NON_APPAREL_PHRASES = [
+    "candle", "candlestick", "candle holder", "perfume", "fragrance", "incense",
+    "notecard", "note card", "mug", "notebook", "keychain", "key chain",
+    "hand towel",
+]
+# Promotional placeholder SKUs — a gift-with-purchase row, not a product you can
+# buy ("Free Scrunchie With Every Swim Item Purchased", $8, Los Angeles Apparel).
+# Unconditional: no real garment is titled as an offer.
+_FREE_WITH_PURCHASE_RE = re.compile(
+    r"(?<![a-z0-9])free\b.{0,40}\bwith\b.{0,40}\bpurchase[sd]?(?![a-z0-9])", re.I
+)
+
 
 def _word_in(needle, hay):
     """True if `needle` appears in `hay` on word boundaries (handles multi-word
@@ -136,6 +163,16 @@ def is_junk(title, price, product_type=""):
     if price is not None and price < JUNK_PRICE_FLOOR:
         if any(_word_in(w, hay) for w in JUNK_ADDON_WORDS):
             return True
+    # Promo placeholder ("Free X With Every Y Purchased") — never a real product.
+    if _FREE_WITH_PURCHASE_RE.search(hay):
+        return True
+    # Non-apparel goods (candles, perfume, mugs, notebooks, keychains, hand
+    # towels), but ONLY when the title names no garment. That guard is what keeps
+    # Ghostboy's "INCENSE SKORT" / "INCENSE TOP" and any future "Candle Light Slip
+    # Dress" alive while still dropping "Scout Candle" and "Oddli Notebook".
+    if any(_word_in(p, hay) for p in JUNK_NON_APPAREL_PHRASES):
+        if _category_from_keywords(hay) is None:
+            return True
     return False
 
 
@@ -168,7 +205,10 @@ CATEGORY_RULES = [
     # One-piece full-body garments map to 'dresses' (closest existing silhouette).
     ("dresses",     JUMPSUIT_KEYWORDS),
     ("dresses",     ["dress", "gown"]),
-    ("bottoms",     ["skirt", "trouser", "pant", "short", "jean", "legging",
+    # 'skort' is listed explicitly: it is a bottoms garment but shares no whole
+    # word with 'skirt' or 'short', so word-boundary matching missed it and every
+    # skort fell through to the `tops` fallback (3 live, Ghostboy).
+    ("bottoms",     ["skirt", "skort", "trouser", "pant", "short", "jean", "legging",
                      "culotte", "capri"]),
     ("outerwear",   ["coat", "jacket", "blazer", "cardigan", "trench", "parka",
                      "anorak", "overcoat", "puffer"]),
@@ -373,10 +413,80 @@ def monetize(url, brand=None):
     return SOVRN_REDIRECT_BASE + "?" + urllib.parse.urlencode(params)
 
 
+# ── Outbound attribution (UTM) ────────────────────────────────────────────────
+# EVERY outbound product link carries a UTM. Before 2026-07-29 only the 400 Gemini
+# partner links did, so 7,914 of 8,314 clicks arrived at a brand's store as plain
+# "Direct" traffic: the brand could not see Loupe in their own analytics, which is
+# the ENTIRE pitch we make to a brand ("we send you buyers, here's the proof").
+# The tag is deliberately plain and honest — a referral tag, not a monetization
+# wrapper — and it composes with the affiliate layer because it is applied to the
+# DESTINATION url BEFORE monetize() wraps/encodes it.
+LOUPE_UTM = "utm_source=loupe&utm_medium=referral&utm_campaign=app"
+
+
+def add_utm(url, utm=LOUPE_UTM):
+    """Append UTM params to a destination URL.
+
+    • Uses '?' on a bare URL and '&' when a query string already exists.
+    • IDEMPOTENT: a param already present (any value) is never appended again, so
+      re-running the build, or re-processing a curated/carried-forward product
+      that was stored already-tagged, can't produce ...&utm_source=loupe twice.
+    • A more specific existing tag WINS — e.g. the Gemini partner links keep
+      utm_campaign=gemini rather than being overwritten with the generic one.
+    • Fails soft on non-string / empty input (curated rows can carry anything).
+    """
+    if not isinstance(url, str) or not url:
+        return url
+    utm = str(utm or "").lstrip("?&")
+    if not utm:
+        return url
+    parts = urllib.parse.urlsplit(url)
+    have = {k for k, _v in urllib.parse.parse_qsl(parts.query, keep_blank_values=True)}
+    add = [(k, v) for k, v in urllib.parse.parse_qsl(utm, keep_blank_values=True)
+           if k not in have]
+    if not add:
+        return url
+    query = urllib.parse.urlencode(add)
+    if parts.query:
+        query = parts.query + "&" + query
+    return urllib.parse.urlunsplit(
+        (parts.scheme, parts.netloc, parts.path, query, parts.fragment)
+    )
+
+
 def fetch_json(url, timeout=25):
     req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT, "Accept": "application/json"})
     with urllib.request.urlopen(req, timeout=timeout) as resp:
         return json.loads(resp.read().decode("utf-8"))
+
+
+def live_currency(domain, timeout=8):
+    """The currency a store ACTUALLY publishes to a US shopper, or None.
+
+    Every Shopify storefront exposes /cart.js, whose `currency` field is the
+    presentment currency of the current session — the same presentment
+    /products.json?country=US prices are quoted in. Comparing it against the
+    per-brand `currency` in brands.json catches the one config mistake that
+    mis-prices a brand's WHOLE catalog by the FX factor:
+
+      • a store tagged EUR that really publishes DKK  (Stine Goya: 7.4x HIGH —
+        a 499 DKK beanie shipped as $539 instead of $72)
+      • a Shopify Markets store tagged GBP/EUR that serves USD under country=US,
+        so the FX multiply DOUBLE-CONVERTS  (Martine Rose +27%, PDPAOLA +8%)
+      • an UNTAGGED store (defaults USD) that really publishes EUR  (SIEDRÉS, 8% low)
+
+    All four were live on 2026-07-29 and this one probe would have caught every
+    one of them. Deliberately best-effort: short timeout, broad except, returns
+    None on any failure — a currency probe must never cost us a brand's items.
+    """
+    try:
+        data = fetch_json(f"https://{domain}/cart.js?country=US", timeout=timeout)
+        cur = (data or {}).get("currency")
+        if isinstance(cur, str) and re.fullmatch(r"[A-Z]{3}", cur.strip().upper()):
+            return cur.strip().upper()
+    except Exception:  # noqa: BLE001 — never fatal, see docstring
+        pass
+    return None
 
 
 # "dress" used as an ADJECTIVE names a different garment — route it there BEFORE
@@ -416,6 +526,21 @@ _SLEEVE_NOISE_RE = re.compile(
     re.I,
 )
 
+# "…hair" as a MATERIAL, not a hair accessory. 'hair' has to stay a strong
+# accessories keyword — Flattered files its hair clips under product_type "Shoes"
+# and their titles say nothing but "Noomi Leather Hair" — but calf/pony/curly hair
+# is shearling-type leather, and without this a "Curly Hair Zip Up River Vest"
+# (VESTIGE, product_type "Jacket") lands in accessories. Redacted like sleeve
+# length: delete the phrase and let the real garment noun decide.
+_MATERIAL_NOISE_RE = re.compile(
+    r"\b(?:calf|pony|curly|goat|horse|camel|shearling)[- ]hair\b|\bhair[- ]calf\b"
+    # "<noun> detail(ed)" is TRIM, never the garment: "Belt detailed mini knit
+    # shorts" is shorts, "bodysuit with belt detail" is a bodysuit. Without this,
+    # 'belt' (accessories) outranks the garment noun and both land in accessories.
+    r"|\b[a-z]+[- ](?:detail(?:ed|ing|s)?|trim(?:med|s)?|accent(?:ed|s)?)\b",
+    re.I,
+)
+
 # Compound one-word dresses ("Sundress", "Maxidress", "Slipdress", "Shirtdress")
 # end in -dress but never contain "dress" as a standalone word, so the keyword
 # rules miss them (they fell to the tops fallback — Aniqa's wrong-filter report).
@@ -426,8 +551,57 @@ _DRESS_SUFFIX_RE = re.compile(
 )
 
 
-def _category_from_keywords(hay):
+# ── Which title words are strong enough to OUTRANK a store's product_type ─────
+# (2026-07-29) A store's product_type is a merchandising bucket, not a garment
+# name, and letting it win mis-files real product: "Runway • Trinity Skirt",
+# "DUET SKIRT" and "NESTING SKIRT" all shipped as `dresses` because their stores
+# file them under a Dresses/"Skirts & Dresses" product_type, and four Flattered
+# hair clips shipped as `shoes` (product_type "Shoes").
+#
+# But "the title always wins" is WORSE, not better. Measured over 21,803 live
+# products it flipped ~60 items correctly and ~60 items WRONGLY, because many
+# category keywords name a DETAIL or a silhouette rather than the garment:
+#     "Cami | Tort & Burnt Honey"        sunglasses -> tops   (via 'cami')
+#     "Small + Mini Dahlia Hoop Set"     earrings   -> tops   (via 'set')
+#     "T-lock leather top handle"        bag        -> tops   (via 'top')
+#     "KNIT BUCKET"                      bag        -> tops   (via 'knit')
+#     "The Cami Slip: White Pointelle"   dress      -> tops   (via 'cami')
+#     "Scoop Tank Mini" / "Fine Halter Maxi"  dress -> tops   (tank / halter)
+#     "Arcadia Zip High Top" / "Thong Wedge" shoe  -> tops   (top / thong)
+#     "Cap Bloomers"                     shorts -> accessories (via 'cap')
+# So only an UNAMBIGUOUS garment noun overrides the product_type. Everything in
+# _WEAK_TITLE_KEYWORDS is still matched normally on the joined title+type string
+# (nothing is lost); it just can't overrule the shop's own filing.
+_WEAK_TITLE_KEYWORDS = set(SWIM_INTIMATES_KEYWORDS) | {
+    # silhouette / cut / construction words, not garment names
+    "top", "tube", "cami", "set", "knit", "vest", "tank", "halter",
+    # length or fit modifiers ("Short Boot", "Flat Knit", "Cap Sleeve")
+    "short", "flat", "heel", "cap", "overall",
+    # material or trim details that ride on other garments ("Scarf slingbacks",
+    # "Glove-Fit Flats", "leather bag charm"). Their compound forms — handbag,
+    # crossbody, tote, clutch, hairclip, headband, scrunchie — stay STRONG.
+    "scarf", "scarves", "bag", "glove",
+}
+# Keywords that exist ONLY in the strong set. "shorts" (plural) really is a pair
+# of shorts — "Denim Shorts", "Bermuda Shorts", "Belt detailed mini knit shorts" —
+# whereas the singular "Short" is nearly always a length modifier ("SHORT UZBEK
+# CARDIGAN", "Short Hilda Earrings"). _word_in only tolerates a TRAILING +s/+es,
+# so "shorts" cannot match a singular "short": the split is exact.
+_STRONG_EXTRA_KEYWORDS = {"bottoms": ["shorts"]}
+_STRONG_CATEGORY_RULES = []
+for _cat, _kws in CATEGORY_RULES:
+    _strong = [k for k in _kws if k not in _WEAK_TITLE_KEYWORDS]
+    _strong += [k for k in _STRONG_EXTRA_KEYWORDS.get(_cat, []) if k not in _strong]
+    if _strong:
+        _STRONG_CATEGORY_RULES.append((_cat, _strong))
+
+
+def _category_from_keywords(hay, strong_only=False):
     """Category from title/type keywords, or None — the CALLER owns the fallback.
+
+    strong_only=True restricts matching to the unambiguous garment nouns in
+    _STRONG_CATEGORY_RULES; used by infer_category to decide whether the TITLE is
+    definite enough to overrule the store's product_type.
     Word-boundary match (the junk filter's _word_in) so a keyword only hits a
     whole word ('ring' never matches inside 'earring', 'hair' not in 'mohair'),
     with +s/+es plural tolerance; garment rules run before accessories (P1-15).
@@ -441,15 +615,20 @@ def _category_from_keywords(hay):
     # Delete sleeve length / knit construction FIRST so it can neither claim the
     # item ("Long Sleeve Gown" is a gown) nor be misread as another garment
     # ("Short Sleeve Top" is not a pair of shorts). See _SLEEVE_NOISE_RE.
-    stripped = _SLEEVE_NOISE_RE.sub(" ", hay)
+    stripped = _MATERIAL_NOISE_RE.sub(" ", _SLEEVE_NOISE_RE.sub(" ", hay))
     for cat, phrases in _DRESS_ADJECTIVE:
         if any(_word_in(p, stripped) for p in phrases):
             return cat
     if _DRESS_SUFFIX_RE.search(stripped):
         return "dresses"
-    for cat, kws in CATEGORY_RULES:
+    for cat, kws in (_STRONG_CATEGORY_RULES if strong_only else CATEGORY_RULES):
         if any(_word_in(k, stripped) for k in kws):
             return cat
+    if strong_only:
+        # Deliberately NO sleeve fallback here: "Leda Long Sleeve" with a
+        # product_type of "Dresses" is a dress, and letting sleeves-only override
+        # the store would flip 10+ live dresses to `tops`.
+        return None
     # Nothing but the sleeve phrase to go on ("KEY SHORT SLEEVE IN BLACK").
     # A garment described solely by its sleeves is a top.
     if stripped != hay and _SLEEVE_NOISE_RE.search(hay):
@@ -501,16 +680,33 @@ def category_from_tags(tags):
 
 
 def infer_category(product_type, title, tags=None):
-    # 1. Title + product_type — the primary, most trustworthy signal.
+    # 1. The TITLE alone — the single most trustworthy signal, and it OUTRANKS the
+    #    store's product_type (fixed 2026-07-29).
+    #
+    #    The rules used to run on the joined f"{product_type} {title}", which let a
+    #    store's collection label beat the actual garment noun: whichever category
+    #    rule came first in CATEGORY_RULES won, and product_type is at the front of
+    #    the string. Live examples, all shipping as `dresses` because the store
+    #    files them under a "Dresses"/"Runway" product_type:
+    #        "Runway • Trinity Skirt"  ·  "DUET SKIRT"  ·  "NESTING SKIRT"
+    #    and three Flattered hair clips shipping as `shoes` (product_type "Shoes").
+    #    A product_type is the shop's merchandising bucket; the title names the
+    #    thing. When the title names a garment, believe the title.
+    cat = _category_from_keywords((title or "").lower(), strong_only=True)
+    if cat:
+        return cat
+    # 2. The title carries no definite garment noun ("Amelia", "Fine Halter Maxi",
+    #    "BRICK soup") — NOW let product_type speak, on the joined string exactly
+    #    as before, with the full keyword set.
     cat = _category_from_keywords(f"{product_type} {title}".lower())
     if cat:
         return cat
-    # 2. No garment word anywhere in the title/type — lean on the store's OWN
+    # 3. No garment word anywhere in the title/type — lean on the store's OWN
     #    tags before falling back (fixes tag-labeled bags/jewelry landing in tops).
     cat = category_from_tags(tags)
     if cat:
         return cat
-    # 3. Nothing anywhere → tops (the app's safest 'cover' bucket).
+    # 4. Nothing anywhere → tops (the app's safest 'cover' bucket).
     return "tops"
 
 
@@ -846,11 +1042,15 @@ def normalize(product, brand, domain, fx, multi_brand=False, retailer=None):
         # Partner links stay CLEAN and go straight to the retailer's own product
         # page (never re-wrapped by an affiliate network), with a UTM so the shop
         # can see Loupe traffic and orders in their own analytics. That attribution
-        # is the evidence the partnership renews on.
-        utm = str(retailer.get("utm") or "").lstrip("?&")
-        affiliate = f"{product_url}?{utm}" if utm else product_url
+        # is the evidence the partnership renews on. Falls back to the generic
+        # Loupe tag if a retailer entry forgets to set one.
+        affiliate = add_utm(product_url, retailer.get("utm") or LOUPE_UTM)
     else:
-        affiliate = monetize(product_url, display_brand)
+        # Attribution FIRST, monetization second: the UTM belongs on the brand's own
+        # product URL, so it survives inside whatever the affiliate layer wraps
+        # around it (a per-brand deep-link template percent-encodes this whole URL
+        # as its {url}, and the brand still sees utm_source=loupe on arrival).
+        affiliate = monetize(add_utm(product_url), display_brand)
     out = {
         # Namespace retailer ids so the same designer stocked BOTH direct and at a
         # partner shop can't collide on id (different stores, different handles).
@@ -996,11 +1196,27 @@ def main():
                 return  # short page → store exhausted
             time.sleep(delay)
 
-    def scrape_brand(domain, cap):
+    def check_currency(label, domain, configured):
+        """Probe the store's LIVE presentment currency once and shout if it
+        disagrees with brands.json. Appends to `summary` so the mismatch lands in
+        the run log the founder actually reads. Never raises, never blocks."""
+        live = live_currency(domain)
+        if live and live != (configured or "USD"):
+            line = (f"  ⚠ CURRENCY MISMATCH (brand={label} "
+                    f"config={configured or 'USD (untagged)'} live={live})")
+            summary.append(line)
+            print(line, file=sys.stderr)
+
+    def scrape_brand(domain, cap, label=None, configured=None):
         """Yield successive products.json pages for a brand, walking `since_id`
         until a short/empty page (store exhausted) or MAX_PAGES. The caller stops
         early once it has `cap` post-filter items, so for most brands this fetches
-        exactly one page."""
+        exactly one page.
+
+        Also fires the one-shot currency probe (see live_currency): a wrong
+        per-brand `currency` silently mis-prices that brand's ENTIRE catalog by
+        the FX factor, and nothing else in the pipeline can detect it."""
+        check_currency(label or domain, domain, configured)
         since_id = None
         for _ in range(MAX_PAGES):
             data = scrape_page(domain, PAGE_LIMIT, since_id)
@@ -1034,7 +1250,8 @@ def main():
         try:
             # Walk products.json pages (since_id) until we have `cap` valid items
             # or the store is exhausted. Most brands satisfy `cap` on page 1.
-            for page in scrape_brand(domain, cap):
+            for page in scrape_brand(domain, cap, label=brand,
+                                     configured=entry.get("currency")):
                 pages_seen += 1
                 for product in page:
                     if got >= cap:
@@ -1102,6 +1319,9 @@ def main():
             rfx = fx_table.get(r.get("currency", "USD"), 1.0)
             rcap = int(r.get("cap", 400))
             vcap = int(r.get("perVendorCap", 24))
+            # A partner's items are the ones where a wrong price damages a real
+            # business relationship — probe their live currency too.
+            check_currency(f"[retailer] {r.get('name', rid)}", rdomain, r.get("currency"))
             # Page-based walk (see scrape_retailer_pages): a retailer needs the
             # whole store paged through, and `since_id` silently collapses on a
             # newest-first store. 250 = Shopify's max page size.
@@ -1213,7 +1433,10 @@ def main():
                     continue
                 seen_ids.add(pid)
                 if p.get("affiliateUrl"):
-                    p["affiliateUrl"] = monetize(p["affiliateUrl"], p.get("brand"))
+                    # Same attribution-then-monetization order as scraped products,
+                    # so a curated brand shows up in its own analytics too. add_utm
+                    # is idempotent, so a curated row stored already-tagged is a no-op.
+                    p["affiliateUrl"] = monetize(add_utm(p["affiliateUrl"]), p.get("brand"))
                 products.append(p)
                 added += 1
             summary.append(f"  {'(curated)':<22} {added:>3} items")
@@ -1452,7 +1675,20 @@ def main():
                 continue
             product["cutoutStatus"] = info.get("status", "fallback")
             if info.get("status") == "ready":
-                product["cutoutUrl"] = f"{_cut_base}{product['id']}.webp"
+                # PERCENT-ENCODE the id (2026-07-29). slugify() is Unicode-aware —
+                # 'é'.isalnum() is True — so accented brands keep their accents in the
+                # product id (pärlemor-…, démodémodé-…, siedrés-…, with-jéan-…). The
+                # cutout file on the `cutouts` branch is named with that raw id, but a
+                # raw non-ASCII byte in a URL is not a valid URL: jsDelivr 400'd all
+                # ~178 of them, so five whole brands rendered as framed tiles instead
+                # of cutouts in the Look Builder. quote() encodes exactly the UTF-8
+                # bytes of the filename, which is the correct URL FOR THAT SAME FILE —
+                # so cutout_catalog.py needs no change and the two stay in sync.
+                # We deliberately do NOT fix this in slugify(): changing ids would
+                # reset addedAt across those brands and orphan every saved item.
+                product["cutoutUrl"] = (
+                    f"{_cut_base}{urllib.parse.quote(product['id'], safe='')}.webp"
+                )
                 if info.get("aspect"):
                     product["cutoutAspect"] = info["aspect"]
                 _cut_n += 1
@@ -1486,6 +1722,46 @@ def main():
         summary.append(
             f"  -> cutout manifest fetch failed; carried {_carried} cutoutUrls from "
             f"previous catalog (no fail-wipe)"
+        )
+
+    # ── PUBLISH GUARD: never overwrite a good catalog with a gutted one ────────
+    # Runs BEFORE OUT_FILE.write_text, so a bad run leaves yesterday's catalog on
+    # disk (and therefore live on jsDelivr) completely untouched.
+    #
+    # The only previous guard was `len(products) < 20`, and it fired AFTER the
+    # write — so any run that returned, say, 3,000 of 8,314 products (a mass
+    # bot-block, a Shopify-wide incident, a bad edit to brands.json, an over-eager
+    # junk filter) published the gutted catalog and exited 0. Users would lose half
+    # the feed with nothing in the run log saying so. Two ratios catch that:
+    #   • product count down >20% vs the previous catalog
+    #   • distinct brand labels down >10% vs the previous catalog
+    # Both are far outside normal daily drift (a healthy day moves a few percent at
+    # most) and both are skipped when there is no substantial previous catalog to
+    # compare against, so a first/bootstrap run is never blocked.
+    def _refuse(reason):
+        print("Loupe catalog build (ABORTED — nothing written)")
+        print("\n".join(summary))
+        print(f"\nERROR: {reason}", file=sys.stderr)
+        print("Refusing to publish. The previous catalog.json is left untouched "
+              "and stays live; fix the cause and re-run.", file=sys.stderr)
+        sys.exit(1)
+
+    _prev_count = len(prev_ids)
+    _prev_labels = len({b for b in prev_by_brand if b})
+    _now_labels = len({(p.get("brand") or "").strip() for p in products
+                       if (p.get("brand") or "").strip()})
+    if len(products) < 20:
+        _refuse(f"only {len(products)} products scraped — not enough to publish.")
+    if _prev_count >= 100 and len(products) < _prev_count * 0.80:
+        _refuse(f"product count collapsed: {len(products)} vs {_prev_count} yesterday "
+                f"({100 * (1 - len(products) / _prev_count):.1f}% drop, limit 20%).")
+    if _prev_labels >= 20 and _now_labels < _prev_labels * 0.90:
+        _refuse(f"brand count collapsed: {_now_labels} labels vs {_prev_labels} yesterday "
+                f"({100 * (1 - _now_labels / _prev_labels):.1f}% drop, limit 10%).")
+    if _prev_count:
+        summary.append(
+            f"  -> publish guard OK: {len(products)} products / {_now_labels} labels "
+            f"vs {_prev_count} / {_prev_labels} previously"
         )
 
     catalog = {
@@ -1548,11 +1824,10 @@ def main():
         print("  category mix: " + ", ".join(
             f"{c}={n}" for c, n in sorted(cat_counts.items(), key=lambda kv: -kv[1])
         ))
-    # Fail the CI run only if we got essentially nothing (keeps a bad scrape from
-    # overwriting a good catalog with an empty one).
-    if len(products) < 20:
-        print("ERROR: too few products scraped \u2014 not enough to publish.", file=sys.stderr)
-        sys.exit(1)
+    # NOTE: the "too few products" check used to live here \u2014 i.e. AFTER the catalog
+    # had already been written to disk. It (and the new shrink ratios) now run in the
+    # PUBLISH GUARD above, before OUT_FILE.write_text, so a bad run can't overwrite a
+    # good catalog and only then complain.
 
 
 if __name__ == "__main__":
