@@ -1,0 +1,36 @@
+{
+  "_what_this_is": "Per-brand affiliate deep-link templates. build_catalog.py rewrites every outbound product URL for a brand listed here through that brand's own affiliate program, which pays 3-10x the Sovrn catch-all. The literal token {url} is replaced with the percent-encoded destination. Brand keys match case- and spacing-insensitively.",
+
+  "_how_to_add_one": "1. Sign up for the brand's program (see _verified_programs below for the ones we already found). 2. The network gives you a deep-link / tracking URL containing YOUR publisher id. 3. Replace the destination part of it with the literal token {url}. 4. Add it here as \"Brand Name\": \"<template>\". 5. Commit. The next catalog build routes that brand through it. Run the three test_*.py fixture scripts before pushing - they are CI gates.",
+
+  "_is_this_safe_to_commit": "Yes, by construction. An affiliate template is embedded in every outbound URL the app produces, so anyone can read it off a single product tap. It is an identifier, not a credential - it cannot spend money or read an account. If a network ever issues one containing something genuinely secret, put THAT one in the BRAND_AFFILIATE_TEMPLATES Actions secret instead, which overrides this file.",
+
+  "_status": "No templates active yet. The entries below are DOCUMENTATION of programs we verified exist (2026-07-29) - they are prefixed with _ so the loader skips them. Move an entry out of _verified_programs and into the top level, with the real publisher id filled in, once signed up.",
+
+  "_verified_programs": {
+    "_comment": "Verified to exist and to belong to the correct brand as of 2026-07-29. Sign-up URLs are in the outreach tracker (Self-serve tab). Commission is what the listing stated; confirm on signup.",
+
+    "Lisa Says Gah":       { "platform": "Impact",             "commission": "",                    "signup": "https://lisasaysgah.com/pages/affiliate" },
+    "Mirror Palais":       { "platform": "Awin",               "commission": "30-day cookie",       "signup": "https://ui.awin.com/merchant-profile/123650" },
+    "Christopher Esber":   { "platform": "Commission Factory", "commission": "12%, 30-day",         "signup": "https://www.commissionfactory.com/advertiser-directory/christopher-esber-affiliate-program/88668" },
+    "Miaou":               { "platform": "Awin",               "commission": "",                    "signup": "https://miaou.com/pages/affiliates" },
+    "Ganni":               { "platform": "FlexOffers",         "commission": "30-day",              "signup": "https://www.flexoffers.com/affiliate-programs/ganni-affiliate-program" },
+    "Proenza Schouler":    { "platform": "FlexOffers",         "commission": "2.4%, 30-day",        "signup": "https://www.flexoffers.com/affiliate-programs/proenza-schouler-affiliate-program" },
+    "St. Agni":            { "platform": "Commission Factory", "commission": "10%, 30-day",         "signup": "https://www.commissionfactory.com/advertiser-directory/st-agni-affiliate-program/67528" },
+    "ALOHAS":              { "platform": "Rakuten / Impact",   "commission": "10%, 30-day",         "signup": "https://alohas.com/pages/affiliates" },
+    "Rat and Boa":         { "platform": "Rakuten / Sovrn",    "commission": "",                    "signup": "https://commerce.sovrn.com/merchants/233454/rat-and-boa-affiliate-program" },
+    "Los Angeles Apparel": { "platform": "Awin",               "commission": "up to 15%, 30-day",   "signup": "https://ui.awin.com/merchant-profile/126803" },
+    "Heaven Mayhem":       { "platform": "Sovrn Commerce",     "commission": "",                    "signup": "https://www.viglink.com/merchants/235919" },
+    "Sir the Label":       { "platform": "FlexOffers",         "commission": "3.2-5.6%, 30-day",    "signup": "https://www.flexoffers.com/affiliate-programs/sir-the-label-affiliate-program" },
+    "Cult Gaia":           { "platform": "FlexOffers",         "commission": "3.2%, 30-day",        "signup": "https://www.flexoffers.com/affiliate-programs/cult-gaia-affiliate-program" },
+    "PDPAOLA":             { "platform": "Webgains",           "commission": "5%, 30-day",          "signup": "https://www.webgains.com/public/en/directory/pdpaola-uk-affiliate-programme/" },
+    "Khaite":              { "platform": "Sovrn Commerce",     "commission": "",                    "signup": "https://www.viglink.com/merchants/137122" },
+    "Agmes":               { "platform": "Pepperjam / ShopMy", "commission": "",                    "signup": "https://agmesnyc.com/pages/affiliate-program" },
+    "Damson Madder":       { "platform": "Awin / Webgains",    "commission": "10%+ 90-day (Awin)",  "signup": "https://ui.awin.com/merchant-profile/114966" },
+    "Flattered":           { "platform": "Klarna Creator",     "commission": "",                    "signup": "https://flattered.com/pages/collaboration" },
+    "Frankies Bikinis":    { "platform": "Awin",               "commission": "up to 10%, 60-day",   "signup": "https://ui.awin.com/merchant-profile/62461" },
+    "Guizio":              { "platform": "FlexOffers",         "commission": "5.6%, 7-day",         "signup": "https://www.flexoffers.com/affiliate-programs/danielle-guizio-ny-affiliate-program" }
+  },
+
+  "_example_once_signed_up": "\"Damson Madder\": \"https://www.awin1.com/cread.php?awinmid=114966&awinaffid=YOUR_AWIN_ID&ued={url}\""
+}

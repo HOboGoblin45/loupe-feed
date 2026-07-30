@@ -5,6 +5,8 @@ Mirrors test_junk_filter.py: plain asserts, no test framework, gated in CI
 before any catalog publish. The wrapper is pure env-driven config, so these
 fixtures reload build_catalog under controlled environments.
 """
+import tempfile
+import pathlib
 import importlib
 import json
 import os
@@ -146,8 +148,73 @@ assert bc.add_utm(RAW, None) == RAW
 frag = bc.add_utm("https://x.com/p/a#reviews")
 assert frag == "https://x.com/p/a?" + UTM + "#reviews", frag
 
+# 10. affiliate_templates.json — the COMMITTED source of brand templates.
+#
+# Why this group exists: brand outreach produces affiliate links one reply at a
+# time over months. When the only way to add one was a GitHub Actions secret,
+# every "yes" was blocked on the one person who can edit repo secrets. The file
+# makes it a normal commit. These fixtures pin the two properties that make that
+# safe: documentation keys must never become live templates, and the env var
+# must still win so a genuinely-secret template can override the public file.
+_TPL_FILE = pathlib.Path(HERE) / "affiliate_templates.json"
+
+# 10a. The shipped file must PARSE and must activate ZERO templates — every
+#      entry in it is documentation (underscore-prefixed) until a real publisher
+#      id is filled in. A doc entry that silently became live would rewrite a
+#      brand's links through a template with no id in it.
+if _TPL_FILE.exists():
+    _doc = json.loads(_TPL_FILE.read_text(encoding="utf-8"))
+    assert isinstance(_doc, dict), "affiliate_templates.json must be a JSON object"
+    _live = {k: v for k, v in _doc.items()
+             if not k.startswith("_") and isinstance(v, str) and "{url}" in v}
+    bc = load({})
+    assert len(bc.BRAND_AFFILIATE_TEMPLATES) == len(_live), (
+        f"shipped affiliate_templates.json activates {len(bc.BRAND_AFFILIATE_TEMPLATES)} "
+        f"template(s) but only {len(_live)} look live - a _doc key leaked through")
+    # Anything that IS live must contain a real destination token and no placeholder.
+    for _brand, _tpl in _live.items():
+        assert "{url}" in _tpl, _brand
+        assert "YOUR_" not in _tpl and "YOURID" not in _tpl, (
+            f"{_brand}: template still contains a placeholder publisher id")
+
+# 10b. A template in the FILE wraps that brand and leaves every other brand alone.
+with tempfile.TemporaryDirectory() as _d:
+    _fake = pathlib.Path(_d) / "affiliate_templates.json"
+    _fake.write_text(json.dumps({
+        "_comment": "docs must be ignored",
+        "_verified_programs": {"Ganni": {"platform": "FlexOffers"}},
+        "Damson Madder": "https://www.awin1.com/cread.php?awinmid=114966&awinaffid=AF1&ued={url}",
+        "Broken Brand": "https://example.com/no-token",
+    }), encoding="utf-8")
+    bc = load({})
+    bc.AFFILIATE_TEMPLATES_FILE = _fake
+    bc.BRAND_AFFILIATE_TEMPLATES = bc._load_brand_templates()
+    assert len(bc.BRAND_AFFILIATE_TEMPLATES) == 1, bc.BRAND_AFFILIATE_TEMPLATES
+    wrapped = bc.monetize(DM_RAW, "Damson Madder")
+    assert wrapped.startswith("https://www.awin1.com/cread.php?awinmid=114966&awinaffid=AF1")
+    assert bc.monetize(wrapped, "Damson Madder") == wrapped        # idempotent
+    assert bc.monetize(RAW, "Peachy Den") == RAW                   # others untouched
+    # Case/spacing-insensitive brand matching still applies to file entries.
+    assert bc.monetize(DM_RAW, "  damson   madder ").startswith("https://www.awin1.com/")
+
+    # 10c. The ENV VAR OVERRIDES the file for the same brand.
+    bc = load({"BRAND_AFFILIATE_TEMPLATES": json.dumps(
+        {"Damson Madder": "https://secret.example/go?id=S9&u={url}"})})
+    bc.AFFILIATE_TEMPLATES_FILE = _fake
+    bc.BRAND_AFFILIATE_TEMPLATES = bc._load_brand_templates()
+    assert bc.monetize(DM_RAW, "Damson Madder").startswith("https://secret.example/go?id=S9")
+
+# 10d. A malformed or missing file must never take the build down.
+with tempfile.TemporaryDirectory() as _d:
+    _bad = pathlib.Path(_d) / "affiliate_templates.json"
+    _bad.write_text("{not json", encoding="utf-8")
+    bc = load({}); bc.AFFILIATE_TEMPLATES_FILE = _bad
+    assert bc._load_brand_templates() == {}
+    bc.AFFILIATE_TEMPLATES_FILE = pathlib.Path(_d) / "does_not_exist.json"
+    assert bc._load_brand_templates() == {}
+
 # Leave the process env clean for anything running after us in the same shell.
 for key in ("SOVRN_API_KEY", "SOVRN_CUID", "BRAND_AFFILIATE_TEMPLATES"):
     os.environ.pop(key, None)
 
-print("test_affiliate_wrappers: 9 fixture groups passed")
+print("test_affiliate_wrappers: 10 fixture groups passed")

@@ -339,29 +339,71 @@ SOVRN_REDIRECT_BASE = "https://redirect.viglink.com/"
 SOVRN_CUID = os.environ.get("SOVRN_CUID", "loupeapp").strip()
 
 
-def _load_brand_templates():
-    """Parse BRAND_AFFILIATE_TEMPLATES (JSON env var) → {_norm_brand: template}.
+AFFILIATE_TEMPLATES_FILE = HERE / "affiliate_templates.json"
 
-    Fail-soft: malformed JSON or entries without a {url} token are skipped with
-    a warning — a bad template must never take the whole catalog build down.
-    """
-    raw = os.environ.get("BRAND_AFFILIATE_TEMPLATES", "").strip()
-    if not raw:
-        return {}
-    try:
-        data = json.loads(raw)
-    except ValueError:
-        print("WARNING: BRAND_AFFILIATE_TEMPLATES is not valid JSON - ignoring it.")
-        return {}
+
+def _coerce_templates(data, source):
+    """{brand: template} → {_norm_brand: template}, skipping anything unusable."""
     if not isinstance(data, dict):
-        print("WARNING: BRAND_AFFILIATE_TEMPLATES must be a JSON object - ignoring it.")
+        print(f"WARNING: affiliate templates from {source} must be a JSON object - ignoring.")
         return {}
-    templates = {}
+    out = {}
     for brand_name, tpl in data.items():
+        if brand_name.startswith("_"):
+            continue  # "_comment" / "_howto" documentation keys
         if isinstance(tpl, str) and "{url}" in tpl:
-            templates[_norm_brand(brand_name)] = tpl
-        else:
-            print(f"WARNING: affiliate template for {brand_name!r} lacks a {{url}} token - skipped.")
+            out[_norm_brand(brand_name)] = tpl
+        elif isinstance(tpl, str) and tpl.strip():
+            print(f"WARNING: affiliate template for {brand_name!r} ({source}) lacks a "
+                  f"{{url}} token - skipped.")
+    return out
+
+
+def _load_brand_templates():
+    """Per-brand affiliate deep-link templates → {_norm_brand: template}.
+
+    TWO SOURCES, merged, env var wins:
+
+      1. affiliate_templates.json (committed, in this repo)  ← the normal path
+      2. BRAND_AFFILIATE_TEMPLATES (JSON env var / Actions secret) ← override
+
+    WHY THE FILE EXISTS. Outreach to ~180 brands means links arrive one reply at
+    a time, for months. When the ONLY way to add one was a GitHub Actions secret,
+    every single "yes" was blocked on the one person who can edit repo secrets —
+    so a brand could say yes on Monday and still not be earning by Friday.
+    A committed file makes it a normal pull request.
+
+    Is that safe in a public repo? Yes, and deliberately: an affiliate deep-link
+    template is public BY CONSTRUCTION — it is embedded in every outbound URL the
+    app produces, so anyone can read it off a single product tap. It is an
+    identifier, not a credential. Nothing here can spend money or read an account.
+    The env var stays supported and takes precedence, so if any future network
+    ever issues a template containing something genuinely secret, put THAT one in
+    the secret and leave the rest in the file.
+
+    Fail-soft everywhere: a missing file, malformed JSON, or an entry without a
+    {url} token is skipped with a warning. A bad template must never take the
+    whole catalog build down.
+    """
+    templates = {}
+    try:
+        if AFFILIATE_TEMPLATES_FILE.exists():
+            templates.update(_coerce_templates(
+                json.loads(AFFILIATE_TEMPLATES_FILE.read_text(encoding="utf-8")),
+                "affiliate_templates.json"))
+    except ValueError:
+        print("WARNING: affiliate_templates.json is not valid JSON - ignoring it.")
+    except Exception as exc:  # unreadable file must not break the build
+        print(f"WARNING: could not read affiliate_templates.json ({exc}) - ignoring it.")
+
+    raw = os.environ.get("BRAND_AFFILIATE_TEMPLATES", "").strip()
+    if raw:
+        try:
+            templates.update(_coerce_templates(json.loads(raw), "BRAND_AFFILIATE_TEMPLATES"))
+        except ValueError:
+            print("WARNING: BRAND_AFFILIATE_TEMPLATES is not valid JSON - ignoring it.")
+    if templates:
+        print(f"affiliate: {len(templates)} brand template(s) active")
     return templates
 
 
