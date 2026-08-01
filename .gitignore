@@ -1,3 +1,8 @@
 __pycache__/
 *.pyc
 .venv/
+
+# Rebuilt from git history by build_price_history.py -- deriving it from the
+# commits and then committing it back would make the history self-referential
+# and double the repo's growth for no gain.
+loupe-feed/price_history.json
