@@ -2003,9 +2003,43 @@ def main():
             f"vs {_prev_count} / {_prev_labels} previously"
         )
 
+    # ── Provenance ────────────────────────────────────────────────────────────
+    # This file is deliberately public, and deliberately machine-readable. The
+    # independent tier is invisible to AI shopping agents — these brands publish
+    # no structured feed, sit in no marketplace, and are individually too small to
+    # crawl. Being the trusted, citable index of that tier is a position nobody
+    # occupies, and it is worth more than the file is worth withholding: every
+    # product fact here is already public on the brand's own storefront, so
+    # locking it down would forfeit the position while protecting nothing.
+    #
+    # What is NOT public is the intelligence derived from this: the visual
+    # embeddings, the ranking behaviour, and the price/availability record
+    # reconstructed from this repo's own history.
+    #
+    # Emitted BEFORE "products" so it is the first thing in the file — a crawler
+    # or an agent that reads only the first kilobyte still gets the terms and the
+    # attribution requirement. Unknown top-level keys are inert to the app, which
+    # reads only .products / .retailers / .ranker.
     catalog = {
         "generatedAt": now_iso,
         "count": len(products),
+        "provenance": {
+            "source": "Loupe",
+            "sourceUrl": "https://useloupe.shop",
+            "description": (
+                "A hand-curated index of independent women's fashion brands. Every "
+                "product is scraped from the brand's own public storefront and "
+                "normalized: prices converted to USD, categories and colours "
+                "inferred, junk (gift cards, size charts, returns) removed."
+            ),
+            "brands": _now_labels,
+            "products": len(products),
+            "license": "CC-BY-4.0",
+            "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+            "attribution": "Data from Loupe — https://useloupe.shop",
+            "terms": "https://github.com/HOboGoblin45/loupe-feed/blob/main/TERMS.md",
+            "updated": "daily",
+        },
         "products": products,
     }
     # Partner retailers, keyed by the `retailer` stamp on a product. Stored ONCE

@@ -48,9 +48,34 @@ sale. Any window spanning it will show spurious "increases" of roughly 8-45%.
 `priceEpoch` below marks the boundary; anything claiming a price DROP must be
 computed inside a single epoch. The guard is enforced, not merely documented.
 
+THE SHALLOW-CLONE TRAP (2026-08-01)
+
+This script's entire input is `git log`. That makes it silently sensitive to how
+the repo was CLONED, which nothing about running it reveals.
+
+Measured on 2026-08-01: the working clone was shallow. It could see 28 daily
+catalog snapshots. The remote had 42. Every day from 2026-06-17 to 2026-06-30 —
+a third of the whole dataset, and the *oldest* third, which is the part that
+cannot be re-derived later — was invisible. The script did not fail. It emitted
+a well-formed file stamped `windowStart: 2026-07-01`, which reads exactly like a
+statement that the data begins there. It does not; that is just where the clone
+began.
+
+The asset this file exists to build is worth precisely as much as its length, so
+understating the length is the one error that matters. A shallow or grafted
+repository is now a hard stop rather than a quiet truncation. `--allow-shallow`
+still permits a partial run for local experimentation, but stamps
+`partialHistory: true` into the output so nothing downstream can mistake a
+fragment for the record.
+
+CI NOTE: actions/checkout defaults to fetch-depth: 1, so any workflow that ever
+runs this MUST set `fetch-depth: 0`. Otherwise it would see a single snapshot
+and exit on the two-snapshot minimum below.
+
 USAGE
     python build_price_history.py                 # walk git, write the file
     python build_price_history.py --report        # human summary, writes nothing
+    python build_price_history.py --allow-shallow # partial run, marked as partial
 """
 
 import argparse
@@ -95,6 +120,25 @@ def git(*args: str) -> str:
     ).stdout
 
 
+def history_is_truncated() -> bool:
+    """True when this clone cannot see the repo's whole history.
+
+    Two ways that happens, both of which produce a shorter dataset with no error:
+      • a shallow clone (`clone --depth N`), which git reports directly;
+      • a grafted history (`.git/shallow` present after a partial unshallow).
+    Either one makes windowStart a fact about the CLONE, not about the data.
+    """
+    if git("rev-parse", "--is-shallow-repository").strip() == "true":
+        return True
+    # Older gits (and some grafted states) do not answer the question above but
+    # still leave the marker file behind. Ask git where it lives rather than
+    # assuming .git is a directory — in a worktree or submodule it is a file.
+    git_dir = git("rev-parse", "--git-dir").strip()
+    if not git_dir:
+        return False
+    return (REPO / git_dir / "shallow").exists() or pathlib.Path(git_dir, "shallow").exists()
+
+
 def daily_snapshots():
     """(day, sha) for the LAST commit of each day that touched the catalog."""
     out = {}
@@ -120,7 +164,28 @@ def in_settle_window(day: str) -> bool:
     return any(e <= day < _plus(e, EPOCH_SETTLE_DAYS) for e in PRICE_EPOCHS)
 
 
-def build(verbose: bool = True):
+def build(verbose: bool = True, allow_shallow: bool = False):
+    # Check BEFORE walking: a truncated clone still produces a perfectly
+    # well-formed file, so there is no later point at which this is detectable.
+    truncated = history_is_truncated()
+    if truncated and not allow_shallow:
+        sys.exit(
+            "REFUSING TO BUILD: this clone's history is truncated (shallow/grafted).\n"
+            "\n"
+            "  Everything here is reconstructed from `git log`, so a shallow clone\n"
+            "  silently yields a SHORTER dataset and a windowStart that describes the\n"
+            "  clone rather than the data. On 2026-08-01 that cost 14 of 42 days —\n"
+            "  the oldest third, which is the part that cannot be rebuilt later.\n"
+            "\n"
+            "  Fix it:      git fetch --unshallow\n"
+            "  In CI:       actions/checkout@v4  with:  fetch-depth: 0\n"
+            "  Anyway:      python build_price_history.py --allow-shallow\n"
+            "               (output is stamped partialHistory: true)"
+        )
+    if truncated:
+        print("WARNING: shallow/grafted clone — this is a FRAGMENT, not the record.",
+              file=sys.stderr)
+
     snaps = daily_snapshots()
     if len(snaps) < 2:
         sys.exit("Need at least two daily catalog snapshots in git history.")
@@ -213,6 +278,10 @@ def build(verbose: bool = True):
         "windowStart": start,
         "windowEnd": end,
         "days": len(days),
+        # True when the clone could not see the whole history, so windowStart is a
+        # lower bound rather than the real beginning. Never omit it on a partial
+        # run: an absent flag is indistinguishable from a complete one.
+        **({"partialHistory": True} if truncated else {}),
         "priceEpochs": PRICE_EPOCHS,
         "schema": "[firstDayIdx, daysSeen, minPrice, maxPrice, lastPrice, lastChangeDayIdx]",
         "products": products,
@@ -225,6 +294,9 @@ def report(hist):
     days, prods = hist["days"], hist["products"]
     print("=" * 74)
     print(f"PRICE HISTORY  {hist['windowStart']} -> {hist['windowEnd']}  ({days} daily snapshots)")
+    if hist.get("partialHistory"):
+        print("  !! PARTIAL — clone is shallow; the window starts where the CLONE does,")
+        print("     not where the data does. Run `git fetch --unshallow` and rebuild.")
     print(f"  products with any history : {len(prods):,}")
 
     tracked = {k: v for k, v in prods.items() if v[1] >= 7}
@@ -252,10 +324,12 @@ def report(hist):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--report", action="store_true", help="print a summary, write nothing")
+    ap.add_argument("--allow-shallow", action="store_true",
+                    help="build from a truncated clone anyway (stamps partialHistory)")
     args = ap.parse_args()
 
     print("walking catalog history…", file=sys.stderr)
-    hist = build()
+    hist = build(allow_shallow=args.allow_shallow)
     report(hist)
 
     if not args.report:

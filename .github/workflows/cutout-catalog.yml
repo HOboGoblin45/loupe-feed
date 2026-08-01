@@ -5,6 +5,47 @@ name: Cutout Loupe catalog
 # and embeddings.json) so `main` stays lean. INCREMENTAL: each run cuts out up to `limit`
 # NEW products and skips everything already in cutouts.json, so the backfill completes
 # over several runs. Manual dispatch + a nightly pass that catches newly-added products.
+#
+# ── WHY THIS BRANCH IS REPUBLISHED, NOT APPENDED TO (2026-08-01) ──────────────
+#
+# Keeping the images off `main` worked exactly as intended — but GitHub's size
+# limit is per REPOSITORY, not per branch, so moving the bulk sideways bought
+# nothing. Measured 2026-08-01, on the full history:
+#
+#     img/ (this branch) ...... 893.5 MB   8,064 blobs   94.7% of the repo
+#     loupe-feed/ (all of main)  49.0 MB     234 blobs    <6%
+#     ─────────────────────────────────────────────────────────────
+#     GitHub-reported repo size   948 MB    (1 GB soft warning, 5 GB hard cap)
+#
+# So the repo was never being killed by the daily 8.8 MB catalog.json — git
+# deltas that down to ~470 KB/commit, 40.9 MB for 87 snapshots. It was being
+# killed here. WebP is already compressed, so every cutout is an incompressible
+# ~111 KB blob that git can never delta against anything.
+#
+# Appending forever made that unbounded in TIME, not just in catalog size. The
+# catalog churns 34%/month (measured: 2,568 of 7,591 pieces vanished in July), so
+# ~2,600 products/month are replaced. cutout_catalog.py already prunes their webp
+# from the working tree — but a delete only removes a file from the TREE. Every
+# blob stayed permanently reachable through history, so churn alone added
+# ~285 MB/month of images that nothing would ever serve again: 5 GB in ~14 months.
+#
+# The fix is to stop keeping history this branch has no use for. Cutouts are
+# derived, regenerable, immutable-per-path data; only the CURRENT tree is ever
+# read. So each publish rewrites the branch as a single orphan commit of exactly
+# what is live, and the previous tip is kept as a dated tag for RETAIN_TAGS days.
+# Steady state becomes "live catalog + one week of churn" — bounded by the size
+# of the catalog rather than by how long the pipeline has been running.
+#
+# The tags are not decoration. build_catalog.py pins cutout URLs to an immutable
+# @<sha>, so a catalog already on a device points at an OLDER commit; dropping
+# that commit would 404 every cutout it references. A week of retention covers
+# any client far past the ~24h catalog refresh, and doubles as a rollback window.
+#
+# NOTE FOR WHOEVER READS THIS AFTER A SCARE: a force-push here cannot lose
+# anything irreplaceable. Re-running the backfill rebuilds the whole branch in
+# ~9 nights. The asset that must never be rewritten is `main`'s history, because
+# build_price_history.py reconstructs the price record from it — and `main` is
+# 49 MB, so it never needs to be.
 
 on:
   workflow_dispatch:
@@ -73,18 +114,72 @@ jobs:
         run: python loupe-feed/cutout_catalog.py --dir cutrepo --limit ${{ github.event.inputs.limit || '800' }}
 
       - name: Commit & push cutouts branch
+        env:
+          # How many previous published tips to keep reachable. Must comfortably
+          # exceed the age of the oldest catalog.json a device might still hold
+          # (rebuilt daily, jsDelivr caches ≤12h), because those catalogs pin
+          # cutout URLs to @<sha>. Seven days is ~7x the worst realistic staleness.
+          RETAIN_TAGS: "7"
         run: |
-          set -e
+          set -euo pipefail
           cd cutrepo
           git config user.name  "loupe-cutout-bot"
           git config user.email "actions@users.noreply.github.com"
+
+          # The clone is --depth 1, so HEAD is the previously published tip (or
+          # nothing at all on the bootstrap run that creates the branch).
+          #
+          # --verify --quiet, NOT a bare `rev-parse HEAD`: on an unborn branch a
+          # bare rev-parse ECHOES THE STRING "HEAD" on stdout and *then* fails, so
+          # `$(... || true)` yields the literal "HEAD" rather than an empty string.
+          # That reads as "there is a previous commit" and sends the next line into
+          # `git ls-tree HEAD` -> "fatal: Not a valid object name HEAD". Caught by
+          # simulating this step against a scratch repo before it ever force-pushed.
+          PREV_SHA="$(git rev-parse --verify --quiet HEAD || true)"
+          PREV_TREE="$(git rev-parse --verify --quiet 'HEAD^{tree}' || echo none)"
+          PREV_IMGS=0
+          if [ -n "$PREV_SHA" ]; then
+            PREV_IMGS="$(git ls-tree -r --name-only HEAD -- img | wc -l)"
+          fi
+          NOW_IMGS="$(find img -type f -name '*.webp' 2>/dev/null | wc -l)"
+          echo "cutouts: $PREV_IMGS published -> $NOW_IMGS on disk"
+
           git add -A
-          if git diff --quiet --cached; then
-            echo "No new cutouts."
+          NEW_TREE="$(git write-tree)"
+          if [ "$NEW_TREE" = "$PREV_TREE" ]; then
+            echo "No cutout changes — leaving the branch (and its pinned sha) alone."
             exit 0
           fi
-          git commit -m "cutouts: batch $(date -u +%Y-%m-%dT%H:%M:%SZ)"
-          git push origin cutouts
+
+          # COLLAPSE GUARD. This step force-pushes, so unlike an append it CAN
+          # destroy the live set in one go. cutout_catalog.py already refuses to
+          # prune more than 30% off a partial catalog fetch; this is the second
+          # net, against a bug or an empty checkout on THIS side of the handoff.
+          # A healthy night moves a few percent: the backfill only ever grew, and
+          # churn replaces roughly as much as it removes.
+          if [ "$PREV_IMGS" -gt 100 ] && [ "$NOW_IMGS" -lt $(( PREV_IMGS * 80 / 100 )) ]; then
+            echo "ERROR: cutout set collapsed — $NOW_IMGS images vs $PREV_IMGS published" >&2
+            echo "       (>20% drop). Refusing to force-push over a good branch." >&2
+            exit 1
+          fi
+
+          # Keep the OLD tip reachable before rewriting the branch. It is the
+          # parent of the commit that live catalogs pin their @<sha> URLs to, so
+          # tagging it keeps every URL already in the wild resolving.
+          if [ -n "$PREV_SHA" ]; then
+            RETAIN_TAG="cutouts-retain-$(date -u +%Y%m%d-%H%M%S)"
+            git tag "$RETAIN_TAG" "$PREV_SHA"
+            git push origin "refs/tags/$RETAIN_TAG"
+            echo "retained previous tip as $RETAIN_TAG"
+          fi
+
+          # Republish as a single ROOT commit: same tree, no ancestry. Everything
+          # deleted before the retention window becomes unreachable and is
+          # reclaimed, instead of accumulating ~285 MB/month forever.
+          git checkout -q --orphan republish
+          git add -A
+          git commit -q -m "cutouts: $NOW_IMGS images as of $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          git push --force origin "HEAD:cutouts"
 
           # ── Pin support: record the pushed commit sha in the manifest ──────────
           # jsDelivr caches the branch→commit mapping (and 404s) up to 12h, so a webp
@@ -94,15 +189,33 @@ jobs:
           # @<sha> URLs. A tiny follow-up commit records it; best-effort — the cutouts
           # are already live above, and build_catalog falls back to @cutouts if the
           # sha is absent, so a hiccup here is non-fatal.
+          #
+          # PUSH HEAD:cutouts, NOT `cutouts`. Since the republish above we are on a
+          # detached orphan branch, and the local `cutouts` ref still points at the
+          # PREVIOUS tip — `git push origin cutouts` would quietly publish yesterday's
+          # commit back over today's.
           set +e
           SHA="$(git rev-parse HEAD)"
           python -c "import json,sys; p='cutouts.json'; m=json.load(open(p,encoding='utf-8')); m['sha']=sys.argv[1]; json.dump(m, open(p,'w',encoding='utf-8'), separators=(',',':'))" "$SHA"
           git add cutouts.json
           if ! git diff --quiet --cached; then
             git commit -m "cutouts: record push sha $SHA for jsDelivr pinning" \
-              && git push origin cutouts \
+              && git push origin "HEAD:cutouts" \
               || echo "WARNING: failed to record cutout sha (build_catalog falls back to @cutouts)"
           fi
+
+          # ── Retire retention tags past the window ─────────────────────────────
+          # Until these are deleted the old commits stay reachable and nothing is
+          # actually reclaimed — this line is what makes the republish above work.
+          # Names are UTC-timestamped, so lexical order IS chronological order.
+          # Best-effort: a failure here costs disk, never availability.
+          git ls-remote --tags origin 'refs/tags/cutouts-retain-*' \
+            | awk '{print $2}' | sed 's#refs/tags/##' | sort \
+            | head -n "-${RETAIN_TAGS}" \
+            | while read -r old; do
+                echo "retiring $old"
+                git push origin ":refs/tags/$old" || true
+              done
           true
 
       - name: Purge jsDelivr (manifest only; image paths are unique so never stale)

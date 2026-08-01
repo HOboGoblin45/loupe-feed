@@ -11,9 +11,13 @@ and C'est Nous. None of them had run a sale. On 2026-07-15 the scrape was pinned
 to country=US (commit 10b4c79) and their prices stepped into the new regime over
 the following days. Comparing across that boundary manufactured a discount.
 """
+import inspect
+
+import build_price_history
 from build_price_history import (
     epoch_of,
     in_settle_window,
+    history_is_truncated,
     PRICE_EPOCHS,
     EPOCH_SETTLE_DAYS,
     MIN_MEANINGFUL_MOVE,
@@ -67,6 +71,31 @@ check("a real sale is not 'never discounted'", claims([200, 200, 140])[0] is Fal
 check("a piece sitting at its low says so", claims([200, 200, 140])[1] is True)
 check("a piece that rebounded does NOT say 'lowest'", claims([200, 140, 200])[1] is False)
 check("a single observation makes no claim", claims([120]) == (True, False))
+
+# ── The shallow-clone trap (2026-08-01) ──────────────────────────────────────
+# A truncated clone produced a well-formed file covering 28 of 42 days and said
+# nothing about it. These pin the guard so it cannot be quietly removed again.
+check("truncation is detectable at all", isinstance(history_is_truncated(), bool))
+
+_sig = inspect.signature(build_price_history.build).parameters
+check("build() can be told to accept a truncated clone", "allow_shallow" in _sig)
+check("build() refuses truncated clones by DEFAULT", _sig["allow_shallow"].default is False)
+
+_src = inspect.getsource(build_price_history.build)
+check("the guard runs before the git walk (nothing else can detect it later)",
+      _src.index("history_is_truncated") < _src.index("daily_snapshots()"))
+check("a refusal names the one-line fix", "--unshallow" in _src)
+check("CI's fetch-depth is spelled out where someone will hit it",
+      "fetch-depth: 0" in _src)
+check("a permitted partial run is stamped, not silently emitted",
+      "partialHistory" in _src)
+
+# An absent flag must mean 'complete' — so the key may only ever appear as True.
+check("partialHistory is never emitted as False (absent == complete)",
+      "partialHistory\": False" not in _src and "'partialHistory': False" not in _src)
+
+_rep = inspect.getsource(build_price_history.report)
+check("the human summary surfaces a partial window", "partialHistory" in _rep)
 
 if failures:
     print("FAIL — %d price-history guarantees broken:" % len(failures))
