@@ -99,12 +99,45 @@ CASES = [
 ]
 
 
+def _grace_window_reclassifies():
+    """The partner-trinket rule must be enforced on BOTH product paths.
+
+    This is a real incident, not a hypothetical. The rule originally lived only
+    in normalize(), which handles freshly-scraped products. But the grace window
+    carries forward labels that are MISSING from today's scrape — and removing
+    every piece of a label is precisely what makes it missing. So on the first
+    live run the grace window restored all 47 pieces the filter had just removed
+    (JESSA Jewelry, Namaste Jewelry, Tai Jewelry, a Room Shop scrunchie…), the
+    catalog shipped with Gemini at 342 pieces instead of 293, and the change
+    looked like it had half-worked.
+
+    Anything that removes products has to be applied where products are
+    RE-ADMITTED too. Read the grace block's source and require it.
+    """
+    import pathlib
+    src = (pathlib.Path(__file__).parent / "build_catalog.py").read_text(encoding="utf-8")
+    start = src.index("# ── Grace window")
+    end = src.index("# ── Drop products whose image", start)
+    grace = src[start:end]
+    assert "infer_accessory_subtype(" in grace, (
+        "the grace window no longer re-classifies carried items — a carried "
+        "partner trinket will come straight back the next time a label goes "
+        "missing"
+    )
+    assert "TRINKET_SUBTYPES" in grace, (
+        "the grace window no longer drops carried partner trinkets"
+    )
+    assert "is_junk(" in grace, "the grace window no longer re-checks the junk filter"
+
+
 def main():
     failures = []
     for category, title, brand, expected in CASES:
         got = infer_accessory_subtype(category, title, "", brand)
         if got != expected:
             failures.append(f"  {category:12} {title[:44]:44} expected {expected}, got {got}")
+
+    _grace_window_reclassifies()
 
     # Contract checks the cases above can't express on their own.
     assert TRINKET_SUBTYPES == {"jewellery", "hair", "hosiery", "scarf", "homeware"}, \

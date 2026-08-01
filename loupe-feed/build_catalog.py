@@ -1706,6 +1706,26 @@ def main():
             # window — e.g. a size-chart / gift-card SKU that slipped through before.
             if is_junk(p.get("name"), p.get("price")):
                 continue
+            # Re-classify against the CURRENT subtype rules, for exactly the same
+            # reason as the junk re-check above — and this one bites HARDER than
+            # it looks. The grace window carries forward labels that are missing
+            # from today's scrape, and a filter that removes every piece of a
+            # label MAKES it missing. So when the partner-trinket rule first
+            # shipped, the grace window immediately restored all 47 pieces it had
+            # just removed (JESSA Jewelry, Namaste, Tai Jewelry…) and the change
+            # looked like it had partly failed. A removal policy has to be
+            # enforced on BOTH paths or it does nothing at all.
+            #
+            # Carried items no longer carry product_type, so classification runs
+            # on title + brand alone; that's the same information the live path
+            # relies on for these titles anyway.
+            sub = infer_accessory_subtype(p.get("category"), p.get("name"), "", p.get("brand"))
+            if p.get("retailer") and sub in TRINKET_SUBTYPES:
+                continue
+            if sub:
+                p["accessorySubtype"] = sub
+            else:
+                p.pop("accessorySubtype", None)  # in case a category was corrected
             if _seen_within(p, GRACE_DAYS):
                 seen_ids.add(pid)
                 # Badge grace-carried items STALE: their price/sizes are frozen at
