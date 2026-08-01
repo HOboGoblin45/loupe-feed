@@ -752,6 +752,162 @@ def infer_category(product_type, title, tags=None):
     return "tops"
 
 
+# ── Accessory SUBTYPE ─────────────────────────────────────────────────────────
+# `accessories` is one bucket holding two very different things: pieces someone
+# opens Loupe to discover (a bag, a hat, sunglasses) and small trinkets that fill
+# a feed without being what anyone came for (stud earrings, hair claws, tights).
+# Measured on the live catalog, the split matters: accessory-only brands approve
+# at 18.2% against 21.9% for everything else, and inside Gemini's own shelf bags
+# and hats earn ~9.5 saves per 100 pieces against 8.6 for jewellery.
+#
+# So the subtype is stamped on every accessory and shoe, and the app decides what
+# to do with it (currently: demote trinkets in Discover, never remove them). It's
+# computed once here rather than by regex on-device, and the app degrades to
+# "no opinion" on any product without it, so an old catalog stays safe.
+#
+# Ordered most-specific first — the first hit wins. `_word_in` gives word
+# boundaries and tolerates a trailing s/es, which matters more here than
+# anywhere: "Croissant Studs", "Freshly Shucked Earrings" and "Suki Claw" are
+# exactly the titles a naive \bstud\b misses.
+_ACCESSORY_SUBTYPES = [
+    # Hair BEFORE jewellery: a "pearl hair pin" is a hair accessory, and 'pearl'
+    # would otherwise claim it. Claw/clip/pin are only hair words when a hair
+    # noun is present or the word is unambiguous on its own (scrunchie, barrette).
+    ("hair", [
+        "scrunchie", "barrette", "headband", "hair claw", "claw clip", "hair clip",
+        "hair pin", "hairpin", "hair tie", "hair band", "hair comb", "hair pick",
+        "hair slide", "bobby pin", "hair bow", "hair fork", "hair stick",
+        # Bare "claw" and "clip": inside an ACCESSORIES product these are hair
+        # pieces almost without exception ("Suki Claw", "Leaf Claw", "Checker
+        # Clip", "Conch Clip" — the whole Chunks / etc. / Casa Clara shelf). The
+        # residual risk is a clip-on EARRING landing here, which changes nothing
+        # that matters: both hair and jewellery are trinkets, so the outcome is
+        # identical either way.
+        "claw", "clip",
+    ]),
+    ("hosiery", [
+        "sock", "tight", "stocking", "hosiery", "knee high", "knee-high",
+        "legwarmer", "leg warmer", "trouser sock", "crew sock", "ankle sock",
+    ]),
+    # Stationery, homewares and desk objects. Several fashion labels sell a
+    # bookmark, a journal or a candle, and Shopify files them under the same
+    # accessories bucket as a handbag — so they arrive in a fashion swipe deck
+    # with no way for the app to tell them apart. This is the same complaint as
+    # the trinket wall, one step further from clothes.
+    #
+    # Ahead of jewellery deliberately: "Key Ring Charm Holder" is a keychain, and
+    # 'charm' / 'chain' would otherwise claim it for jewellery. Both are
+    # trinkets, so the outcome is the same either way — this just labels it
+    # honestly for anyone reading the catalog later.
+    ("homeware", [
+        "bookmark", "journal", "notebook", "notepad", "candle", "mug", "tumbler",
+        "coaster", "sticker", "postcard", "greeting card", "puzzle", "poster",
+        "keychain", "key chain", "keyring", "key ring", "magnet",
+        "laptop case", "laptop sleeve", "phone case", "airpod", "tech accessory",
+        "matchbox", "incense", "vase", "tray", "blanket", "towel", "pillow",
+    ]),
+    ("jewellery", [
+        "earring", "necklace", "bracelet", "anklet", "pendant", "brooch",
+        "stud", "hoop", "choker", "charm", "signet", "cuff", "locket",
+        "bangle", "ear cuff", "body chain", "huggie", "jewel",
+        # NOT bare 'chain' — "chain strap bag", "chain detail" and "chain trim"
+        # are all hardware on something else, and bag is matched after this.
+        "chain necklace", "chain bracelet", "curb chain", "box chain",
+        "rope chain", "figaro", "herringbone chain",
+    ]),
+    ("scarf", ["scarf", "shawl", "bandana", "kerchief", "neckerchief", "pashmina"]),
+    ("bag", [
+        "bag", "tote", "purse", "clutch", "pouch", "backpack", "crossbody",
+        "satchel", "hobo", "shopper", "wallet", "cardholder", "card holder",
+        "card case", "coin purse", "duffle", "duffel",
+    ]),
+    ("hat", [
+        "hat", "cap", "beanie", "beret", "bucket hat", "visor", "headscarf",
+        "balaclava", "fascinator", "rancher",
+    ]),
+    # Eyewear brands title by MODEL NAME ("Nina | Night Shade", "Bunny",
+    # "nolan ; mustard tortoiseshell"), so the only reliable words are the
+    # materials. Eyewear is kept, not demoted — this just gets the label right.
+    ("eyewear", ["sunglass", "sunnies", "eyewear", "shades", "spectacle",
+                 "acetate", "tortoiseshell", "tortoise shell", "lens"]),
+    ("belt", ["belt", "sash", "waistband", "suspender"]),
+    ("gloves", ["glove", "mitten", "mitt"]),
+]
+
+# 'ring' is genuinely ambiguous — a ring is jewellery, but "ring detail",
+# "O-ring strap", "ring handle bag" and "key ring" are hardware on something
+# else. So it lives outside the keyword lists with its own guards: a standalone
+# 'ring' that is not part of a compound and is not modifying a hardware noun.
+_RING_RE = re.compile(r"(?<![a-z0-9-])rings?(?![a-z0-9])", re.I)
+_RING_NOT_JEWELLERY_RE = re.compile(
+    r"(?:key|o|d|split|tension|pull)[- ]rings?\b"
+    r"|\brings?[- ](?:detail|handle|pull|trim|strap|closure|buckle|hardware|zip)",
+    re.I,
+)
+
+# A brand whose NAME says jewellery is a stronger signal than any title. These
+# labels sell nothing else, and their titles are frequently just a first name
+# ("Maya Studs", "Zoey Earrings", "Iris Necklace") where the garment noun is the
+# only word doing any work — and sometimes not even that ("Ramen Studs in Gold").
+_JEWELLERY_BRAND_RE = re.compile(r"\b(jewel|jewellery|jewelry|joyas|bijoux)\b", re.I)
+
+# A garment noun in the title VETOES a trinket classification. Some stores file
+# real clothes under an accessories product_type, and the accessory word is then
+# describing the STYLE of a garment rather than naming an object:
+#     "Scarf Top" · "SCARF TOP | black silk" · "Livae Knitted Scarf Top"
+# Seven of those were live, all genuine tops, and demoting them would have hidden
+# real clothes to solve a trinket problem. When both readings are possible, the
+# garment wins and the piece falls through to `other` — kept and never demoted.
+# ("top handle" is excluded: that is a bag, not a top.)
+_GARMENT_VETO_RE = re.compile(
+    r"\b(?:dress|skirt|trouser|jean|coat|jacket|shirt|blouse|sweater|cardigan|"
+    r"blazer|pant|jumpsuit|romper|bodysuit|gown|kaftan|caftan|robe|tee|"
+    r"top(?![- ]handle))\w*\b",
+    re.I,
+)
+
+
+def infer_accessory_subtype(category, title, product_type="", brand=""):
+    """Sub-classify an accessory/shoe. Returns a subtype string, or None for
+    anything that isn't an accessory (garments have no subtype).
+
+    'shoes' is its own top-level category already, so it maps straight through
+    rather than being re-derived — the app treats it as a real fashion category,
+    not a trinket.
+    """
+    if category == "shoes":
+        return "shoes"
+    if category != "accessories":
+        return None
+    hay = f"{title or ''} {product_type or ''}".lower()
+    # Only the TITLE can veto — a store's accessories product_type is exactly the
+    # mis-filing we're correcting for, so it must not be able to veto itself.
+    garment = _GARMENT_VETO_RE.search(str(title or ""))
+    for subtype, words in _ACCESSORY_SUBTYPES:
+        if any(_word_in(w, hay) for w in words):
+            if garment and subtype in TRINKET_SUBTYPES:
+                return "other"        # real clothing, mis-filed — keep it
+            return subtype
+    # Standalone 'ring' — checked after the lists so "ring handle bag" has
+    # already been claimed by `bag`, and guarded so hardware never reads as
+    # jewellery. Catches the bare-noun titles the lists miss: "BAE Ring",
+    # "Zap Ring in Sterling Silver", "galán ring", "Large Bow Ring".
+    if _RING_RE.search(hay) and not _RING_NOT_JEWELLERY_RE.search(hay):
+        return "jewellery"
+    if _JEWELLERY_BRAND_RE.search(str(brand or "")):
+        return "jewellery"
+    return "other"
+
+
+# Trinkets: small, cheap, high-volume pieces that fill a feed without being what
+# anyone opened the app for. NOT a quality judgement and NOT a removal from the
+# app — the Discover ranker demotes them and the weight is remotely tunable. The
+# one place they ARE removed is a partner shop's shelf (see normalize): when we
+# curate 400 pieces to represent a boutique, we take their clothes, not their
+# trinket wall.
+TRINKET_SUBTYPES = {"jewellery", "hair", "hosiery", "scarf", "homeware"}
+
+
 def infer_colors(title, options, tags=None, product_type=""):
     """Infer up to 2 color tags for the colorway actually shown.
 
@@ -1073,6 +1229,21 @@ def normalize(product, brand, domain, fx, multi_brand=False, retailer=None):
     if _norm_brand(display_brand) in EXCLUDE_BRANDS:
         return None
     category = infer_category(product_type, title, product.get("tags"))
+    subtype = infer_accessory_subtype(category, title, product_type, display_brand)
+    # ── Partner shelves carry clothes, not the trinket wall ───────────────────
+    # A partner's presence in Loupe is a CURATED shelf we assemble on their
+    # behalf, not a mirror of their store. Gemini's 400 pieces were 42%
+    # accessories, and ~125 of those were stud earrings, hair claws and tights:
+    # volume that fills a swipe deck without being what anyone opened a fashion
+    # app to find. Bags, hats and shoes stay — they read as fashion and, measured
+    # on Gemini's own shelf, earn more saves per piece than the jewellery did.
+    #
+    # This is removal, which is deliberately reserved for partner sources. For
+    # brand-direct products the same trinkets are KEPT and merely demoted by the
+    # ranker, because dropping them would delete whole labels from the app and
+    # from the public brand directory. See TRINKET_SUBTYPES.
+    if retailer and subtype in TRINKET_SUBTYPES:
+        return None
     colors = infer_colors(title, product.get("options"),
                           tags=product.get("tags"), product_type=product_type)
     # Product-level availability: True if ANY variant is in stock. Disambiguates
@@ -1109,6 +1280,12 @@ def normalize(product, brand, domain, fx, multi_brand=False, retailer=None):
         "available": is_available,
         "affiliateUrl": affiliate,
     }
+    if subtype:
+        # Accessories and shoes only — garments carry no subtype, so this adds
+        # nothing to the ~72% of the catalog that is clothing. The app reads it
+        # to decide how hard to demote trinkets in Discover, and treats a missing
+        # value as "no opinion", so an older catalog behaves exactly as before.
+        out["accessorySubtype"] = subtype
     if retailer:
         # Resolved by the app against catalog.retailers -> tile tint, badge, and
         # the store block (address / hours / map / call) on the product page.

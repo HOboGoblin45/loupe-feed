@@ -92,6 +92,7 @@ jobs:
           python test_junk_filter.py
           python test_affiliate_wrappers.py
           python test_color_category.py
+          python test_accessory_subtype.py
 
       - name: Build catalog
         run: python loupe-feed/build_catalog.py
