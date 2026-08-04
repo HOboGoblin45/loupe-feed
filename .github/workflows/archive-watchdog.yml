@@ -1,0 +1,169 @@
+name: Archive watchdog
+
+# Is the price/availability archive still growing?
+#
+# This exists because of 2026-07-25 -> 2026-07-28. Commit 0732108 added a $5 hard
+# price floor to is_junk() without updating test_junk_filter.py; refresh-catalog.yml
+# runs the fixtures BEFORE the build, so every scheduled run from the next morning
+# died at that step and published nothing. Four days of observations of 209
+# storefronts are gone permanently. They cannot be re-scraped: the shops have
+# already changed.
+#
+# The lesson is NOT "the job failed silently" -- it failed hard and red, and
+# GitHub emailed the failure four mornings running. The lesson is:
+#
+#   1. Nothing reported the ABSENCE. To notice, you had to already suspect.
+#   2. A check bolted onto the end of refresh-catalog.yml would have been skipped
+#      by the very failure it was watching for, on all four days.
+#
+# So this workflow is deliberately DISJOINT from the build:
+#   * its own file, its own schedule, its own concurrency group;
+#   * it shares no step, no secret and no script with build_catalog.py;
+#   * it runs only stdlib Python against `git log`, so there is nothing in it
+#     that a broken scrape, a dead Shopify endpoint or an expired token can take
+#     down with the build;
+#   * it fails CLOSED -- if archive_integrity.py itself is broken, this goes red.
+#
+# TWICE A DAY, ON PURPOSE. The build is 08:00 UTC. At 23:00 on the day of a first
+# missed run the newest snapshot is ~39h old, so the alarm lands the SAME EVENING
+# rather than four days later. 11:00 is the confirming check three hours after a
+# healthy build.
+#
+# WHAT IT DOES NOT ALARM ON: old, already-known gaps. A permanent historical hole
+# stays visible in ARCHIVE_STATUS.md and in this run's summary, but it never turns
+# the run red -- an alarm that keeps ringing for a week about something nobody can
+# fix is how you teach someone to ignore the alarm, which is the disease we are
+# actually treating here.
+#
+# KNOWN LIMIT: GitHub disables scheduled workflows in a repository with 60 days of
+# no activity. A daily catalog commit keeps this alive; if the archive ever stops
+# for two months, the watchdog stops too. It is a watchdog, not an oracle.
+
+on:
+  schedule:
+    - cron: "0 11,23 * * *"   # 11:00 and 23:00 UTC
+  workflow_dispatch: {}
+
+permissions:
+  contents: read     # read-only: this workflow must never be able to damage the thing it guards
+  issues: write      # ...except to open the alert
+
+concurrency:
+  group: loupe-archive-watchdog
+  cancel-in-progress: false
+
+jobs:
+  watch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout (FULL history)
+        uses: actions/checkout@v4
+        with:
+          # MANDATORY. actions/checkout defaults to fetch-depth: 1, and every
+          # number this workflow reports comes from `git log`. On a depth-1
+          # checkout the archive would look like one single day -- the watchdog
+          # would either alarm constantly or, worse, report a confident wrong
+          # answer. Measured 2026-08-01 the whole repo is ~23 MB bundled, so full
+          # history costs seconds.
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Measure the archive
+        shell: bash
+        run: |
+          python loupe-feed/archive_integrity.py | tee "$RUNNER_TEMP/report.txt"
+          {
+            echo '## Loupe archive'
+            echo '```'
+            cat "$RUNNER_TEMP/report.txt"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Is the newest snapshot fresh?
+        id: fresh
+        shell: bash          # `shell: bash` gives -eo pipefail, so tee cannot swallow the exit code
+        run: |
+          python loupe-feed/archive_integrity.py --quiet --check-age 36 2>&1 \
+            | tee "$RUNNER_TEMP/alert.txt"
+
+      - name: Raise the alarm
+        # Runs when (and only when) the freshness check failed. It does not make
+        # the job green again -- the run stays red, so GitHub's own failure email
+        # still goes out. This step adds the two channels that a failure email
+        # demonstrably did not cover in July: a GitHub issue, which persists and
+        # nags until somebody closes it, and a direct email through the Resend
+        # account this repo already uses for brand approvals.
+        if: failure()
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          ALERT_EMAIL: ${{ secrets.ALERT_EMAIL }}
+          FALLBACK_EMAIL: ${{ secrets.ANIQA_EMAIL }}
+          EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
+        run: |
+          set -uo pipefail
+          BODY="$RUNNER_TEMP/body.md"
+          {
+            echo "**The Loupe catalog archive has stopped growing.**"
+            echo
+            echo "Every hour this stays broken is a day of price and availability"
+            echo "observations across 209 independent storefronts that cannot be taken"
+            echo "again. Gaps are permanent."
+            echo
+            echo '```'
+            cat "$RUNNER_TEMP/alert.txt" 2>/dev/null || echo "(no detail captured)"
+            echo '```'
+            echo
+            echo '```'
+            cat "$RUNNER_TEMP/report.txt" 2>/dev/null || true
+            echo '```'
+            echo
+            echo "### Where to look"
+            echo "- Latest [Refresh Loupe catalog](${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/workflows/refresh-catalog.yml) run -- it will be red."
+            echo "- Last time (2026-07-25) the cause was the pre-build fixture gate:"
+            echo "  \`build_catalog.py\` had changed and \`test_junk_filter.py\` had not."
+            echo "  Reproduce locally with \`cd loupe-feed && python test_junk_filter.py\`."
+            echo "- This watchdog run: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+            echo
+            echo "_Close this issue once a catalog snapshot has landed. It will reopen"
+            echo "as a new comment on the next stale check, so it will not go quiet on its own._"
+          } > "$BODY"
+
+          # One issue, many comments -- never a fresh issue every 12 hours. An
+          # alert that spams is an alert that gets muted.
+          gh label create archive-alert --color B60205 \
+            --description "The daily catalog archive stopped growing" 2>/dev/null || true
+          EXISTING="$(gh issue list --state open --label archive-alert --limit 1 \
+                        --json number --jq '.[0].number // empty' 2>/dev/null || true)"
+          if [ -n "$EXISTING" ]; then
+            gh issue comment "$EXISTING" --body-file "$BODY" || true
+          else
+            gh issue create --title "Loupe archive has stopped growing" \
+              --label archive-alert --body-file "$BODY" || true
+          fi
+
+          # Direct email, best-effort. Resend + these secret names are already in
+          # use by process_requests.py, so this adds no new service and no new
+          # runtime dependency. Set ALERT_EMAIL to reach Charlie directly;
+          # otherwise it falls back to ANIQA_EMAIL. Missing key -> skipped, and
+          # the run is red regardless.
+          TO="${ALERT_EMAIL:-$FALLBACK_EMAIL}"
+          if [ -n "${RESEND_API_KEY:-}" ] && [ -n "$TO" ]; then
+            jq -n \
+              --arg from "${EMAIL_FROM:-Loupe <onboarding@resend.dev>}" \
+              --arg to "$TO" \
+              --arg subject "Loupe archive has stopped growing" \
+              --arg text "$(cat "$BODY")" \
+              '{from:$from, to:[$to], subject:$subject, text:$text}' > "$RUNNER_TEMP/mail.json"
+            curl -sS -X POST https://api.resend.com/emails \
+              -H "Authorization: Bearer ${RESEND_API_KEY}" \
+              -H "Content-Type: application/json" \
+              -d @"$RUNNER_TEMP/mail.json" || echo "resend send failed (non-fatal)"
+          else
+            echo "No RESEND_API_KEY / recipient configured -- GitHub issue + failure email only."
+          fi

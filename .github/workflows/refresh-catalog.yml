@@ -21,7 +21,12 @@ name: Refresh Loupe catalog
 on:
   schedule:
     - cron: "0 8 * * *"   # every day at 08:00 UTC
-  workflow_dispatch: {}    # manual "Run workflow" button
+  workflow_dispatch:       # manual "Run workflow" button
+    inputs:
+      override_heartbeat:
+        description: "Publish even if the archive heartbeat says this build produced nothing new"
+        type: boolean
+        default: false
   push:
     # Rebuild immediately when ANY build INPUT changes — not just the brand list.
     # Before 2026-07-29 this listed brands.json only, so a fix to build_catalog.py
@@ -62,6 +67,18 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          # FULL history, not the depth-1 default. The commit history of
+          # catalog.json IS the price/availability archive -- the one asset here
+          # that cannot be re-acquired at any price -- and two things in this run
+          # read it: archive_integrity.py (which writes ARCHIVE_STATUS.md below)
+          # and test_archive_integrity.py. On a shallow checkout both would see a
+          # single day and either refuse (they do, by design) or, if that guard
+          # were ever removed, certify an archive a fraction of its real length.
+          # Measured 2026-08-01: the whole repo bundles to 22.6 MB, because
+          # minified single-line JSON delta-compresses almost perfectly. Full
+          # history costs seconds here.
+          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -87,12 +104,22 @@ jobs:
           APPROVAL_HMAC_SECRET: ${{ secrets.APPROVAL_HMAC_SECRET }}
 
       - name: Regression fixtures (junk filter + affiliate wrapper)
+        # These gate the build, which cuts both ways: on 2026-07-24 commit 0732108
+        # changed is_junk() without updating test_junk_filter.py, this step went
+        # red every morning, and four days of the archive were lost before anyone
+        # noticed. The gate was right and the blast radius was the problem, so the
+        # answer is not a weaker gate -- it is archive-watchdog.yml, which now
+        # notices within ~15h instead of never. Keep both.
+        #
+        # ALWAYS run these locally before pushing anything they cover.
         working-directory: loupe-feed
         run: |
           python test_junk_filter.py
           python test_affiliate_wrappers.py
           python test_color_category.py
           python test_accessory_subtype.py
+          python test_price_history.py
+          python test_archive_integrity.py
 
       - name: Build catalog
         run: python loupe-feed/build_catalog.py
@@ -110,6 +137,33 @@ jobs:
           # Settings -> Secrets as direct-program approvals land (Rakuten/Awin/...).
           BRAND_AFFILIATE_TEMPLATES: ${{ secrets.BRAND_AFFILIATE_TEMPLATES }}
 
+      - name: Archive heartbeat (did this build actually produce anything?)
+        # The July gap was the LOUD failure. This guards the quiet one on the
+        # other side of it: a run that goes green having published yesterday's
+        # data again. Nothing caught that shape before, because `generatedAt` is a
+        # wall clock -- it moves on every run, so a completely stale scrape still
+        # produces a changed file and a perfectly normal-looking commit. The
+        # archive would keep gaining days that carry no new observation, which is
+        # worse than a gap: a gap is visible, a fake day is not.
+        #
+        # Checks, against the COMMITTED catalog rather than the on-disk one, so it
+        # also catches "the build wrote nothing at all":
+        #   * byte-identical                       -> build_catalog.py did not write
+        #   * identical once generatedAt is removed -> the scrape returned nothing new
+        #     (never happened once across all 42 archived days -- FX alone moves
+        #     prices daily -- so this has a measured zero false-positive rate)
+        #   * count moved more than -20% / +25%     -> implausible. The -20% side
+        #     backstops build_catalog.py's own PUBLISH GUARD; the +25% side is not
+        #     checked anywhere else, and inflation is the failure that looks like
+        #     success.
+        #
+        # ARCHIVE_HEARTBEAT_OVERRIDE can only ever be set from a manual run. Cron
+        # has no way to reach it, which is the point: the automated path cannot
+        # talk itself out of the check.
+        env:
+          ARCHIVE_HEARTBEAT_OVERRIDE: ${{ inputs.override_heartbeat && '1' || '' }}
+        run: python loupe-feed/archive_integrity.py --heartbeat
+
       - name: Commit if changed
         run: |
           set -euo pipefail
@@ -118,12 +172,48 @@ jobs:
           # process_requests.py (Stage B) can edit brands.json; build_catalog.py
           # writes catalog.json. Commit both. new_brands.json is intentionally
           # NOT committed (it's gitignored, run-local handoff to the notify step).
+          # This used to `exit 0` with "No catalog changes." That is the exact
+          # shape of a run that publishes nothing and still reports success, and
+          # it is unreachable now anyway (the heartbeat above fails first), so it
+          # fails instead. A green run must mean a day was added to the archive.
           if [[ -z "$(git status --porcelain loupe-feed/brands.json loupe-feed/catalog.json loupe-feed/catalog.meta.json)" ]]; then
-            echo "No catalog changes."
-            exit 0
+            echo "ERROR: the build left the catalog unchanged, so this run would add" >&2
+            echo "no day to the archive. Failing rather than reporting success." >&2
+            exit 1
           fi
           git add loupe-feed/brands.json loupe-feed/catalog.json loupe-feed/catalog.meta.json
           git commit -m "chore: refresh catalog $(date -u +%Y-%m-%d)"
+
+          # Regenerate the integrity record NOW, with today's snapshot already in
+          # `git log`, and fold it into the same commit. --amend is purely local
+          # (nothing has been pushed yet) and keeps the archive at one commit per
+          # day. The record deliberately describes COMMITTED history only: a
+          # status file that counted a day still sitting in the working tree
+          # would be the same class of quiet overstatement as a shallow clone
+          # reporting its own start date as the start of the data.
+          #
+          # FAIL-SOFT, and this matters more than it looks. This block sits under
+          # `set -e` BETWEEN the commit and the push, so anything here that exits
+          # non-zero would abort the step with the day committed locally and never
+          # pushed -- losing exactly the day it exists to account for. The archive
+          # comes first; the record about the archive comes second. It is allowed
+          # to be a day stale. It is not allowed to cost a day.
+          if python loupe-feed/archive_integrity.py --quiet --write; then
+            git add ARCHIVE_STATUS.md loupe-feed/archive_status.json
+            git commit --amend --no-edit
+          else
+            echo "WARNING: could not regenerate the integrity record. Publishing the" >&2
+            echo "catalog anyway -- the snapshot matters more than the paperwork." >&2
+          fi
+          # Put the headline on the run page too, so the state of the archive is
+          # the first thing visible on a run rather than something you have to go
+          # and look for. Not looking is how July happened.
+          {
+            echo '## Archive'
+            echo '```'
+            python loupe-feed/archive_integrity.py --headline || echo "(unavailable)"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY" || true
           # Even though concurrency serializes our own runs, a human commit (or a
           # brands.json push) can land between checkout and push. Rebase onto the
           # latest main and retry once on a non-fast-forward so an approved brand's

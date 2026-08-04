@@ -1,0 +1,153 @@
+name: Archive backup
+
+# A second copy of the archive, somewhere that is not this repository's history.
+#
+# The price/availability record lives in exactly one place: the commit history of
+# this repo. One account, one force-push, one over-zealous "let's shrink the
+# clone" is the entire risk surface. The data is not secret (public repo, CC-BY
+# catalog) -- the concern is availability, and specifically that elapsed time is
+# the only input to this dataset that cannot be bought back.
+#
+# Each run publishes to a GitHub RELEASE, which is deliberately not the git
+# object store: releases survive a rewritten history, and a rewritten history is
+# the failure this is insuring against. Release assets are free on public repos.
+# The same files also go up as an Actions artifact, which is a different storage
+# system with a different expiry -- two independent ways to be wrong.
+#
+# ZERO new services, zero paid dependencies. Everything here is git, python
+# stdlib, and the gh CLI that is preinstalled on the runner.
+#
+# Measured 2026-08-01, 42 archived days:
+#   loupe-feed-<date>.bundle              22.6 MB   the WHOLE repo, restorable with
+#                                                   `git clone <file> loupe-feed`
+#   loupe-price-archive-<date>.jsonl.gz    1.9 MB   every price and size list on
+#                                                   every archived day, plain gzip
+#   ARCHIVE_MANIFEST.json                    1 KB   sha256 of both, plus the gaps
+
+on:
+  schedule:
+    - cron: "20 6 * * 0"    # Sundays 06:20 UTC -- clear of the 02:00 embed, the
+                            # 04:00 cutout run and the 08:00 catalog rebuild
+  workflow_dispatch: {}
+
+permissions:
+  contents: write           # required to create the release; nothing is pushed to a branch
+
+concurrency:
+  group: loupe-archive-backup
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout (FULL history, with blobs)
+        uses: actions/checkout@v4
+        with:
+          # fetch-depth: 0 is mandatory and, unlike the watchdog, this job needs
+          # the BLOBS too -- it reads every daily catalog.json out of history --
+          # so it must NOT be narrowed to a treeless/partial clone later.
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Build the off-repo copies
+        shell: bash
+        run: |
+          python loupe-feed/archive_backup.py --out "$RUNNER_TEMP/archive_out"
+
+      - name: Verify before publishing
+        shell: bash
+        run: |
+          # A backup nobody has read back is a rumour. This re-opens the gzip,
+          # checks the day rows against the meta record, checks the id indices
+          # are in range and checks the days are in order. archive_backup.py has
+          # already run `git bundle verify` on the bundle and refuses to emit one
+          # that fails.
+          OUT="$RUNNER_TEMP/archive_out"
+          DIST="$(jq -r '.artifacts[] | select(.name|endswith(".jsonl.gz")) | .name' "$OUT/ARCHIVE_MANIFEST.json")"
+          python loupe-feed/archive_backup.py --verify "$OUT/$DIST"
+          {
+            echo '## Archive backup'
+            echo '```'
+            jq -r '.headline' "$OUT/ARCHIVE_MANIFEST.json"
+            jq -r '.artifacts[] | "\(.name)  \(.bytes) bytes  sha256 \(.sha256)"' "$OUT/ARCHIVE_MANIFEST.json"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload as an Actions artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: loupe-archive-${{ github.run_id }}
+          path: ${{ runner.temp }}/archive_out/*
+          retention-days: 90    # the maximum for a public repo
+          if-no-files-found: error
+
+      - name: Publish as a GitHub Release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          OUT="$RUNNER_TEMP/archive_out"
+          TAG="archive-$(date -u +%Y-%m-%d)"
+          NOTES="$RUNNER_TEMP/notes.md"
+          {
+            echo "Off-repo copy of the Loupe price/availability archive."
+            echo
+            echo "**$(jq -r '.headline' "$OUT/ARCHIVE_MANIFEST.json")**"
+            echo
+            echo '| file | bytes | sha256 |'
+            echo '|---|---:|---|'
+            jq -r '.artifacts[] | "| \(.name) | \(.bytes) | `\(.sha256)` |"' "$OUT/ARCHIVE_MANIFEST.json"
+            echo
+            echo '### Restore'
+            echo '```'
+            echo 'git clone loupe-feed-<date>.bundle loupe-feed     # the whole repo, all history'
+            echo 'gzip -dc loupe-price-archive-<date>.jsonl.gz | head -2   # meta + id index'
+            echo '```'
+          } > "$NOTES"
+
+          # Re-runnable: if today's tag already exists, replace its assets rather
+          # than failing the job. A backup that skips a week because of a naming
+          # collision is not a backup.
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" "$OUT"/* --clobber
+            gh release edit "$TAG" --notes-file "$NOTES"
+          else
+            gh release create "$TAG" "$OUT"/* \
+              --title "Loupe archive $TAG" --notes-file "$NOTES"
+          fi
+
+          # Prove it landed. `gh release create` exiting 0 is not the same claim.
+          COUNT="$(gh release view "$TAG" --json assets --jq '.assets | length')"
+          echo "release $TAG holds $COUNT asset(s)"
+          [ "$COUNT" -ge 3 ] || { echo "ERROR: expected >=3 assets on $TAG" >&2; exit 1; }
+
+      - name: Prune old backup releases
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          KEEP=6
+          # Only ever touches tags this workflow creates. The guard below means a
+          # bug here can delete nothing at all rather than deleting everything --
+          # the failure mode of a pruner is exactly the failure mode of a backup.
+          mapfile -t TAGS < <(gh release list --limit 100 --json tagName \
+                                --jq '.[].tagName | select(startswith("archive-"))' | sort -r)
+          echo "found ${#TAGS[@]} archive release(s), keeping the newest $KEEP"
+          if [ "${#TAGS[@]}" -le "$KEEP" ]; then
+            echo "nothing to prune"; exit 0
+          fi
+          for TAG in "${TAGS[@]:$KEEP}"; do
+            echo "deleting $TAG"
+            gh release delete "$TAG" --cleanup-tag --yes || true
+          done
+          REMAIN="$(gh release list --limit 100 --json tagName \
+                      --jq '[.[].tagName | select(startswith("archive-"))] | length')"
+          echo "$REMAIN archive release(s) remain"
+          [ "$REMAIN" -ge 1 ] || { echo "ERROR: pruning left NO backups" >&2; exit 1; }

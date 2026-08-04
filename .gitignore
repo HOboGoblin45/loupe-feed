@@ -6,3 +6,9 @@ __pycache__/
 # commits and then committing it back would make the history self-referential
 # and double the repo's growth for no gain.
 loupe-feed/price_history.json
+
+# Off-repo backups written by archive_backup.py (a ~23 MB git bundle of the whole
+# repo + the distilled price series). Same reasoning as above, and more so: the
+# entire point of these files is to exist SOMEWHERE THAT IS NOT THIS REPO.
+# .github/workflows/archive-backup.yml publishes them as GitHub Release assets.
+archive_out/
