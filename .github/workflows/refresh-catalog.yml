@@ -128,6 +128,17 @@ jobs:
           # the app can keep reading, and that priceRaw/currency round-trip so an
           # FX mistake is re-derivable instead of permanent.
           python test_currency_fx.py
+          # Market signals (added 2026-08-07). Pins the two things we started
+          # recording that day and the one thing we promised not to publish:
+          # that the OFFERED size run is a superset of the in-stock set (so
+          # "they don't stock XL" and "XL sold out" stay different sentences),
+          # that compare_at_price is stored with its per-store FILL RATE (a 0%
+          # store never filled the field in -- it is not a store that never
+          # discounts), that a missing inventory_quantity is a normal state and
+          # never an error, that the inventory pass runs AFTER catalog.json and
+          # shelf.json so it cannot cost the catalog a product, and that
+          # catalog.json's row shape did not gain a single field.
+          python test_market_signals.py
 
       - name: Build catalog
         run: python loupe-feed/build_catalog.py
@@ -144,6 +155,21 @@ jobs:
           # a {url} token). Still active — takes precedence per brand. Add via repo
           # Settings -> Secrets as direct-program approvals land (Rakuten/Awin/...).
           BRAND_AFFILIATE_TEMPLATES: ${{ secrets.BRAND_AFFILIATE_TEMPLATES }}
+          # ── stock.json's pseudonym salt ──────────────────────────────────────
+          # The inventory panel is only a TIME SERIES if the same variant hashes
+          # to the same key tomorrow, and it is only safe in a PUBLIC repo if
+          # that key cannot be reversed. One secret does both. Without it the
+          # build still runs and still records the day's cross-section, but marks
+          # the file `joinable: false` and shouts -- it never silently produces
+          # 90 unjoinable snapshots and calls that a units signal.
+          #
+          # LOUPE_STOCK_SALT is the right home; set it (any long random string).
+          # APPROVAL_HMAC_SECRET is a FALLBACK the build derives from via a
+          # one-way HMAC, so the signal starts on day one rather than on the day
+          # someone remembers. Rotating that secret would break every join, which
+          # is exactly why it is a fallback and not the design.
+          LOUPE_STOCK_SALT: ${{ secrets.LOUPE_STOCK_SALT }}
+          APPROVAL_HMAC_SECRET: ${{ secrets.APPROVAL_HMAC_SECRET }}
 
       - name: Archive heartbeat (did this build actually produce anything?)
         # The July gap was the LOUD failure. This guards the quiet one on the
@@ -194,7 +220,20 @@ jobs:
           # per-store walk (catalog.json is a bounded 60-per-brand deck), so a
           # day missing here cannot be reconstructed from a day present there.
           # Committed in the SAME commit so the two can never drift apart by a day.
+          #
+          # stock.json (2026-08-07) is the inventory panel: ~3,000 variant
+          # quantities a day from the 33 stores that expose inventory_quantity,
+          # pseudonymised. Same reasoning again -- a day of it cannot be
+          # re-scraped tomorrow, because a quantity is only true at the moment it
+          # is read. Deliberately NOT part of the change-detect condition above:
+          # that guard exists to catch a build that produced nothing, and letting
+          # a moved stock number satisfy it would mask exactly that.
+          # `git add` tolerates a missing path here only if it exists; the pass
+          # is fail-soft and may legitimately write nothing, so use a glob-safe
+          # add that does not abort the commit under `set -e`.
           git add loupe-feed/brands.json loupe-feed/catalog.json loupe-feed/catalog.meta.json loupe-feed/shelf.json
+          [[ -f loupe-feed/stock.json ]] && git add loupe-feed/stock.json || \
+            echo "NOTE: no stock.json this run (the inventory pass is fail-soft)."
           git commit -m "chore: refresh catalog $(date -u +%Y-%m-%d)"
 
           # Regenerate the integrity record NOW, with today's snapshot already in

@@ -19,15 +19,19 @@ Output (catalog.json):
   }
 """
 
+import hashlib
+import hmac
 import json
 import os
 import random
 import re
+import secrets
 import sys
 import time
 import urllib.parse
 import urllib.request
 import urllib.error
+import zlib
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
@@ -1310,17 +1314,59 @@ def _norm_size(val):
     return str(val or "").strip().upper().replace(" ", "")
 
 
-def available_sizes(product):
-    """In-stock size values for a product, sensibly ordered, or [] if no size option."""
-    options = product.get("options") or []
+def _ordered_run(values, declared):
+    """`values` laid out either on the canonical letter scale (when every value
+    looks like a letter size) or in the option's own DECLARED order, with
+    anything the store didn't declare appended. Shared by both runs below so the
+    offered curve and the in-stock curve are always read the same way round."""
+    if not values:
+        return []
+    if all(_norm_size(s) in _SIZE_ORDER for s in values):
+        return sorted(values, key=lambda s: _SIZE_ORDER[_norm_size(s)])
+    if declared:
+        vset = set(values)
+        ordered = [s for s in declared if s in vset]
+        ordered += [s for s in values if s not in declared]
+        if ordered:
+            return ordered
+    return values
+
+
+def size_runs(product):
+    """(offered, in_stock) — the size run this store OFFERS, and the subset of it
+    that is actually buyable today.
+
+    ── WHY BOTH. THE ONE-LINE FIX THAT WAS THROWING AWAY DATA (2026-08-07) ──────
+    `product["options"]` carries the COMPLETE declared size run, sold-out values
+    included. Until today the only thing computed from it was the in-stock set:
+    the variant loop below opened with `if not v.get("available"): continue`, so
+    every size a brand offers but has sold out of was read and then discarded, on
+    every product, on every run, permanently.
+
+    The cost was not hypothetical. "XL stocked on 45.8% of pieces" went out as an
+    OFFER rate — read as "over half this tier doesn't make an XL" — when it is an
+    IN-STOCK rate, and the true offer rate is at least 6 points higher. Those are
+    different sentences about somebody else's business:
+        offered, sold out   -> they make it and it SELLS. Demand evidence.
+        never offered       -> they don't make it. A range decision.
+    One number cannot say both, and the in-stock number quietly says the wrong one.
+
+    So both are recorded, and `offered` is a SUPERSET of `in_stock` BY
+    CONSTRUCTION (it is built from every variant, plus the declared values,
+    rather than from a filtered subset) — not by convention, because a convention
+    is what the caller has to remember and a construction is what it can't get
+    wrong. test_market_signals.py pins it.
+
+    Only the in-stock run ships to the app (see available_sizes). The offered run
+    goes to shelf.json, which the app never downloads.
+    """
     size_opt = None
-    for opt in options:
-        name = (opt.get("name") or "").strip().lower()
-        if name in ("size", "sizes"):
+    for opt in product.get("options") or []:
+        if (opt.get("name") or "").strip().lower() in ("size", "sizes"):
             size_opt = opt
             break
     if not size_opt:
-        return []
+        return [], []
 
     # position is 1-based → maps to option1/option2/option3 on each variant.
     pos = size_opt.get("position")
@@ -1330,38 +1376,46 @@ def available_sizes(product):
         pos = 1
     key = f"option{pos}"
 
-    in_stock = []
-    seen = set()
+    declared = []
+    for x in (size_opt.get("values") or []):
+        s = str(x).strip()
+        if s and s not in declared:
+            declared.append(s)
+
+    in_stock, offered = [], list(declared)
+    seen_in, seen_off = set(), set(declared)
     for v in product.get("variants") or []:
-        if not v.get("available"):
-            continue
         raw = v.get(key)
         if raw is None:
             continue
         s = str(raw).strip()
-        if s and s not in seen:
-            seen.add(s)
+        if not s:
+            continue
+        # EVERY variant, available or not — this is what makes `offered` a
+        # superset even for a store whose options[].values is incomplete.
+        if s not in seen_off:
+            seen_off.add(s)
+            offered.append(s)
+        if v.get("available") and s not in seen_in:
+            seen_in.add(s)
             in_stock.append(s)
 
-    if not in_stock:
-        return []
+    # `in_stock` keeps its historical shape exactly: [] when nothing is in stock,
+    # which is what the app renders as "Out of Stock" rather than "one size".
+    return _ordered_run(offered, declared), (_ordered_run(in_stock, declared)
+                                             if in_stock else [])
 
-    # If they look like standard letter sizes, sort by the canonical scale;
-    # otherwise preserve the option's declared value order, filtered to in-stock.
-    if all(_norm_size(s) in _SIZE_ORDER for s in in_stock):
-        return sorted(in_stock, key=lambda s: _SIZE_ORDER[_norm_size(s)])
 
-    order = [str(x).strip() for x in (size_opt.get("values") or [])]
-    if order:
-        in_stock_set = set(in_stock)
-        ordered = [s for s in order if s in in_stock_set]
-        # Append any in-stock values not present in the declared values list.
-        for s in in_stock:
-            if s not in order:
-                ordered.append(s)
-        if ordered:
-            return ordered
-    return in_stock
+def available_sizes(product):
+    """In-stock size values for a product, sensibly ordered, or [] if no size option.
+
+    catalog.json's `sizes` field, and deliberately still only that: the app has
+    no use for stock levels or for sizes it cannot sell, and catalog.json is
+    1.09 KB/product against jsDelivr's ~20 MB ceiling. The offered run is
+    recorded in shelf.json instead. Keeping this a thin wrapper is what makes
+    "the app payload did not change" checkable rather than asserted.
+    """
+    return size_runs(product)[1]
 
 
 def first_price(product):
@@ -1373,6 +1427,458 @@ def first_price(product):
             except (TypeError, ValueError):
                 continue
     return None
+
+
+# ── compare_at_price: a SECONDARY markdown signal, per-store calibrated ───────
+# Every variant in the public feed carries `compare_at_price` — the "was" price a
+# store shows struck through. It is free (already in the bytes we fetch) and it
+# is the merchant's own statement that something is marked down, which observed
+# price movement can only infer a day late.
+#
+# It is NOT a drop-in replacement for observed movement, and the reason is
+# measured rather than argued: FILL RATE VARIES ENORMOUSLY BY STORE.
+#     collinastrada 92.1%   baserange 84.5%   lisasaysgah 48.1%
+#     st-agni        0.5%   damsonmadder 0%   ratandboa    0%
+# A store at 0% is not a store that never discounts — it is a store that never
+# populates the field. Read raw, this signal says "independent brands at the top
+# of the tier don't do sales", which is a false statement about their business
+# and exactly the kind we send to them in writing.
+#
+# So the fill rate is recorded PER STORE, every day, alongside the values, and a
+# consumer that wants to use compare_at has to divide by it. Observed price
+# movement stays primary; this calibrates and confirms it.
+def compare_at_signal(product):
+    """(compareAt, variants, variantsWithCompareAt) for one product.
+
+    compareAt is the store's own struck-through price on the SAME variant
+    `first_price` reads, unconverted and in the store's own currency (matching
+    `priceRaw`), or None when unset. The two counts are the calibration: they say
+    how much of this product's evidence the merchant actually filled in.
+    """
+    variants = product.get("variants") or []
+    filled = 0
+    head = None
+    head_found = False
+    for v in variants:
+        try:
+            c = float(v.get("compare_at_price"))
+        except (TypeError, ValueError):
+            c = 0.0
+        if c > 0:
+            filled += 1
+        if not head_found:
+            p = v.get("price")
+            if p:
+                try:
+                    float(p)
+                except (TypeError, ValueError):
+                    continue
+                head_found = True
+                head = round(c, 2) if c > 0 else None
+    return head, len(variants), filled
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# TRUE PER-VARIANT INVENTORY — and the line this data does not cross
+# ══════════════════════════════════════════════════════════════════════════════
+#
+# WHAT IT IS. `/products/<handle>.js` returns, per variant, a real
+# `inventory_quantity` on stores created before Shopify's 2017-12-05 changelog
+# entry removed those fields from the Liquid `json` filter. Pre-2018 shops are
+# grandfathered. Re-derived live across the whole roster on 2026-08-07 —
+# 162 of 162 domains answered, 0 errors — 33 stores expose it. Not placeholders:
+# ALOHAS returns −114 to −6 (a real oversold/preorder ledger), Staud 44,
+# Miaou 0…25 across 36 variants, and `available` tracks the sign.
+#
+# Day over day that is DECREMENTS = UNITS SOLD and POSITIVE JUMPS = RESTOCKS,
+# per variant, per day. Loupe has never had a units signal. Every day it is not
+# recorded is a day that cannot be recovered at any price, which is the only
+# reason this is being wired in ahead of knowing exactly what it is worth.
+#
+# ── THE ETHICAL BOUNDARY, AS A CONSTRAINT AND NOT A PREFERENCE ────────────────
+#
+# These merchants did not intend to publish their stock levels. Nothing here
+# evades anything — the endpoint is public, unauthenticated, and served to every
+# browser that loads the product page; robots.txt allows it on all 159 domains
+# that publish one, and Shopify's platform-level /agents.md explicitly sanctions
+# unauthenticated read-only product JSON in return for one obligation, which is
+# to back off on 429. We honour that literally (see _pace and scrape_page).
+#
+# But "public" is not "intended", and the difference is the whole of the ethics
+# here. A merchant chose to expose a stock number to a shopper looking at one
+# product. Nobody chose to hand a competitor a daily time series of their sell-
+# through. So:
+#
+#   PERMITTED   aggregate, anonymised, tier-level statistics, over at least
+#               MIN_BRANDS_PER_AGGREGATE distinct brands.
+#   FORBIDDEN   a named brand's stock or units, in any artefact, ever.
+#               Showing any brand's figures to a competitor.
+#               Per-brand outreach ("we can see you sold 40 of these").
+#               Resale or publication of per-brand figures.
+#
+# Telling a brand its own stock is pointless anyway: they have Shopify admin.
+# The value here is the TIER — the thing nobody can see, including them.
+#
+# THIS IS A PUBLIC REPO, so the constraint has to survive the file itself. A
+# committed stock.json naming brands would BE the forbidden disclosure, to
+# everyone, permanently, no matter what any policy document said. Hence the
+# pseudonymisation below: what is committed carries an HMAC of the domain and of
+# the variant id under a salt that is never published, plus category and price
+# band. That is enough for every permitted use (a tier aggregate needs to count
+# distinct brands, not name them) and not enough for any forbidden one.
+#
+# stock_aggregate_ok() exists so "aggregate, anonymised, tier-level" is something
+# a consumer CALLS rather than something it remembers. test_market_signals.py
+# pins the policy block, the pseudonymisation, and the threshold.
+STOCK_FILE = HERE / "stock.json"
+
+# The floor for any published figure derived from this record.
+MIN_BRANDS_PER_AGGREGATE = 5
+
+
+def stock_aggregate_ok(n_brands):
+    """True if a figure derived from the inventory panel may be published.
+
+    The ONLY defensible shape is aggregate, anonymised and tier-level, so an
+    aggregate has to span enough distinct brands that no single one is
+    identifiable from it. Call this; do not re-derive the rule at each call site.
+    """
+    return isinstance(n_brands, int) and not isinstance(n_brands, bool) \
+        and n_brands >= MIN_BRANDS_PER_AGGREGATE
+
+
+# Re-derived live 2026-08-07 (162/162 domains answered, 0 errors) by probing one
+# product per store for the field. Kept as a list rather than re-discovered every
+# run because re-discovery costs 162 requests a day to learn something that
+# changes when a merchant migrates platforms — i.e. almost never. It cannot go
+# silently stale in either direction:
+#   • a store here that stops exposing the field is skipped after ONE product
+#     (see collect_stock) and reported under `dropped`;
+#   • INVENTORY_CANARIES stores NOT on the list are probed each run on a rotating
+#     schedule, so a new exposer surfaces under `newExposers` within ~3 weeks.
+INVENTORY_STORES = [
+    "aeyde.com", "agmesnyc.com", "alighieri.com", "alohas.io", "annaoctober.com",
+    "bonnieclyde.la", "checkout.eckhauslatta.com", "ciaolucia.com", "cultgaia.com",
+    "deijistudios.com", "frankiesbikinis.com", "khaite.com", "laurenmanoogian.com",
+    "maguireshoes.com", "marthacalvo.com", "miaou.com", "mondo-mondo.com",
+    "mounser.com", "nuukjewellery.com", "orseundiris.com", "priscavera.com",
+    "ratandboa.com", "shopalexis.com", "shopanonie.com", "sirthelabel.com",
+    "sophiebuhai.com", "st-agni.com", "staud.clothing", "stinegoya.com",
+    "swfboutique.com", "thefrankieshop.com", "thelinebyk.com", "www.wolfcircus.com",
+]
+
+# ── The cost, stated before it was wired into CI ──────────────────────────────
+# The daily job is ~540 storefront requests / ~25 min. One extra GET per product
+# on the 33 exposing stores, unbounded, would be ~10,000 requests and ~100
+# minutes — a 20x increase against shops we do not pay. That is not a signal, it
+# is an imposition, and REQUEST_BUDGET (1500) would have silently truncated the
+# WALK to pay for it.
+#
+# So the inventory pass is a PANEL, not a census: a fixed cohort per store,
+# a budget of its own, and it runs only AFTER catalog.json and shelf.json are on
+# disk, so it structurally cannot cost the catalog anything.
+#   33 stores x 15 products  = 495
+#   + 8 rotating canaries    = 503  requests, ~5-6 min at MIN_REQUEST_INTERVAL
+# ~3,000 variants observed daily. Raising it is one constant, and the panel's
+# value is in its LENGTH, so starting narrow today beats starting wide next week.
+INVENTORY_BUDGET = 520
+INVENTORY_PER_STORE = 15
+INVENTORY_CANARIES = 8
+
+
+def stock_cohort(ids, k=INVENTORY_PER_STORE):
+    """The k product ids with the smallest CRC32 — a STABLE panel.
+
+    Day-over-day differencing needs the SAME variants observed on both days, so
+    the cohort cannot be "the first k of today's walk": products.json is
+    published_at DESCENDING, so that set churns every time a brand lists
+    anything. A hash of the id is a property of the product, so membership does
+    not move when its neighbours do.
+
+    zlib.crc32, NOT hash(): Python's hash() of a str is salted per PROCESS, so a
+    cohort built on it would be different on every single run and the panel would
+    silently never join to itself. That is the exact failure this file keeps
+    finding — a thing that looks like it is working and is not.
+    """
+    return [i for _c, i in sorted((zlib.crc32(str(i).encode("utf-8")), str(i))
+                                  for i in ids)[:max(int(k), 0)]]
+
+
+# Price bands for the published panel. Coarse on purpose: a band plus a category
+# is a tier position, an exact price plus a category is close to a fingerprint.
+_PRICE_BANDS = [(100, "<100"), (200, "100-199"), (350, "200-349"), (600, "350-599")]
+
+
+def price_band(price):
+    """A coarse USD band, or "?" — see _PRICE_BANDS."""
+    try:
+        p = float(price)
+    except (TypeError, ValueError):
+        return "?"
+    for hi, label in _PRICE_BANDS:
+        if p < hi:
+            return label
+    return "600+"
+
+
+def variant_stock(domain, handle, timeout=12):
+    """(status, variants) for ONE product's public .js endpoint. NEVER raises.
+
+    status is "ok" (the field is there), "no-field" (the shop answered and does
+    not expose it — NOT an error, it is the default for any store created after
+    2017-12-05), or "err:<ExceptionName>".
+
+    Fail-soft is the whole contract. This pipeline lost four days of an
+    irreplaceable archive to a pre-build gate that failed loudly, and the lesson
+    was not "fewer gates" but "know the blast radius". The blast radius of this
+    function is one product's stock row. It must never be anything else.
+
+    Back-off follows the same rule as scrape_page's retry loop — 30s on a 429,
+    1.5s on an ordinary flake — because every Shopify store's /agents.md asks for
+    exactly one thing in return for unauthenticated read access: "Respect rate
+    limits ... Back off on 429 responses." Pacing and the global request counter
+    are NOT re-implemented here: this goes through fetch_json, which goes through
+    _pace, which is the one place spacing is enforced.
+    """
+    url = f"https://{domain}/products/{urllib.parse.quote(str(handle))}.js?country=US"
+    last = None
+    for attempt in range(2):
+        try:
+            data = fetch_json(url, timeout=timeout)
+        except urllib.error.HTTPError as e:
+            last = e
+            if e.code == 429:
+                time.sleep(30.0 * (attempt + 1))
+                continue
+            return f"err:HTTP{e.code}", []
+        except Exception as e:  # noqa: BLE001 — see docstring
+            last = e
+            time.sleep(1.5 * (attempt + 1))
+            continue
+        out = []
+        for v in (data or {}).get("variants") or []:
+            q = v.get("inventory_quantity")
+            if q is None:
+                continue
+            try:
+                q = int(q)
+            except (TypeError, ValueError):
+                continue
+            # `inventory_management` is LOAD-BEARING and was very nearly left out.
+            # When it is null the shop is not tracking that variant, so `available`
+            # is true no matter what the number says and the number is a stale
+            # remnant, not a live position. Measured on 2,502 live variants
+            # (2026-08-07):
+            #   tracked + deny      1,831 — available == (qty > 0) on 1,831 of
+            #                               1,831. The ledger, exactly.
+            #   tracked + continue    610 — oversell allowed; 545 sit at or below
+            #                               zero and are still buyable. Genuine
+            #                               oversold/preorder positions, and their
+            #                               decrements are still units.
+            #   untracked              61 — available on 61 of 61, with quantities
+            #                               down to −208. NOT a live number.
+            # Fold those together and 2.4% of rows quietly poison every units
+            # aggregate, in a way no consumer could detect after the fact.
+            out.append((str(v.get("id")), q,
+                        bool(v.get("available")),
+                        str(v.get("inventory_policy") or ""),
+                        (v.get("inventory_management") or "") == "shopify"))
+        return ("ok", out) if out else ("no-field", [])
+    return f"err:{type(last).__name__}", []
+
+
+def collect_stock(store_items, canaries=(), fetch=variant_stock,
+                  budget=INVENTORY_BUDGET, per_store=INVENTORY_PER_STORE):
+    """Poll the inventory panel. Returns raw, IN-MEMORY, still-identifying data;
+    stock_record() is what turns it into something publishable.
+
+    store_items: {domain: {"brand": str, "items": [(id, handle, category, price)]}}
+    canaries:    (domain, handle) pairs for stores NOT expected to expose the
+                 field, probed once each so a new exposer is discovered instead
+                 of being waited for.
+
+    Never raises. A store that errors, that has stopped exposing the field, or
+    that we run out of budget for is RECORDED as such — because "we looked and
+    there was nothing" and "we could not look" are different facts, and a
+    consumer that cannot tell them apart reads our bad afternoon as a market
+    event. That is the same lesson shelf.json's `failed` map exists for.
+    """
+    spent = 0
+    stores, panel, dropped, new_exposers = {}, [], [], []
+
+    # ROUND-ROBIN across stores, one product each per pass. Two reasons, and the
+    # second is the load-bearing one:
+    #
+    #   politeness — a store-at-a-time walk sends one shop 15 requests inside 9
+    #     seconds. Interleaved, the same 15 are spread across the whole pass.
+    #
+    #   FAIRNESS — with a store-at-a-time walk and a budget that runs out, the
+    #     stores at the end of the sort get nothing. Not once: EVERY DAY,
+    #     FOREVER, in the same order. That is a silently biased panel, which is
+    #     worse than a smaller one, because the bias is invisible in the output
+    #     and permanent in the history.
+    queues, order = {}, []
+    for domain in sorted(store_items):
+        info = store_items[domain]
+        by_id = {i[0]: i for i in info.get("items") or []}
+        cohort = stock_cohort(list(by_id), per_store)
+        queues[domain] = [by_id[pid] for pid in cohort]
+        stores[domain] = {"brand": info.get("brand"), "exposes": False,
+                          "cohort": len(cohort), "variants": 0, "errors": 0}
+        if cohort:
+            order.append(domain)
+
+    while order and spent < budget:
+        for domain in list(order):
+            if spent >= budget:
+                break
+            queue = queues[domain]
+            if not queue:
+                order.remove(domain)
+                continue
+            pid, handle, category, price = queue.pop(0)
+            meta = stores[domain]
+            spent += 1
+            status, variants = fetch(domain, handle)
+            if status.startswith("err"):
+                meta["errors"] += 1
+            elif status == "no-field":
+                # ONE product decides it. A store that stopped exposing the field
+                # must not cost 15 requests a day forever to keep proving it —
+                # and must not be mistaken for a store we failed to reach.
+                if not meta["exposes"]:
+                    dropped.append({"domain": domain,
+                                    "brand": (store_items[domain] or {}).get("brand"),
+                                    "reason": "no inventory_quantity"})
+                    queue.clear()
+            else:
+                meta["exposes"] = True
+                for vid, qty, avail, policy, tracked in variants:
+                    panel.append((domain, f"{pid}|{vid}", qty, avail, policy,
+                                  tracked, category, price_band(price)))
+                    meta["variants"] += 1
+            if not queue:
+                order.remove(domain)
+
+    for domain, handle in canaries:
+        if spent >= budget:
+            break
+        spent += 1
+        status, variants = fetch(domain, handle)
+        if status == "ok" and variants:
+            new_exposers.append(domain)
+
+    return {"stores": stores, "panel": panel, "requests": spent,
+            "dropped": dropped, "newExposers": new_exposers,
+            "budget": budget, "budgetExhausted": spent >= budget}
+
+
+def stock_salt():
+    """(salt, source) for the panel's pseudonyms.
+
+    A salt that is stable ACROSS DAYS is what makes the panel a time series
+    rather than 90 unrelated snapshots, and a salt that is SECRET is what keeps a
+    public repo from publishing named per-brand stock. Both, or the file is
+    either worthless or wrong.
+
+      1. LOUPE_STOCK_SALT             — the right long-term home. Set it.
+      2. APPROVAL_HMAC_SECRET, via a one-way HMAC with a domain-separation label
+         — a secret this workflow already has. Derived, never echoed, and it
+         means the signal starts TODAY instead of on the day someone remembers to
+         add a secret. It is a fallback, not the design.
+      3. a fresh random salt — the panel is still a valid CROSS-SECTION (how deep
+         is stock in this tier today) but CANNOT be joined to any other day, and
+         says so in `joinable`. It never silently pretends otherwise.
+    """
+    env = os.environ.get("LOUPE_STOCK_SALT", "").strip()
+    if env:
+        return env, "env"
+    borrowed = os.environ.get("APPROVAL_HMAC_SECRET", "").strip()
+    if borrowed:
+        return hmac.new(borrowed.encode("utf-8"), b"loupe-stock-panel-v1",
+                        hashlib.sha256).hexdigest(), "derived"
+    return secrets.token_hex(32), "ephemeral"
+
+
+def _pseudonym(salt, value):
+    return hmac.new(salt.encode("utf-8"), str(value).encode("utf-8"),
+                    hashlib.sha256).hexdigest()[:12]
+
+
+def stock_record(collected, salt, source, day, now_iso):
+    """The publishable inventory panel: pseudonymised, policy-stamped, compact.
+
+    Rows are arrays for the same reason shelf.json's are — this file is committed
+    every day forever and its value is entirely in its length.
+    """
+    joinable = source in ("env", "derived")
+    keys = {}
+
+    def key(v):
+        k = keys.get(v)
+        if k is None:
+            k = keys[v] = _pseudonym(salt, v)
+        return k
+
+    panel = [[key(dom), key(vk), qty, 1 if avail else 0,
+              1 if pol == "deny" else 0, 1 if tracked else 0, cat or "", band]
+             for dom, vk, qty, avail, pol, tracked, cat, band in collected["panel"]]
+    stores = {key(d): {kk: vv for kk, vv in meta.items() if kk != "brand"}
+              for d, meta in collected["stores"].items()}
+    return {
+        "generatedAt": now_iso,
+        "day": day,
+        # Read this before reading anything else in the file.
+        "use": {
+            "permitted": ("aggregate, anonymised, tier-level statistics over at "
+                          f"least {MIN_BRANDS_PER_AGGREGATE} distinct brands"),
+            "forbidden": [
+                "a named brand's stock or units, in any artefact",
+                "showing any brand's figures to a competitor",
+                "per-brand outreach derived from these numbers",
+                "resale or publication of per-brand figures",
+            ],
+            "minBrandsPerAggregate": MIN_BRANDS_PER_AGGREGATE,
+            "why": ("These merchants did not intend to publish stock levels. The "
+                    "endpoint is public, unauthenticated and served to every "
+                    "browser, and robots.txt/agents.md permit reading it, but "
+                    "public is not intended: a shopper looking at one product is "
+                    "not a competitor holding a daily sell-through series. Store "
+                    "and variant identifiers here are HMAC pseudonyms under an "
+                    "unpublished salt for exactly that reason."),
+            "pseudonymLimit": ("Not cryptographic anonymity. Anyone can re-run "
+                               "today's public probe and match today's rows back "
+                               "to a store. What it prevents is this repo becoming "
+                               "a free, retroactive, NAMED sell-through history — "
+                               "which is the part nobody can re-acquire."),
+        },
+        "saltSource": source,
+        "saltId": hashlib.sha256(salt.encode("utf-8")).hexdigest()[:12],
+        # FALSE means today's rows cannot be differenced against any other day.
+        # Stated as a field, not as a log line nobody reads.
+        "joinable": joinable,
+        # `tracked` is 0 when the shop does not manage that variant's inventory
+        # through Shopify. Those rows carry a stale number and an `available` that
+        # ignores it — EXCLUDE them from any units figure. See variant_stock.
+        "schema": ["storeKey", "variantKey", "qty", "available", "denyPolicy",
+                   "tracked", "category", "priceBand"],
+        "stores": stores,
+        "storesExposing": sum(1 for m in collected["stores"].values() if m["exposes"]),
+        # Plain domains, DELIBERATELY. Which Shopify shops predate the 2017-12-05
+        # changelog is a platform fact, one request away for anybody, and it is
+        # already spelled out in INVENTORY_STORES a few hundred lines up. It is
+        # also the only actionable thing in this file: these two lists are how the
+        # constant stops going stale. What must never be attributable is a stock
+        # NUMBER, and no number appears here.
+        "dropped": [{"reason": d["reason"], "domain": d["domain"]}
+                    for d in collected["dropped"]],
+        "newExposers": list(collected["newExposers"]),
+        "requests": collected["requests"],
+        "requestBudget": collected["budget"],
+        "budgetExhausted": collected["budgetExhausted"],
+        "count": len(panel),
+        "panel": panel,
+    }
 
 
 def normalize(product, brand, domain, fx, multi_brand=False, retailer=None,
@@ -1538,6 +2044,19 @@ def main():
     observed_meta = {}
     observed_failed = {}
     summary = []
+    # ── The market-only side-record ───────────────────────────────────────────
+    # Everything here is about the WALK, not about the deck, and none of it may
+    # reach catalog.json — the app has no use for a size it cannot sell or for a
+    # stock level, and catalog.json is 1.09 KB/product against jsDelivr's ~20 MB
+    # ceiling and becomes a ~111 KB cutout and an embedding per row.
+    #
+    # Kept as a SIDE MAP keyed by product id rather than as extra keys on the
+    # normalized product, and that is the whole design: `by_brand` holds the SAME
+    # dict objects as `observed`, so anything stamped onto a normalized row ships
+    # to phones. A separate map cannot leak into the payload by forgetting a
+    # strip step. test_market_signals.py pins catalog.json's exact row shape.
+    #   id -> (offeredRun, inStockRun, compareAtRaw, domain, handle)
+    market = {}
 
     # Load the previous good catalog UP FRONT. It does two jobs: (1) carries each
     # product's stable addedAt date (NEW-arrival flagging), and (2) lets us carry
@@ -1743,6 +2262,11 @@ def main():
         base_counts = {}  # base product name -> # color variants already kept
         pages_seen = 0
         exhausted = False
+        # compare_at_price coverage for THIS store. Recorded per store because
+        # the fill rate is what separates "never discounts" from "never fills the
+        # field in", and those two readings of a 0% store are opposite claims
+        # about a real business. See compare_at_signal.
+        cap_variants = cap_filled = 0
         try:
             # Walk products.json pages until the store is exhausted or we reach
             # the walk depth. Unlike before 2026-08-06 this does NOT stop at the
@@ -1767,6 +2291,14 @@ def main():
                     base_counts[bkey] = base_counts.get(bkey, 0) + 1
                     seen_ids.add(norm["id"])
                     bucket.append(norm)
+                    # The market-only record for this piece, taken from the RAW
+                    # Shopify product while we still have it. Free — no extra
+                    # request, no extra byte in catalog.json.
+                    _cap, _nvar, _nfill = compare_at_signal(product)
+                    cap_variants += _nvar
+                    cap_filled += _nfill
+                    market[norm["id"]] = (*size_runs(product), _cap,
+                                          domain, product.get("handle"))
                     got += 1
                 if got >= walk_cap:
                     break  # walk depth reached — don't fetch further pages
@@ -1786,6 +2318,11 @@ def main():
                     "exhausted": bool(exhausted),
                     **({"budgetStopped": True} if not exhausted and got < walk_cap
                        and budget_left() <= 0 else {}),
+                    # BOTH numbers, never the ratio alone: a 0.0 over 12 variants
+                    # and a 0.0 over 4,000 are different facts, and it is the
+                    # second that licenses "this store does not use the field".
+                    "capVariants": cap_variants,
+                    "capFilled": cap_filled,
                 }
                 # catalog.json keeps only the display slice. products.json is
                 # newest-first, so this is the same front as before — the app's
@@ -2470,11 +3007,39 @@ def main():
     _shelf_brands = sorted(observed)
     _bidx = {b: i for i, b in enumerate(_shelf_brands)}
     _rows = []
+    # ── The offered size run, and the markdown the merchant declared ───────────
+    # PARALLEL ARRAYS, not extra columns on the row, for two reasons. The row
+    # schema is pinned by test_shelf_sampling.py and consumers read it
+    # positionally, so widening it is a breaking change to the one file whose
+    # value is that old days stay readable. And these are INTERNED: the roster
+    # publishes on the order of a thousand distinct size runs across ~46,000
+    # pieces, so storing an index into a run table costs ~3 bytes a row instead
+    # of ~30.
+    #
+    # Index 0 is reserved for the empty run BEFORE the loop, so a piece with no
+    # size option and a piece we have no record for both read as [] rather than
+    # silently borrowing whichever run happened to be interned first.
+    _runs, _run_idx = [], {}
+
+    def _intern(run):
+        t = tuple(run)
+        i = _run_idx.get(t)
+        if i is None:
+            i = _run_idx[t] = len(_runs)
+            _runs.append(list(run))
+        return i
+
+    _intern([])
+    _offered, _in_stock, _compare_at = [], [], []
     for b in _shelf_brands:
         for p in observed[b]:
             _rows.append([p["id"], _bidx[b], p["price"],
                           1 if p.get("available") else 0,
                           p.get("publishedAt") or "", p.get("category") or ""])
+            _m = market.get(p["id"])
+            _offered.append(_intern(_m[0]) if _m else 0)
+            _in_stock.append(_intern(_m[1]) if _m else 0)
+            _compare_at.append(_m[2] if _m and _m[2] else 0)
     shelf = {
         "generatedAt": now_iso,
         "day": now.strftime("%Y-%m-%d"),
@@ -2493,6 +3058,33 @@ def main():
         "count": len(_rows),
         "products": _rows,
     }
+    # ── The offer curve (2026-08-07) ──────────────────────────────────────────
+    # `sizesOffered` is the size run each store OFFERS; `sizesInStock` is the
+    # subset that is buyable. Until today only the second existed, and the
+    # difference is not cosmetic: it is what separates "they don't stock XL" from
+    # "XL sold out", i.e. a range decision from demand evidence. "XL stocked on
+    # 45.8% of pieces" was published as an offer rate when it was an in-stock
+    # rate, and the true offer rate is at least 6 points higher.
+    #
+    # `compareAtRaw` is the merchant's own struck-through price for the piece, in
+    # the store's own currency (matching priceRaw), 0 when unset. It is a
+    # SECONDARY signal: brands[<brand>].capVariants / capFilled give the store's
+    # fill rate, and without dividing by that a 0%-fill store reads as a store
+    # that never discounts. Observed price movement stays primary.
+    #
+    # Written only when the arrays line up with the rows. They are built in the
+    # same loop so they cannot diverge, but a market record that is silently one
+    # element out of phase is worse than one that is absent, so it is checked.
+    if len(_offered) == len(_in_stock) == len(_compare_at) == len(_rows):
+        shelf["sizeRuns"] = _runs
+        shelf["sizeSchema"] = ["offeredIdx", "inStockIdx", "compareAtRaw"]
+        shelf["sizesOffered"] = _offered
+        shelf["sizesInStock"] = _in_stock
+        shelf["compareAtRaw"] = _compare_at
+    else:  # pragma: no cover — structurally unreachable, deliberately not silent
+        summary.append(f"  ⚠ size/markdown arrays out of phase with the rows "
+                       f"({len(_offered)}/{len(_in_stock)}/{len(_compare_at)} vs "
+                       f"{len(_rows)}) — OMITTED from shelf.json this run")
     SHELF_FILE.write_text(json.dumps(shelf, separators=(",", ":"), ensure_ascii=False),
                           encoding="utf-8")
     _walked = sum(len(v) for v in observed.values())
@@ -2529,6 +3121,73 @@ def main():
         print("  category mix: " + ", ".join(
             f"{c}={n}" for c, n in sorted(cat_counts.items(), key=lambda kv: -kv[1])
         ))
+
+    # \u2500\u2500 The inventory panel \u2014 LAST, on purpose \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+    # catalog.json, shelf.json and catalog.meta.json are already on disk by the
+    # time this runs. That ordering is the fail-soft guarantee: an exposing store
+    # that goes away, starts erroring, or drops the field cannot cost the catalog
+    # a single product, because there is nothing left for it to cost. The whole
+    # block is caught anyway \u2014 twice, in fact (variant_stock never raises either)
+    # \u2014 because this pipeline once lost four days to a pre-build gate that failed
+    # loudly and nothing reported the absence.
+    #
+    # Set STOCK_PANEL=0 to skip it (mirrors VALIDATE_IMAGES).
+    if os.environ.get("STOCK_PANEL", "1") != "0":
+        try:
+            _dom_items = {}
+            for _b in _shelf_brands:
+                for _p in observed[_b]:
+                    _m = market.get(_p["id"])
+                    if not _m or not _m[4]:
+                        continue
+                    _dom_items.setdefault(_m[3], {"brand": _b, "items": []})
+                    _dom_items[_m[3]]["items"].append(
+                        (_p["id"], _m[4], _p.get("category"), _p.get("price")))
+            _known = set(INVENTORY_STORES)
+            _targets = {d: v for d, v in _dom_items.items() if d in _known}
+            # Rotating canaries over the stores NOT on the list, so INVENTORY_STORES
+            # cannot quietly go stale in the "a new store started exposing" direction.
+            # 8 a day walks the ~128 remaining stores in about three weeks, for 8
+            # requests. A list nobody re-derives is a list that is wrong later.
+            _others = sorted(d for d in _dom_items if d not in _known)
+            _canaries = []
+            if _others:
+                _start = (now.timetuple().tm_yday * INVENTORY_CANARIES) % len(_others)
+                for _i in range(min(INVENTORY_CANARIES, len(_others))):
+                    _d = _others[(_start + _i) % len(_others)]
+                    _canaries.append((_d, _dom_items[_d]["items"][0][1]))
+
+            _collected = collect_stock(_targets, canaries=_canaries)
+            _salt, _salt_src = stock_salt()
+            _rec = stock_record(_collected, _salt, _salt_src,
+                                now.strftime("%Y-%m-%d"), now_iso)
+            STOCK_FILE.write_text(
+                json.dumps(_rec, separators=(",", ":"), ensure_ascii=False),
+                encoding="utf-8")
+
+            print("\nInventory panel (stock.json)")
+            print(f"  {_rec['count']:,} variants across {_rec['storesExposing']} of "
+                  f"{len(_targets)} stores, {_rec['requests']} requests of "
+                  f"{_rec['requestBudget']}")
+            if _rec["dropped"]:
+                print("  \u26a0 NO LONGER EXPOSING inventory_quantity \u2014 remove from "
+                      "INVENTORY_STORES: " + ", ".join(d["domain"] for d in _rec["dropped"]))
+            if _rec["newExposers"]:
+                print("  \u271a NEWLY EXPOSING inventory_quantity \u2014 add to "
+                      "INVENTORY_STORES: " + ", ".join(_rec["newExposers"]))
+            if not _rec["joinable"]:
+                print("  \u26a0 UNJOINABLE PANEL: no LOUPE_STOCK_SALT and no "
+                      "APPROVAL_HMAC_SECRET, so today's pseudonyms are random and "
+                      "today's rows CANNOT be differenced against any other day. "
+                      "The units signal is not being recorded. Set the secret.")
+            elif _rec["saltSource"] == "derived":
+                print("  note: pseudonym salt derived from APPROVAL_HMAC_SECRET. "
+                      "Works, but set LOUPE_STOCK_SALT so rotating that secret "
+                      "does not silently break every join.")
+        except Exception as e:  # noqa: BLE001 \u2014 see the block comment above
+            print(f"\nInventory panel: SKIPPED ({type(e).__name__}: {e}). The "
+                  f"catalog and the shelf are already written and are unaffected.")
+
     # NOTE: the "too few products" check used to live here \u2014 i.e. AFTER the catalog
     # had already been written to disk. It (and the new shrink ratios) now run in the
     # PUBLISH GUARD above, before OUT_FILE.write_text, so a bad run can't overwrite a
