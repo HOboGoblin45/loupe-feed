@@ -290,6 +290,17 @@ MAINSTREAM_BRANDS = {
         "The Row", "Khaite", "Toteme", "Totême", "Ganni", "Dries Van Noten",
         "Proenza Schouler", "Coperni", "Staud", "Cult Gaia", "Phoebe Philo",
         "Frankies Bikinis", "LA Apparel", "Los Angeles Apparel",
+        # Added 2026-08-06 with the roster batch, by the same standard already
+        # applied to Ganni, Staud and Khaite: DÔEN runs 9 US stores and
+        # wholesales at Net-a-Porter and Nordstrom, Linda Farrow has been a
+        # luxury eyewear house since 1970, and WARDROBE.NYC's median piece is
+        # ~$750. Uncapped they would take ~180 feed slots as "discoveries".
+        # BOTH DÔEN SPELLINGS ARE LOAD-BEARING: _norm_brand only folds the
+        # accents listed above, and "ô" is not one of them, so "DÔEN" folds to
+        # the short key "den" while the plain spelling folds to "doen". Whichever
+        # spelling a store's vendor field uses, one of the two matches; drop
+        # either and the cap silently stops applying.
+        "DÔEN", "Doen", "Linda Farrow", "WARDROBE.NYC",
     ]
 }
 
@@ -308,6 +319,13 @@ EXCLUDE_BRANDS = {
         # Removed 2026-07-29 (founder decision).
         "Mackage",
         "Marfa Stance",
+        # PAUSED 2026-08-06 (Aniqa's request) — not a deletion. INK + ALLOY has
+        # no brands.json entry at all: its 4 products enter only as a VENDOR
+        # inside the Gemini storefront, so there is nothing to delete and this
+        # list is the only place the removal can be expressed. Source-agnostic
+        # by design — it stays out even if it arrives again through the next
+        # reseller added. To un-pause, delete this one line.
+        "INK + ALLOY",
     ]
 }
 

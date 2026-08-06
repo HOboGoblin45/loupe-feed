@@ -41,6 +41,16 @@ jobs:
         with:
           python-version: "3.12"
 
+      # This workflow SENDS to real phones and, until 2026-08-06, ran no test at
+      # all — the catalog build was gated by nine fixtures while the thing that
+      # actually reaches a user was gated by nothing. That asymmetry is how an FX
+      # correction got one afternoon away from being pushed as a 73% sale.
+      # test_currency_fx.py holds the guard that stops it; if it fails, nothing is
+      # sent. A missed digest is recoverable, a false one is not.
+      - name: Gate — alert rules must still hold
+        working-directory: loupe-feed
+        run: python test_currency_fx.py
+
       - name: Send daily sale/restock digest
         run: python loupe-feed/price_drop_push.py
         env:

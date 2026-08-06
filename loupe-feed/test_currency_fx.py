@@ -204,6 +204,111 @@ check("an uncorrected brand is left alone",
       bph.correct_price(600, "Deiji Studios", "2026-08-01", False, table) == 600)
 
 
+# ── 4. an FX correction must never reach a user as a SALE ────────────────────
+# 2026-08-06, the second half of the same incident and the more expensive one.
+#
+# The corrections above fixed the archive. Nothing fixed the ALERT path. eb5a0b3
+# landed at 02:54 and the catalog rebuilt at 03:06; two of the eight corrections
+# make prices FALL — 28natelier x0.27229 and Sir the Label x0.66 — and
+# price_drop_push.py compares the live price against each user's price-at-save
+# with a 10% / $3 threshold. Measured on the real snapshots either side of the
+# rebuild (bd7582e -> 3d8b7ca): 117 pieces, 60 of 60 for 28natelier and 57 of 57
+# for Sir the Label, cleared that threshold. The 17:00 digest would have told
+# every holder of one:
+#
+#     "Price drop in your Dresser — 28natelier The Kufiya Hair Scarf is 73% off"
+#
+# Nothing was marked down. The analysis path had known about this class of event
+# for weeks — PRICE_EPOCHS voids comparisons across a methodology change and
+# build_loupe_index.detect_uniform_steps() voids a brand-day whose whole line
+# moves by one ratio — and the alert path could not see any of it. These cases
+# are that split brain nailed shut, on the side where it reaches a phone.
+import io
+import tokenize
+
+import price_drop_push as pdp
+
+pdp_table = pdp.load_price_corrections()
+
+# The tell is the ratio, and the record is the source of it. A brand-wide step
+# that lands exactly on the published factor is our own arithmetic, not a sale.
+check("the digest reads the SHARED record, not its own brand list",
+      pdp_table == {c["brand"]: float(c["factor"]) for c in corr["corrections"]},
+      f"got {pdp_table}")
+# The record must be READ, never restated. A brand named in the digest's
+# executable code is a second list that drifts from the archive the first time
+# anyone corrects a ninth brand — and the two would then disagree about what a
+# user is owed. Comments and docstrings are prose, not a table, so the source is
+# stripped of them before the check rather than pattern-matched raw.
+_src = pathlib.Path(HERE / "price_drop_push.py").read_text(encoding="utf-8")
+_code = "".join(
+    tok.string if tok.type not in (tokenize.COMMENT, tokenize.STRING) else " "
+    for tok in tokenize.generate_tokens(io.StringIO(_src).readline))
+_baked = sorted(b for b in pdp_table if b in _code)
+check("no brand from the record is baked into the digest's code",
+      not _baked,
+      f"{_baked} hardcoded in price_drop_push.py — it will drift from the record")
+
+live = {"p": {"price": 151, "sizes": [], "brand": "28natelier", "name": "Teddy Dress"}}
+saved = [{"product_id": "p", "price_at_save": 555, "product": {"id": "p", "sizes": []}}]
+check("WITHOUT the record a currency fix is published as a 72% sale",
+      pdp.compute_alerts(saved, live)[0]["sale"]["pct"] == 72)
+check("WITH the record the same move is not a sale at all",
+      pdp.compute_alerts(saved, live, pdp_table) == [],
+      str(pdp.compute_alerts(saved, live, pdp_table)))
+
+# ...and the same for the other falling brand, whose step is a plausible-looking
+# 34% rather than an obviously-absurd 73%. Size matters less than uniformity.
+live_sir = {"q": {"price": 79, "sizes": [], "brand": "Sir the Label", "name": "Calypso"}}
+saved_sir = [{"product_id": "q", "price_at_save": 120, "product": {"id": "q", "sizes": []}}]
+check("a merely plausible FX step is suppressed too",
+      pdp.compute_alerts(saved_sir, live_sir, pdp_table) == [])
+
+# THE CASE THAT MATTERS MOST. The guard must not mute the brand — only the step.
+# A real markdown on a corrected brand, on the SAME day, still has to be told.
+live_real = {"r": {"price": 90, "sizes": [], "brand": "Sir the Label", "name": "Olea"}}
+saved_real = [{"product_id": "r", "price_at_save": 200, "product": {"id": "r", "sizes": []}}]
+got_real = pdp.compute_alerts(saved_real, live_real, pdp_table)
+check("a genuine markdown on a CORRECTED brand still alerts",
+      len(got_real) == 1 and got_real[0]["sale"] is not None,
+      f"got {got_real}")
+
+# A single-item markdown on an uncorrected brand is untouched — this is the
+# 7 real sales that survived alongside the 117 artefacts on 2026-08-06.
+live_other = {"s": {"price": 110, "sizes": [], "brand": "Tyler McGillivary", "name": "Tank"}}
+saved_other = [{"product_id": "s", "price_at_save": 275, "product": {"id": "s", "sizes": []}}]
+check("an uncorrected brand's markdown is left alone",
+      pdp.compute_alerts(saved_other, live_other, pdp_table)[0]["sale"]["pct"] == 60)
+
+# The tolerance is DERIVED, not tuned: both prices are dollar-rounded, so a true
+# FX step can miss its factor by at most 0.5*factor + 0.5. Inside that, suppress;
+# outside it, the move is real and must be reported. Worst residual measured over
+# all 400 corrected pieces was $0.870 against a $1.258 bound.
+check("a step one cent inside the rounding bound is FX",
+      pdp.is_fx_correction_step(100 * 0.66 + 0.82, 100, 0.66) is True)
+check("a step outside the rounding bound is a real move",
+      pdp.is_fx_correction_step(100 * 0.66 - 5, 100, 0.66) is False)
+check("a brand with no correction is never suppressed",
+      pdp.is_fx_correction_step(50, 100, None) is False)
+
+# Restock/sold-out is a different axis and a PRICE guard must not touch it.
+live_sz = {"t": {"price": 151, "sizes": ["S", "M"], "brand": "28natelier", "name": "Teddy"}}
+saved_sz = [{"product_id": "t", "price_at_save": 555, "product": {"id": "t", "sizes": ["S"]}}]
+got_sz = pdp.compute_alerts(saved_sz, live_sz, pdp_table)
+check("the FX guard suppresses the phantom sale but keeps the real restock",
+      len(got_sz) == 1 and got_sz[0]["sale"] is None and got_sz[0]["new_sizes"] == ["M"],
+      f"got {got_sz}")
+
+# A missing record is a REFUSAL to send, never an empty table. A silent {} here
+# would send all 117 false pushes to real phones, once, with no way to recall
+# them. build_price_history.py takes the same position for the same reason.
+try:
+    pdp.load_price_corrections(HERE / "price_corrections.__absent__.json")
+    check("a missing corrections record stops the send", False, "it returned instead")
+except SystemExit:
+    check("a missing corrections record stops the send", True)
+
+
 def main():
     if failures:
         print("CURRENCY/FX REGRESSIONS:")

@@ -11,8 +11,15 @@
 # day). The rules here MUST match the app's src/lib/dresserAlerts.ts so the push,
 # the in-app "Sale & restock alerts" screen and the Dresser badge always agree.
 #
+# A price move caused by OUR OWN pipeline is never reported as a sale. The brand
+# factors published in price_corrections.json are read on every run and a drop that
+# matches one is suppressed — see the FX block below for the derivation. The same
+# rule lives in dresserAlerts.ts (isFxCorrectionStep), fed by the catalog's
+# `priceCorrections` block, so the push and the in-app screen suppress identically.
+#
 # Reads:   the published catalog (current price + sizes) + Supabase
-#          (profiles.push_token / last_marketing_push_*, saved_items.product/...).
+#          (profiles.push_token / last_marketing_push_*, saved_items.product/...)
+#          + price_corrections.json (the shared FX record; missing = refuse to send).
 # Writes:  Supabase profiles.last_marketing_push_at + last_marketing_push_sig
 #          (the per-user daily cap + anti-repeat signature); the Expo push itself.
 #
@@ -30,10 +37,14 @@
 
 import json
 import os
+import pathlib
 import sys
 import urllib.error
 import urllib.request
 from datetime import datetime, timezone
+
+HERE = pathlib.Path(__file__).resolve().parent
+CORRECTIONS = HERE / "price_corrections.json"
 
 CATALOG_URL = os.environ.get(
     "CATALOG_URL",
@@ -55,6 +66,103 @@ TIMEOUT = 30
 # ── Alert rules — MUST mirror src/lib/dresserAlerts.ts ───────────────────────────
 PRICE_DROP_MIN_PCT = 10  # ≥ 10% off price-at-save
 PRICE_DROP_MIN_ABS = 3   # AND ≥ $3 cheaper
+
+
+# ── FX / config corrections are NOT sales ────────────────────────────────────────
+# On 2026-08-06 (eb5a0b3) eight brands' base currency was corrected: build_catalog.py
+# had been converting each store's raw price at the FX rate for the per-brand
+# `currency` ANNOTATION in brands.json, while a live probe that knew the store's real
+# presentment currency ran alongside and only logged a warning.
+#
+# Two of those corrections make prices FALL. Measured on the real snapshots either
+# side of the rebuild (bd7582e -> 3d8b7ca): 28natelier moved 60 of 60 pieces at a
+# median x0.2721 and Sir the Label 57 of 57 at x0.6590. Against price-at-save that is
+# a 73% and a 34% "discount" on 117 pieces, and the digest would have led with the
+# largest one it could find:
+#
+#     "Price drop in your Dresser — 28natelier TEDDY DRESS is 72% off (now $151)"
+#
+# Nothing was marked down. We fixed our own arithmetic, and telling a user that a
+# $555 dress is 72% off when it was never $555 is the worst thing this pipeline can
+# say. The analysis path has known about this whole class of event for a while —
+# build_price_history.PRICE_EPOCHS voids comparisons across a methodology change, and
+# build_loupe_index.detect_uniform_steps() voids a brand-day where a whole line moves
+# by one identical ratio (it caught Stine Goya's x0.134 krone step). The alert path
+# knew none of it. This is that guard, on this side of the split.
+#
+# THE TELL, exactly as the index states it: not the SIZE of the move but its
+# ratio. A real sale marks different pieces down by different amounts; an FX
+# correction multiplies every piece by the same number — the one published in
+# price_corrections.json. So the record is read, never re-listed here: a parallel
+# list of brands in this file would drift from the archive on the first correction
+# anyone added, and the two would then disagree about what a user is owed.
+#
+# WHY THE TOLERANCE IS DERIVED RATHER THAN TUNED. Every archived price is a
+# dollar-rounded integer, so an FX-corrected price is round(raw * rightFx) for a raw
+# only known to within half a unit of its own currency. That double rounding bounds
+# the residual exactly:
+#
+#     then = round(raw * wrongFx)             =>  raw*wrongFx ∈ [then-0.5, then+0.5)
+#     now  = round(raw * rightFx)             =>  |now - then*factor| ≤ 0.5*factor + 0.5
+#
+# Measured over all 400 corrected pieces present in both snapshots, the worst
+# residual is $0.870 against a bound of $1.258 — 0.80 of it, with headroom and no
+# fitting. A residual ABOVE the bound cannot be rounding, so it is a real move and
+# the alert stands.
+#
+# THE AMBIGUITY, STATED RATHER THAN HIDDEN — the same one detect_uniform_steps()
+# declares. "Everything x0.66 overnight" is a currency correction and it is also a
+# sitewide 34%-off sale, and no amount of staring at two prices separates them. Both
+# are suppressed. That biases this digest toward saying LESS than the truth, never
+# more, which is the only safe direction for a push notification.
+FX_STEP_ROUNDING_SLACK = 0.5  # the half-dollar each of the two roundings can cost
+
+
+def load_price_corrections(path=CORRECTIONS):
+    """{brand: factor} from the shared archive record.
+
+    A MISSING TABLE IS A HARD STOP, not an empty dict. build_price_history.py refuses
+    to build without this file for the same reason: quoting a price we cannot vouch
+    for because a path was wrong is exactly the failure the file exists to end. Here
+    the stakes are higher than a rebuilt artefact — a silent {} would send the 117
+    false "on sale" pushes this guard was written to stop, to real phones, once, with
+    no way to recall them. A missed digest is recoverable; a false one is not.
+    """
+    if not path.exists():
+        sys.exit(
+            f"REFUSING TO SEND: {path.name} is missing.\n"
+            "  It records the FX corrections that must NOT be reported as sales.\n"
+            "  Without it this digest would push a currency fix to users as a discount."
+        )
+    doc = json.loads(path.read_text(encoding="utf-8"))
+    out = {}
+    for c in doc.get("corrections", []):
+        brand, factor = c.get("brand"), c.get("factor")
+        try:
+            factor = float(factor)
+        except (TypeError, ValueError):
+            continue
+        if brand and factor > 0:
+            out[brand] = factor
+    return out
+
+
+def is_fx_correction_step(now, then, factor):
+    """True when `then` -> `now` is exactly the published FX correction for the brand.
+
+    `factor` is the multiplier price_corrections.json says was applied to that brand's
+    stored price. When the observed move lands within the rounding bound derived
+    above, the move IS the correction and no part of it is a markdown.
+    """
+    if not factor or factor <= 0:
+        return False
+    try:
+        now = float(now)
+        then = float(then)
+    except (TypeError, ValueError):
+        return False
+    expected = then * factor
+    return abs(now - expected) <= FX_STEP_ROUNDING_SLACK * factor + FX_STEP_ROUNDING_SLACK
 
 
 def fmt_price(x):
@@ -118,8 +226,13 @@ def norm_sizes(sizes):
     return out
 
 
-def compute_alerts(items, live_by_id):
-    """Sale + size alerts for ONE user's saved items vs the live catalog."""
+def compute_alerts(items, live_by_id, corrections=None):
+    """Sale + size alerts for ONE user's saved items vs the live catalog.
+
+    `corrections` is {brand: factor} from load_price_corrections(). A move that IS
+    one of those factors is our own arithmetic being fixed, never a markdown.
+    """
+    corrections = corrections or {}
     out, seen = [], set()
     for it in items:
         product = it.get("product") or {}
@@ -141,11 +254,17 @@ def compute_alerts(items, live_by_id):
 
         sale = None
         if is_meaningful_price_drop(live.get("price"), it.get("price_at_save")):
-            sale = {
-                "was": float(it["price_at_save"]),
-                "now": float(live["price"]),
-                "pct": sale_percent(live["price"], it["price_at_save"]),
-            }
+            # An FX/config correction is not a discount. The brand's published factor
+            # is consulted BEFORE the drop is allowed to become a sale, so a currency
+            # fix can never reach a user's lock screen as "72% off". See the block at
+            # the top of this file for the derivation and the deliberate ambiguity.
+            factor = corrections.get((live.get("brand") or "").strip())
+            if not is_fx_correction_step(live.get("price"), it.get("price_at_save"), factor):
+                sale = {
+                    "was": float(it["price_at_save"]),
+                    "now": float(live["price"]),
+                    "pct": sale_percent(live["price"], it["price_at_save"]),
+                }
 
         new_sizes, gone_sizes = [], []
         snap = norm_sizes(product.get("sizes"))
@@ -388,7 +507,7 @@ def send_expo_pushes(messages):
     return succeeded_idx, tickets
 
 
-def build_digests(users, items, catalog):
+def build_digests(users, items, catalog, corrections=None):
     """Return (messages, stamps) for users with a NEW digest, honoring the 1/day cap."""
     by_user = {}
     for it in items:
@@ -400,7 +519,7 @@ def build_digests(users, items, catalog):
             continue  # already pushed today — hard 1/day cap
         if recently_active(u.get("active_at")):
             continue  # on-device 11am digest already covers active users — no double
-        alerts = compute_alerts(by_user.get(uid, []), catalog)
+        alerts = compute_alerts(by_user.get(uid, []), catalog, corrections)
         summ = summarize(alerts)
         if not summ:
             continue
@@ -425,12 +544,19 @@ def main():
         print("daily-digest: SUPABASE_URL / SUPABASE_SERVICE_KEY not set — skipping (no-op).")
         return
 
+    # Loaded BEFORE any network call: a missing corrections table must stop the run
+    # while it is still a no-op, not after the catalog and the roster are in hand.
+    corrections = load_price_corrections()
+
     catalog = load_catalog()
     users = load_users()
     items = load_saved_items()
-    print(f"Catalog: {len(catalog)} | push users: {len(users)} | saved items: {len(items)}")
+    print(
+        f"Catalog: {len(catalog)} | push users: {len(users)} | saved items: {len(items)}"
+        f" | FX corrections in force: {len(corrections)}"
+    )
 
-    messages, stamps = build_digests(users, items, catalog)
+    messages, stamps = build_digests(users, items, catalog, corrections)
     if not messages:
         print("No new sale/restock digests to send today.")
         return
