@@ -634,19 +634,24 @@ class Panel:
                 self.state[(pid, j)] = arr
         del day_masks
 
-    _cache = {}
+    _cache = collections.OrderedDict()
+    _CACHE_MAX = 2
 
-    def _load_day(self, day):
+    @staticmethod
+    def _load_day(day):
+        """One day's rows. Bounded LRU: the panel build is a single forward pass,
+        so holding the whole archive as parsed dicts would cost ~1 GB to save a
+        re-read that takes a tenth of a second."""
         if day in Panel._cache:
+            Panel._cache.move_to_end(day)
             return Panel._cache[day]
         out = {}
         with open(CACHE / f"{day}.tsv", encoding="utf-8", newline="") as fh:
             for r in csv.DictReader(fh, delimiter="\t"):
                 out[r["id"]] = r
-        # Only two consecutive days are ever needed at once during the build, but
-        # the whole archive at ~8k rows/day fits comfortably and section 7 re-walks
-        # it. Bounded by the archive length, which is bounded by the calendar.
         Panel._cache[day] = out
+        while len(Panel._cache) > Panel._CACHE_MAX:
+            Panel._cache.popitem(last=False)
         return out
 
     # ---- spell structure ---------------------------------------------------
@@ -1263,10 +1268,15 @@ def main():
                 prev = max(i for i in obs if i < first_out)
                 tts.append(((D[first_out] - D[first_in]).days
                             + (D[prev] - D[first_in]).days) / 2.0)
-        for a, b in ons:
-            s = next((i for i in obs if i >= 0 and arr[i] == 1 and i <= a), None)
-            if s is not None:
-                in_spell.append((D[a] - D[s]).days)
+        # In-stock spell length: walk BACK from the last in-stock day to the start
+        # of that contiguous run. Taking the first-ever in-stock day instead would
+        # silently merge every cycle a restocked variant went through into one.
+        pos = {i: t for t, i in enumerate(obs)}
+        for a, _b in ons:
+            t = pos[a]
+            while t > 0 and arr[obs[t - 1]] == 1:
+                t -= 1
+            in_spell.append((D[a] - D[obs[t]]).days)
         for a, b in panel.restocks(v, obs):
             out_spell.append((D[b] - D[a]).days)
             restocked += 1
@@ -1280,6 +1290,10 @@ def main():
         q = np.percentile(tts, [10, 25, 50, 75, 90])
         print(f"      time to first stockout (calendar days)     : "
               f"p10 {q[0]:.0f}  p25 {q[1]:.0f}  median {q[2]:.0f}  p75 {q[3]:.0f}  p90 {q[4]:.0f}")
+    if in_spell:
+        q = np.percentile(in_spell, [25, 50, 75])
+        print(f"      in-stock spell before a depletion (days)   : "
+              f"p25 {q[0]:.0f}  median {q[1]:.0f}  p75 {q[2]:.0f}   (n={len(in_spell):,})")
     if out_spell:
         q = np.percentile(out_spell, [25, 50, 75])
         print(f"      confirmed restocks                         : {restocked:,}")
@@ -1356,30 +1370,38 @@ def main():
           f"   delta vs binary {auc_tim - auc_bin:+.3f}")
     print(f"      simulated feasible ceiling at ρ = {RHO:.3f} : {CEIL_FEAS:.3f}")
 
-    print("\n  (d) POSITIVE CONTROL for this section: the same brand-level plumbing on a")
-    print("      quantity that MUST carry across the two windows — the brand's median")
-    print("      price. If this is not near 1, the brand join is broken and (b) is noise.")
-    pa, pb_ = [], []
-    for b in keep:
-        va_ = [panel.price[p] for (p, _), i in zip(ids, range(len(ids)))
-               if panel.brand[p] == b and panel.price[p] > 0]
-        if va_:
-            pa.append(np.median(va_))
-            pb_.append(np.median(va_))
-    ctl_price = float(stats.spearmanr(
-        [np.median([panel.price[p] for (p, _) in ids if panel.brand[p] == b] or [0])
-         for b in keep],
-        [np.median([panel.price[p] for (p, _) in ids if panel.brand[p] == b] or [0])
-         for b in keep])[0]) if len(keep) >= 10 else float("nan")
+    print("\n  (d) POSITIVE CONTROL for this section. The same brand-level plumbing, the")
+    print("      same two windows, on quantities that MUST carry across them. Both are")
+    print("      recomputed independently in each window off that window's own snapshots —")
+    print("      nothing is joined to itself, which would return 1.00 and prove nothing.")
+    # Brand median price, computed separately on the FIRST day of A and the LAST
+    # day of B: different snapshots, different product populations, same brands.
+    def brand_median_price(day):
+        agg = collections.defaultdict(list)
+        for r in Panel._load_day(day).values():
+            if r["stale"]:
+                continue
+            try:
+                v = float(r["price"] or 0)
+            except ValueError:
+                continue
+            if v > 0:
+                agg[r["brand"]].append(v)
+        return {b: float(np.median(v)) for b, v in agg.items()}
+    mpA, mpB = brand_median_price(days[A[0]]), brand_median_price(days[B[1]])
+    both = [b for b in keep if b in mpA and b in mpB]
+    ctl_price = (float(stats.spearmanr([mpA[b] for b in both], [mpB[b] for b in both])[0])
+                 if len(both) >= 10 else float("nan"))
     n_exp_a = np.array([bstat[b]["TA"] for b in keep]) if keep else np.array([])
     n_exp_b = np.array([bstat[b]["TB"] for b in keep]) if keep else np.array([])
     ctl_exposure = (float(stats.spearmanr(n_exp_a, n_exp_b)[0])
                     if len(keep) >= 10 else float("nan"))
-    print(f"      brand median price, A vs B (identity join) : {ctl_price:.3f}")
-    print(f"      brand at-risk exposure, A vs B             : {ctl_exposure:.3f}"
-          "   <- a real, non-trivial carry-over")
-    print(f"      Both near 1 means the brand key joins and the windows line up, so a")
-    print(f"      near-zero demand correlation in (b) is a measurement and not plumbing.")
+    print(f"      brand median price   {days[A[0]]} vs {days[B[1]]} : {ctl_price:.3f}"
+          f"   ({len(both)} brands)")
+    print(f"      brand at-risk exposure, window A vs window B  : {ctl_exposure:.3f}")
+    print("      Both high means the brand key joins, the windows line up and the")
+    print("      exposure denominators are sane — so a near-zero DEMAND correlation in")
+    print("      (b) is a measurement about demand and not a broken pipe.")
 
     # ── 6. JOB 3 — THE SIZE RUN, WITH THE POWER AND THE UNIT IT NEEDED ────
     rule("6. THE SIZE RUN — reopened with the unit, the statistic and the power")

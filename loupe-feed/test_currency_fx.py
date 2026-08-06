@@ -273,6 +273,25 @@ check("a genuine markdown on a CORRECTED brand still alerts",
       len(got_real) == 1 and got_real[0]["sale"] is not None,
       f"got {got_real}")
 
+# WHY THE RECORD, AND NOT THE UNIFORMITY HEURISTIC. detect_uniform_steps() is the
+# right instrument for the index and the wrong one here, and 2026-08-06 happens to
+# prove it. On that afternoon Martine Rose moved 38 of 60 pieces to exactly half
+# price. The index's test — a large share of the line moving with the movers'
+# ratios inside ~1% — fires on that brand-day (63% share, IQR 0.5000..0.5023,
+# hi/lo 1.0047) and would void it. But 0.5000 is a round number matching no
+# currency pair, and an FX conversion moves 100% of a line, never 63%. It was a
+# real sale, and suppressing it would have cost 38 users a genuine markdown.
+#
+# The published record does not have that ambiguity: it is a statement about what
+# WE changed, not an inference from what prices did. The index may safely void
+# both cases because it only understates an aggregate. A push either tells someone
+# the truth or wastes the one message a day we are allowed.
+live_mr = {"m": {"price": 254, "sizes": [], "brand": "Martine Rose", "name": "Bondage Tote"}}
+saved_mr = [{"product_id": "m", "price_at_save": 509, "product": {"id": "m", "sizes": []}}]
+check("a REAL sitewide sale that looks uniform is still reported",
+      pdp.compute_alerts(saved_mr, live_mr, pdp_table)[0]["sale"]["pct"] == 50,
+      "a uniformity heuristic here would have eaten a genuine 50%-off event")
+
 # A single-item markdown on an uncorrected brand is untouched — this is the
 # 7 real sales that survived alongside the 117 artefacts on 2026-08-06.
 live_other = {"s": {"price": 110, "sizes": [], "brand": "Tyler McGillivary", "name": "Tank"}}
