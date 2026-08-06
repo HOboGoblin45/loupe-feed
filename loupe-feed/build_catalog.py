@@ -309,9 +309,64 @@ EXCLUDE_BRANDS = {
 
 
 def effective_cap(brand, per_brand):
-    """Per-brand product cap: mainstream houses are capped at MAINSTREAM_CAP so
-    the feed stays indie-forward; everyone else keeps the full perBrand budget."""
+    """Per-brand DISPLAY cap: mainstream houses are capped at MAINSTREAM_CAP so
+    the feed stays indie-forward; everyone else keeps the full display budget.
+
+    This governs catalog.json — what the app downloads and what becomes a cutout
+    and an embedding. It is a PRODUCT decision. It is NOT the measurement, and
+    conflating the two is the bug this docstring exists to prevent recurring:
+    see `perBrand` vs `perBrandDisplay` in brands.json.
+    """
     return MAINSTREAM_CAP if _norm_brand(brand) in MAINSTREAM_BRANDS else per_brand
+
+
+# ── ONE NUMBER WAS DOING TWO JOBS ─────────────────────────────────────────────
+# Until 2026-08-06, `perBrand` = 60 decided BOTH how deep we looked into a store
+# AND how much of it shipped to the app. Those have opposite requirements, and
+# the shipping requirement won, which quietly broke the measurement.
+#
+# /products.json returns published_at DESCENDING, so a 60-item slice is a
+# brand's PUBLISHING FRONT. Live walk of the WHOLE roster to exhaustion on
+# 2026-08-06 (157 of 161 stores answered, 587 requests): the median store
+# publishes 157 eligible pieces, p75 = 324, p90 = 638, p95 = 897, max = 3,104,
+# 45,718 in total. Only 19% of stores fit inside 60; 81% are bigger. For those
+# the tracked shelf ROTATES — a new listing pushes an old piece out of the
+# window, and the old piece reads as having left the market. Measured cost:
+# 981 of 2,041 disappearances between 2026-07-16 and 2026-08-01 were
+# whole-brand rotation. 48%.
+#
+# Why the fix is not simply "raise the number":
+#
+#   catalog.json is 1.09 KB/product and is served to phones by jsDelivr, which
+#   has a ~20 MB per-file ceiling. Every product in it also becomes a ~111 KB
+#   WebP cutout on the cutouts branch and a ~1.25 KB embedding. The measured
+#   roster is 45,718 eligible products, which is a ~50 MB catalog (2.5x past
+#   jsDelivr's limit, so the app's feed simply stops loading), ~5.1 GB of
+#   cutouts (past GitHub's 5 GB repository cap on its own, on a repo already at
+#   948 MB) and ~5.6x the embedding compute. A naive raise does not make the
+#   data better, it takes the product off the air.
+#
+# So the two jobs get two numbers:
+#
+#   perBrand        — WALK DEPTH. How far into each store we look and record.
+#                     This is the measurement, and it is what had to go up.
+#   perBrandDisplay — how much of that ships in catalog.json. Unchanged at 60,
+#                     because that is a deck-variety decision and the payload,
+#                     the cutouts branch and the embedding cost all hang off it.
+#
+# The full walk is published separately in shelf.json, which is ~60 bytes per
+# row instead of 1.09 KB, is never fetched by the app, and generates no cutouts.
+# THAT file's git history — not catalog.json's — is the market record from here.
+SHELF_FILE = HERE / "shelf.json"
+
+# Shopify hard-caps a page at 250, so a walk depth is really a page count.
+# 750 = three pages, the smallest whole number of pages that clears the 90th
+# percentile of the roster (638 eligible items). It fully covers 93% of stores
+# (146 of 157), against 19% at a cap of 60. Covering the last 7% would mean
+# walking a 3,104-item store, which is not an independent label having a big
+# season, it is a different kind of business — and the whole cost curve is on
+# that tail: 750 -> 3,200 buys 7 points of coverage for 8,000 more products.
+DEFAULT_WALK_DEPTH = 750
 
 # ── Affiliate wrapping: per-brand programs + Sovrn catch-all ──────────────────
 # Two layers, both server-side switches (env vars via GitHub Actions secrets),
@@ -496,7 +551,59 @@ def add_utm(url, utm=LOUPE_UTM):
     )
 
 
+# ── Politeness budget ─────────────────────────────────────────────────────────
+# Until 2026-08-06 this build made almost exactly ONE products.json request per
+# brand, because perBrand=60 fitted inside a single 180-item page. Walking a
+# store to exhaustion multiplies that by however many pages it has, so the
+# binding constraint stops being "how many items do we want" and becomes "how
+# many requests may we make against 209 independent shops we do not pay".
+#
+# MEASURED, the hard way, on 2026-08-06: a sizing probe that ran six domains
+# concurrently and fetched robots.txt + agents.md + llms.txt per domain before
+# the product pages got HTTP 429 Too Many Requests from 151 of 162 stores —
+# including robots.txt itself. Shopify's edge throttles per CLIENT, not per
+# store, so being impolite to one shop costs us every other shop in the same
+# run, and the failure looks exactly like 151 dead brands.
+#
+# Hence: the budget is GLOBAL, the spacing is enforced in ONE place that every
+# storefront fetch goes through, and running out means we stop walking deeper —
+# never that we push through, and never that a brand is dropped.
+#
+# WHAT THE STORES ACTUALLY PERMIT, checked rather than assumed (2026-08-06):
+#   • robots.txt — readable on 159 of the roster's 162 domains, and all 159
+#     ALLOW /products.json. Not one store disallows it.
+#   • agents.md  — Shopify now serves a platform-level /agents.md, present on
+#     158 of 162. Its "Read-Only Browsing (No Authentication Required)" section
+#     explicitly sanctions reading product JSON without auth, and gives exactly
+#     one obligation in return: "Respect rate limits ... Back off on 429
+#     responses." scrape_page honours that literally (30s+ on a 429, vs 1.5s
+#     for an ordinary flake) — see the retry loop there.
+# So this scrape is permitted, and the only thing we owe is pace. Which is the
+# one thing a deeper walk makes easier to get wrong.
+MIN_REQUEST_INTERVAL = 0.6      # seconds between ANY two storefront requests
+REQUEST_BUDGET = 1500           # hard ceiling on storefront requests per run
+
+_last_request = [0.0]
+_requests_made = [0]
+
+
+def _pace():
+    """Space every storefront request this process makes. Never raises: a
+    budget overrun degrades the WALK (see the page loops), it must never turn
+    into an exception that costs a brand its items."""
+    wait = MIN_REQUEST_INTERVAL - (time.time() - _last_request[0])
+    if wait > 0:
+        time.sleep(wait)
+    _last_request[0] = time.time()
+    _requests_made[0] += 1
+
+
+def budget_left():
+    return REQUEST_BUDGET - _requests_made[0]
+
+
 def fetch_json(url, timeout=25):
+    _pace()
     req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT, "Accept": "application/json"})
     with urllib.request.urlopen(req, timeout=timeout) as resp:
         return json.loads(resp.read().decode("utf-8"))
@@ -1278,6 +1385,15 @@ def normalize(product, brand, domain, fx, multi_brand=False, retailer=None):
         "sizes": available_sizes(product),
         "images": gallery_images(product),
         "available": is_available,
+        # The STORE's own publish date, not ours. Two jobs:
+        #   • it is the honest arrival date, so raising the walk depth admits
+        #     thousands of pieces WITHOUT stamping them as new today (see the
+        #     addedAt block near the end of main());
+        #   • it makes addedAt auditable — anyone can compare our claim about a
+        #     piece's age against the brand's own storefront.
+        # Truncated to a date: the time of day is noise and costs 9 bytes on
+        # every row of a file served to phones.
+        "publishedAt": (product.get("published_at") or "")[:10] or None,
         "affiliateUrl": affiliate,
     }
     if subtype:
@@ -1296,9 +1412,24 @@ def normalize(product, brand, domain, fx, multi_brand=False, retailer=None):
 def main():
     cfg = json.loads(BRANDS_FILE.read_text(encoding="utf-8"))
     fx_table = cfg["fx_to_usd"]
-    per_brand = int(cfg.get("perBrand", 10))
+    # perBrand is the WALK DEPTH (measurement); perBrandDisplay is what ships in
+    # catalog.json (product). They were one number until 2026-08-06 and that is
+    # exactly what made the tracked shelf a rotating window — see the block above
+    # effective_cap. An old brands.json with only `perBrand` still works: the
+    # display cap falls back to the historical 60 rather than to the walk depth,
+    # because silently shipping a 750-item-per-brand catalog would blow past
+    # jsDelivr's file ceiling and take the app's feed off the air.
+    walk_depth = int(cfg.get("perBrand", DEFAULT_WALK_DEPTH))
+    per_brand_display = int(cfg.get("perBrandDisplay", 60))
+    if per_brand_display > walk_depth:
+        per_brand_display = walk_depth
     products, seen_ids = [], set()
     by_brand = {}
+    # The full walk, per brand, before any display trimming, grace carry-forward
+    # or curated merge. This is the market observation; by_brand is the deck.
+    observed = {}
+    observed_meta = {}
+    observed_failed = {}
     summary = []
 
     # Load the previous good catalog UP FRONT. It does two jobs: (1) carries each
@@ -1334,11 +1465,14 @@ def main():
         except (ValueError, OSError):
             pass
 
-    def scrape_page(domain, limit, since_id=None):
+    def scrape_page(domain, limit, since_id=None, page=None):
         """Fetch ONE products.json page with a few retries — most scrape
         'failures' are momentary timeouts / rate-limits, not a dead store.
-        Shopify caps ?limit at 250; we never ask for more. `since_id` walks to
-        the next page (Shopify returns products with id > since_id)."""
+        Shopify caps ?limit at 250; we never ask for more.
+
+        Pass `page` for the page-number walk (what brands use since 2026-08-06).
+        `since_id` is retained only because the parameter is part of Shopify's
+        API; nothing calls it any more. See scrape_brand for why."""
         # Shopify hard-caps page size at 250; asking for more is silently clamped.
         limit = min(max(int(limit), 1), 250)
         # country=US pins Shopify Markets stores to their US-market presentment.
@@ -1351,6 +1485,8 @@ def main():
         # publishing their base currency, which the per-brand `currency` + fx
         # table still converts as before.
         qs = f"limit={limit}&country=US"
+        if page is not None:
+            qs += f"&page={page}"
         if since_id is not None:
             qs += f"&since_id={since_id}"
         last = None
@@ -1359,14 +1495,26 @@ def main():
                 return fetch_json(f"https://{domain}/products.json?{qs}")
             except (urllib.error.URLError, urllib.error.HTTPError, ValueError, TimeoutError) as e:
                 last = e
-                time.sleep(1.5 * (attempt + 1))
+                # 429 is not a flaky timeout, it is the platform telling us to
+                # stop, and every Shopify store's /agents.md says so in as many
+                # words: "Respect rate limits ... Back off on 429 responses."
+                # Retrying a 429 at 1.5s is not a retry, it is the same mistake
+                # again — measured 2026-08-06, a burst got 429 from 151 of 162
+                # stores at once, including their robots.txt, because the
+                # throttle is per CLIENT. A long back-off costs one brand a few
+                # seconds; not backing off costs every brand in the run.
+                is_429 = isinstance(e, urllib.error.HTTPError) and e.code == 429
+                time.sleep((30.0 if is_429 else 1.5) * (attempt + 1))
         raise last
 
-    # Per-brand page size: enough headroom over `cap` to absorb junk/variant
-    # filtering, but never above Shopify's 250 max.
-    PAGE_LIMIT = min(max(per_brand * 3, 30), 250)
-    # Safety bound so a huge store can't loop forever; cap*4 valid-item headroom
-    # at PAGE_LIMIT per page is plenty to collect `cap` survivors.
+    # Always ask for Shopify's maximum page. Before 2026-08-06 this was
+    # perBrand*3 = 180, which was sized to guarantee one page was enough; now
+    # that we walk to the store's end, a bigger page is strictly fewer requests
+    # for the same data, and requests are the scarce resource (see _pace).
+    PAGE_LIMIT = 250
+    # Safety bound so a huge store can't loop forever. At 250/page this admits
+    # 5,000 raw items, comfortably past the largest store measured (3,104
+    # eligible), and the walk depth stops it long before this in practice.
     MAX_PAGES = 20
 
     def scrape_retailer_pages(domain, page_limit, max_pages, delay):
@@ -1427,18 +1575,46 @@ def main():
             print(line, file=sys.stderr)
 
     def scrape_brand(domain, cap, label=None, configured=None):
-        """Yield successive products.json pages for a brand, walking `since_id`
-        until a short/empty page (store exhausted) or MAX_PAGES. The caller stops
-        early once it has `cap` post-filter items, so for most brands this fetches
-        exactly one page.
+        """Yield successive products.json pages for a brand, by PAGE NUMBER,
+        until a short/empty page (store exhausted), MAX_PAGES, or the global
+        request budget runs out.
+
+        WHY NOT since_id — and why this mattered the moment the cap went up.
+
+        This walk used `since_id` until 2026-08-06: take the last id on a page,
+        ask for products with a greater id. That assumes ASCENDING ids. Shopify's
+        public products.json returns NEWEST FIRST, i.e. DESCENDING ids — the
+        retailer walk below has said so since Gemini yielded 89 of ~400 expected
+        items for exactly this reason. The last id on a page is then the
+        SMALLEST, so `since_id` re-requests the same items and the walk collapses
+        after one page.
+
+        MEASURED DIRECTLY, carmensays.com, 2026-08-06:
+            page 1 (limit=250)          -> 250 items, ids 15555562078532 first,
+                                           15212506022212 last  (DESCENDING)
+            since_id=15212506022212     -> 250 items, 250 of which are PAGE 1
+            page=2                      -> 145 items, 0 overlap with page 1
+        So the old walk did not fetch a second page, it fetched the first page
+        again, and the de-dupe silently threw all 250 away.
+
+        At perBrand=60 with a 180-item page that was invisible, because one page
+        always sufficed. It stops being invisible the instant the cap is raised:
+        the walk would appear to run, cost real requests, and still silently stop
+        at ~one page per brand — a cap raise that changed nothing but looked like
+        it had. That is a worse failure than the one being fixed, because the
+        first one is now written down and this one would not be.
+
+        `page=N` is stable regardless of sort order. The caller de-duplicates by
+        product id, so an overlap cannot double-count.
 
         Also fires the one-shot currency probe (see live_currency): a wrong
         per-brand `currency` silently mis-prices that brand's ENTIRE catalog by
         the FX factor, and nothing else in the pipeline can detect it."""
         check_currency(label or domain, domain, configured)
-        since_id = None
-        for _ in range(MAX_PAGES):
-            data = scrape_page(domain, PAGE_LIMIT, since_id)
+        for n in range(1, MAX_PAGES + 1):
+            if budget_left() <= 0:
+                return
+            data = scrape_page(domain, PAGE_LIMIT, page=n)
             page = (data or {}).get("products", []) or []
             if not page:
                 return
@@ -1446,34 +1622,33 @@ def main():
             # A page shorter than the requested limit means the store is exhausted.
             if len(page) < PAGE_LIMIT:
                 return
-            # Advance: next page is products with id greater than the last seen.
-            last_id = None
-            for p in page:
-                pid = p.get("id")
-                if isinstance(pid, int):
-                    last_id = pid
-            if last_id is None:
-                return  # no numeric ids to paginate on — stop rather than loop
-            since_id = last_id
 
     for entry in cfg["brands"]:
         brand, domain = entry["brand"], entry["domain"]
         fx = fx_table.get(entry.get("currency", "USD"), 1.0)
         multi_brand = bool(entry.get("multiBrand"))
-        # Mainstream houses get a lower cap than indie brands (discovery-first).
-        cap = effective_cap(brand, per_brand)
+        # Two caps, two jobs (see the block above effective_cap).
+        #   walk_cap    — how deep we LOOK. The measurement.
+        #   display_cap — how much ships to the app. The product decision.
+        display_cap = effective_cap(brand, per_brand_display)
+        walk_cap = walk_depth
         got = 0
         bucket = []
         base_counts = {}  # base product name -> # color variants already kept
         pages_seen = 0
+        exhausted = False
         try:
-            # Walk products.json pages (since_id) until we have `cap` valid items
-            # or the store is exhausted. Most brands satisfy `cap` on page 1.
-            for page in scrape_brand(domain, cap, label=brand,
+            # Walk products.json pages until the store is exhausted or we reach
+            # the walk depth. Unlike before 2026-08-06 this does NOT stop at the
+            # display cap: stopping there is what made the tracked shelf a
+            # rotating window instead of a catalogue.
+            for page in scrape_brand(domain, walk_cap, label=brand,
                                      configured=entry.get("currency")):
                 pages_seen += 1
+                if len(page) < PAGE_LIMIT:
+                    exhausted = True
                 for product in page:
-                    if got >= cap:
+                    if got >= walk_cap:
                         break
                     norm = normalize(product, brand, domain, fx, multi_brand=multi_brand)
                     if not norm or norm["id"] in seen_ids:
@@ -1487,13 +1662,33 @@ def main():
                     seen_ids.add(norm["id"])
                     bucket.append(norm)
                     got += 1
-                if got >= cap:
-                    break  # enough — don't fetch further pages
+                if got >= walk_cap:
+                    break  # walk depth reached — don't fetch further pages
+            # THE FULL WALK is the observation. Recorded before anything is
+            # trimmed, because everything downstream of here is a display
+            # decision and none of it belongs in a market measurement.
             if bucket:
-                by_brand[brand] = bucket
+                observed[brand] = bucket
+                observed_meta[brand] = {
+                    "observed": len(bucket), "pages": pages_seen,
+                    # TRUE only when the store itself ran out (a short page).
+                    # Deliberately NOT `got < walk_cap`: falling short can also
+                    # mean the request budget stopped us, and a file that says
+                    # "we saw the whole store" when we did not is the same class
+                    # of quiet overstatement as a shallow clone reporting its own
+                    # start date as the start of the data.
+                    "exhausted": bool(exhausted),
+                    **({"budgetStopped": True} if not exhausted and got < walk_cap
+                       and budget_left() <= 0 else {}),
+                }
+                # catalog.json keeps only the display slice. products.json is
+                # newest-first, so this is the same front as before — the app's
+                # deck is deliberately unchanged by this commit.
+                by_brand[brand] = bucket[:display_cap]
             # Flag brands that exhausted their store without filling `cap` — usually
             # a small catalog, heavy junk/variant filtering, or a too-low page walk.
-            short = " (under cap — store exhausted)" if got < cap else ""
+            short = (f" (walked {len(bucket)}, showing {min(len(bucket), display_cap)})"
+                     if len(bucket) > display_cap else " (under cap — store exhausted)")
             # Currency sanity: price = raw × fx[brands.json currency], so a wrong
             # per-brand currency mis-prices the WHOLE brand by the FX factor. An
             # absurd median USD price is that mistake's unmistakable signature —
@@ -1513,6 +1708,13 @@ def main():
             # RemoteDisconnected, IncompleteRead, ssl.SSLError), which is how a
             # single reset could take down a run that had already scraped ~150
             # brands. Log the skip and continue.
+            #
+            # RECORDED, not just logged. shelf.json must be able to tell "we
+            # looked and this store published nothing" apart from "we could not
+            # look", because the first is a market fact and the second is an
+            # outage, and a consumer that cannot distinguish them will read our
+            # bad afternoon as a brand going under.
+            observed_failed[brand] = type(e).__name__
             summary.append(f"  {brand:<22}  SKIP ({type(e).__name__})")
         time.sleep(0.5)  # be polite
 
@@ -1841,9 +2043,31 @@ def main():
     # data, so a brand that briefly failed keeps its products AND their addedAt.)
 
     # Stamp each product's stable "first seen" date for NEW-arrival flagging:
-    #   • seen before with a date  → carry it over
+    #   • seen before with a date    → carry it over
     #   • existed before this feature → backdate (not new)
-    #   • genuinely new product     → now
+    #   • never seen, but the STORE says when it was published → use that
+    #   • never seen, no store date  → now
+    #
+    # THE THIRD CASE IS NEW (2026-08-06) AND IT IS THE POINT.
+    #
+    # "First time WE saw it" and "new" were the same thing only while the scrape
+    # took a fixed 60-item window off the front of every store. The moment the
+    # walk depth goes up, thousands of pieces that have been on sale for months
+    # become visible for the first time — and under the old rule every one of
+    # them would be stamped with today's date. That is not a cosmetic problem:
+    #   • the app's New Arrivals rail and its new-drop push would fire on ~20,000
+    #     items in one morning;
+    #   • the Index would read a several-hundred-percent "refresh rate" for
+    #     brands that published nothing;
+    #   • and none of it would be recoverable later, because addedAt is written
+    #     once and carried forward forever.
+    #
+    # Shopify already knows the answer and publishes it, so we ask instead of
+    # guessing. Guarded both ways: a future date (some stores schedule drops) is
+    # not allowed to make a piece newer than the day we first saw it, and a
+    # date is only ever used to make a piece OLDER than today, never younger.
+    _today = now.date()
+    _from_store = 0
     for product in products:
         pid = product["id"]
         if pid in prev_added:
@@ -1851,7 +2075,20 @@ def main():
         elif pid in prev_ids:
             product["addedAt"] = backdated_iso
         else:
-            product["addedAt"] = now_iso
+            pub = product.get("publishedAt")
+            stamped = now_iso
+            if pub:
+                try:
+                    d = datetime.strptime(pub, "%Y-%m-%d").date()
+                    if d < _today:          # never in the future, never "newer than now"
+                        stamped = d.strftime("%Y-%m-%dT00:00:00Z")
+                        _from_store += 1
+                except ValueError:
+                    pass
+            product["addedAt"] = stamped
+    if _from_store:
+        summary.append(f"  -> addedAt from the store's own published_at: "
+                       f"{_from_store} newly-seen products (not stamped new today)")
 
     # ── Cutout merge (Look Builder) ────────────────────────────────────────────
     # cutout_catalog.py publishes alpha-matted WebP cutouts on the orphan `cutouts`
@@ -2072,6 +2309,59 @@ def main():
     # and inflated the payload ~30% against jsDelivr's ~20MB/file ceiling. The
     # app never reads this by eye; use scripts or jq locally.
     OUT_FILE.write_text(json.dumps(catalog, separators=(",", ":"), ensure_ascii=False), encoding="utf-8")
+
+    # ── shelf.json — the market observation ───────────────────────────────────
+    # catalog.json is a product: a bounded, image-heavy deck the app downloads.
+    # This is the measurement: every eligible piece each store published today,
+    # with nothing trimmed for deck variety, no images, and no cutouts. Rows are
+    # arrays rather than objects (~60 bytes vs ~1.09 KB in catalog.json), so the
+    # whole roster costs a few MB and git deltas it to almost nothing.
+    #
+    # From 2026-08-06 THIS file's git history is the market record. catalog.json's
+    # history remains the app's, and remains a rotating 60-item front — anything
+    # longitudinal computed from it before this date is measuring our sampler
+    # about half the time (981 of 2,041 disappearances, 2026-07-16 -> 08-01).
+    #
+    # `failed` is load-bearing. A brand absent from `products` because its store
+    # 429'd looks identical to a brand that delisted everything, and that
+    # confusion is precisely the class of error this file exists to end.
+    _shelf_brands = sorted(observed)
+    _bidx = {b: i for i, b in enumerate(_shelf_brands)}
+    _rows = []
+    for b in _shelf_brands:
+        for p in observed[b]:
+            _rows.append([p["id"], _bidx[b], p["price"],
+                          1 if p.get("available") else 0,
+                          p.get("publishedAt") or "", p.get("category") or ""])
+    shelf = {
+        "generatedAt": now_iso,
+        "day": now.strftime("%Y-%m-%d"),
+        "schema": ["id", "brandIdx", "price", "available", "publishedAt", "category"],
+        "walkDepth": walk_depth,
+        "displayCap": per_brand_display,
+        # Declared here as well as in build_price_history.py so a consumer that
+        # only ever reads this file still cannot mistake the day the walk got
+        # deeper for a day the market got busier.
+        "samplingEpochs": ["2026-08-06"],
+        "requestsMade": _requests_made[0],
+        "requestBudget": REQUEST_BUDGET,
+        "budgetExhausted": budget_left() <= 0,
+        "brands": {b: observed_meta.get(b, {}) for b in _shelf_brands},
+        "failed": observed_failed,
+        "count": len(_rows),
+        "products": _rows,
+    }
+    SHELF_FILE.write_text(json.dumps(shelf, separators=(",", ":"), ensure_ascii=False),
+                          encoding="utf-8")
+    _walked = sum(len(v) for v in observed.values())
+    summary.append(
+        f"  -> shelf.json: {_walked:,} pieces observed across {len(observed)} brands "
+        f"({len(observed_failed)} could not be reached), "
+        f"{_requests_made[0]} storefront requests of {REQUEST_BUDGET}"
+    )
+    if budget_left() <= 0:
+        summary.append("  ⚠ REQUEST BUDGET EXHAUSTED — later brands were walked only "
+                       "as far as the budget allowed; shelf.json under-counts them.")
     # Version stamp for the app-side download probe (see update_meta.py).
     from update_meta import write_meta
     write_meta()

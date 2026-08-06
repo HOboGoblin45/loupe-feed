@@ -120,6 +120,7 @@ jobs:
           python test_accessory_subtype.py
           python test_price_history.py
           python test_archive_integrity.py
+          python test_shelf_sampling.py
 
       - name: Build catalog
         run: python loupe-feed/build_catalog.py
@@ -176,12 +177,17 @@ jobs:
           # shape of a run that publishes nothing and still reports success, and
           # it is unreachable now anyway (the heartbeat above fails first), so it
           # fails instead. A green run must mean a day was added to the archive.
-          if [[ -z "$(git status --porcelain loupe-feed/brands.json loupe-feed/catalog.json loupe-feed/catalog.meta.json)" ]]; then
+          if [[ -z "$(git status --porcelain loupe-feed/brands.json loupe-feed/catalog.json loupe-feed/catalog.meta.json loupe-feed/shelf.json)" ]]; then
             echo "ERROR: the build left the catalog unchanged, so this run would add" >&2
             echo "no day to the archive. Failing rather than reporting success." >&2
             exit 1
           fi
-          git add loupe-feed/brands.json loupe-feed/catalog.json loupe-feed/catalog.meta.json
+          # shelf.json is the MARKET RECORD as of 2026-08-06 and its value is
+          # entirely in its length, exactly like catalog.json's. It is the full
+          # per-store walk (catalog.json is a bounded 60-per-brand deck), so a
+          # day missing here cannot be reconstructed from a day present there.
+          # Committed in the SAME commit so the two can never drift apart by a day.
+          git add loupe-feed/brands.json loupe-feed/catalog.json loupe-feed/catalog.meta.json loupe-feed/shelf.json
           git commit -m "chore: refresh catalog $(date -u +%Y-%m-%d)"
 
           # Regenerate the integrity record NOW, with today's snapshot already in

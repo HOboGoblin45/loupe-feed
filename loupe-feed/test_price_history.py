@@ -18,7 +18,12 @@ from build_price_history import (
     epoch_of,
     in_settle_window,
     history_is_truncated,
+    sampling_epoch_of,
+    in_sampling_settle_window,
+    crosses_sampling_epoch,
+    arrival_blackout,
     PRICE_EPOCHS,
+    SAMPLING_EPOCHS,
     EPOCH_SETTLE_DAYS,
     MIN_MEANINGFUL_MOVE,
 )
@@ -96,6 +101,71 @@ check("partialHistory is never emitted as False (absent == complete)",
 
 _rep = inspect.getsource(build_price_history.report)
 check("the human summary surfaces a partial window", "partialHistory" in _rep)
+
+# ── The sampling epoch (2026-08-06 cap raise) ────────────────────────────────
+# The price epoch guards WHAT WE RECORD about a piece. This one guards WHICH
+# PIECES WE LOOK AT, and it exists because until 2026-08-06 the scrape took the
+# 60 most recently published items per store: 981 of 2,041 "disappearances" in
+# the 2026-07-16 -> 2026-08-01 window were whole-brand rotation, 48%. Raising the
+# cap makes thousands of always-for-sale pieces appear on one day, which must
+# never read as newness, restock or a drop.
+check("a sampling epoch is declared", len(SAMPLING_EPOCHS) >= 1)
+check("the cap raise is the declared boundary", "2026-08-06" in SAMPLING_EPOCHS)
+check("sampling epochs are sorted", SAMPLING_EPOCHS == sorted(SAMPLING_EPOCHS))
+check("the day before the cap raise is sampling epoch 0",
+      sampling_epoch_of("2026-08-05") == 0)
+check("the cap-raise day is sampling epoch 1", sampling_epoch_of("2026-08-06") == 1)
+check("a later day stays in epoch 1", sampling_epoch_of("2026-12-01") == 1)
+
+check("the cap-raise day is settling", in_sampling_settle_window("2026-08-06"))
+check("day+1 is still settling", in_sampling_settle_window("2026-08-07"))
+check("day+2 is still settling", in_sampling_settle_window("2026-08-08"))
+check("day+3 is comparable again", not in_sampling_settle_window("2026-08-09"))
+check("a day before the raise is not settling", not in_sampling_settle_window("2026-08-05"))
+check("the sampling settle window is exactly EPOCH_SETTLE_DAYS wide",
+      sum(in_sampling_settle_window(d) for d in
+          ("2026-08-06", "2026-08-07", "2026-08-08", "2026-08-09")) == EPOCH_SETTLE_DAYS)
+
+# The two epoch kinds are deliberately SEPARATE. Folding the cap raise into
+# PRICE_EPOCHS would void every price comparison for 8,000 pieces whose prices
+# did not move; leaving it out of SAMPLING_EPOCHS would leave arrivals exposed.
+check("the cap raise is NOT a price epoch (no price moved)",
+      "2026-08-06" not in PRICE_EPOCHS)
+check("the country=US pin is NOT a sampling epoch (no population changed)",
+      "2026-07-15" not in SAMPLING_EPOCHS)
+
+# A window that spans the boundary cannot be compared at all.
+check("a window spanning the cap raise is void",
+      crosses_sampling_epoch("2026-08-01", "2026-08-10"))
+check("a window entirely before it is fine",
+      not crosses_sampling_epoch("2026-07-16", "2026-08-05"))
+check("a window entirely after it is fine",
+      not crosses_sampling_epoch("2026-08-09", "2026-09-01"))
+check("direction does not matter", crosses_sampling_epoch("2026-08-10", "2026-08-01"))
+
+# The blackout is what a consumer that never read the prose actually sees.
+_days = ["2026-08-03", "2026-08-04", "2026-08-05", "2026-08-06",
+         "2026-08-07", "2026-08-08", "2026-08-09", "2026-08-10"]
+check("the blackout covers exactly the settling days",
+      arrival_blackout(_days) == [[3, 5]])
+check("an archive that never spans a sampling epoch has no blackout",
+      arrival_blackout(["2026-07-16", "2026-07-17", "2026-07-18"]) == [])
+check("blackout indices are into the day list, not dates",
+      all(isinstance(i, int) for r in arrival_blackout(_days) for i in r))
+
+_src = inspect.getsource(build_price_history.build)
+check("the emitted file declares its sampling epochs", "samplingEpochs" in _src)
+check("the emitted file carries the arrival blackout", "arrivalBlackout" in _src)
+_rep = inspect.getsource(build_price_history.report)
+check("the human summary shouts about a sampling boundary", "arrivalBlackout" in _rep)
+check("the summary says the boundary is not an arrival", "NOT an arrival" in _rep)
+
+# The docstring is load-bearing here: this file's whole method is that a reader
+# is told what the number cannot mean before they are given the number.
+_doc = build_price_history.__doc__ or ""
+check("the rotation incident is written down, with its measurement",
+      "981" in _doc and "48%" in _doc)
+check("the docstring names what survives rotation", "available" in _doc)
 
 if failures:
     print("FAIL — %d price-history guarantees broken:" % len(failures))

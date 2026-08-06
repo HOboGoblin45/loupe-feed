@@ -48,6 +48,36 @@ sale. Any window spanning it will show spurious "increases" of roughly 8-45%.
 `priceEpoch` below marks the boundary; anything claiming a price DROP must be
 computed inside a single epoch. The guard is enforced, not merely documented.
 
+A SECOND READING THIS FILE MUST NOT MAKE (2026-08-06)
+
+The one above is about the price axis. This one is about the population.
+
+Until 2026-08-06, brands.json set perBrand = 60 and Shopify's /products.json
+returns published_at DESCENDING, so what this archive tracked was never a
+brand's catalogue — it was the 60 most recently published pieces. 88 of 173
+brands sat exactly at that cap, and for those the tracked shelf ROTATED: a new
+listing pushed an old piece out of the window, and the old piece looks, in this
+file and in everything built on it, exactly like a piece that left the market.
+
+Measured over 2026-07-16 -> 2026-08-01: whole-brand rotation accounted for 981
+of 2,041 disappearances, 48%. Bec + Bridge "lost" 60 of 60 products and finished
+the window holding 60. Agmes, VESTIGE and The Frankie Shop show the same
+signature; Christopher Esber lost 50 of 50 and ended with 55. None of them sold
+out. So the "34% monthly churn" quoted at the top of this file, and every
+turnover figure derived from disappearance, is roughly half our own scraper.
+
+Raising the cap fixes the future. It cannot fix the past, and it introduces its
+own artefact in the opposite direction: on the day it lands, thousands of pieces
+that were always for sale become visible for the first time. SAMPLING_EPOCHS
+marks that boundary, `arrivalBlackout` is emitted into the output so a consumer
+cannot miss it, and build_catalog.py stamps newly-admitted products with the
+STORE's own published_at instead of today so most of the spike never happens.
+
+Note which claims survive and which do not. Anything measured on the store's own
+`available` flag, for a product present at BOTH endpoints, is immune — the
+sampler cannot flip a flag on a piece it is still holding. Anything measured on
+ABSENCE is contaminated and has to say so.
+
 THE SHALLOW-CLONE TRAP (2026-08-01)
 
 This script's entire input is `git log`. That makes it silently sensitive to how
@@ -97,6 +127,40 @@ OUT = HERE / "price_history.json"
 # decision, and must never be shown to a shopper as a discount.
 PRICE_EPOCHS = [
     "2026-07-15",  # 10b4c79 — pinned scrape to country=US, 49 brands flipped to USD
+]
+
+# Dates on or after which the SAMPLING methodology changed — WHICH products we
+# look at, rather than what we record about the ones we already had.
+#
+# A price epoch voids PRICE comparisons. A sampling epoch voids everything
+# counted by a product's ARRIVAL, DISAPPEARANCE or TENURE, because on that day
+# the population changed underneath the measurement. The two are different
+# failures and need different guards; conflating them would either leave
+# arrivals unprotected or needlessly destroy price history for every piece we
+# already had.
+#
+# 2026-08-06 — perBrand raised from 60. Until that day the scrape took at most
+# 60 items from each store's /products.json, which returns published_at
+# DESCENDING. What we tracked was therefore a brand's PUBLISHING FRONT, not its
+# catalogue, and for the 88-of-173 brands sitting exactly at the cap that front
+# ROTATED: a new listing pushed an old piece out of the window and the old piece
+# read, in every absence-based metric, as gone from the market.
+#
+# Measured before the change: whole-brand rotation accounted for 981 of 2,041
+# disappearances between 2026-07-16 and 2026-08-01 — 48%. Bec + Bridge "lost"
+# 60 of 60 products and ended the window holding 60. Nothing sold out.
+#
+# The change fixes the future and CANNOT fix the past, so it is a boundary in
+# both directions:
+#   • BEFORE it, "disappeared" is ~half our own sampler.
+#   • ON it, thousands of pieces that were always for sale become visible for
+#     the first time. That is not a drop, not a restock, and not newness.
+# build_catalog.py additionally stamps newly-admitted products with the STORE's
+# own published_at rather than today, so the arrival spike mostly does not
+# happen at source. This list is the second net, for the pieces whose store
+# publishes no usable date.
+SAMPLING_EPOCHS = [
+    "2026-08-06",  # perBrand 60 -> paginated whole-catalogue walk
 ]
 
 # A methodology change does not land in one clean day. The country=US pin rolled
@@ -162,6 +226,48 @@ def _plus(day: str, n: int) -> str:
 def in_settle_window(day: str) -> bool:
     """True while a pricing-methodology change is still working through the feed."""
     return any(e <= day < _plus(e, EPOCH_SETTLE_DAYS) for e in PRICE_EPOCHS)
+
+
+def sampling_epoch_of(day: str) -> int:
+    """Which SAMPLING regime a day belongs to. Arrival / disappearance / tenure
+    comparisons across two different regimes are void: the population changed,
+    not the market."""
+    return sum(1 for e in SAMPLING_EPOCHS if day >= e)
+
+
+def in_sampling_settle_window(day: str) -> bool:
+    """True while a sampling change is still working through the feed.
+
+    A cap raise does not land in one clean day either: each store is re-walked on
+    its own schedule and the grace window carries yesterday's shape forward for
+    up to GRACE_DAYS. Pieces first seen inside this window have a firstDay that
+    describes our scraper, so nothing may read them as arrivals.
+    """
+    return any(e <= day < _plus(e, EPOCH_SETTLE_DAYS) for e in SAMPLING_EPOCHS)
+
+
+def crosses_sampling_epoch(day_a: str, day_b: str) -> bool:
+    """True when a window spans a sampling change, i.e. when 'this piece is gone'
+    and 'this piece is new' cannot be compared between its two endpoints."""
+    lo, hi = sorted((day_a, day_b))
+    return sampling_epoch_of(lo) != sampling_epoch_of(hi)
+
+
+def arrival_blackout(days) -> list:
+    """[startIdx, endIdx] day-index ranges in which firstDay is NOT an arrival.
+
+    Emitted into price_history.json so a consumer that never read this file's
+    prose still cannot mistake the boundary for a drop. Inclusive on both ends;
+    empty when the archive does not span a sampling change.
+    """
+    out = []
+    for i, d in enumerate(days):
+        if in_sampling_settle_window(d):
+            if out and out[-1][1] == i - 1:
+                out[-1][1] = i
+            else:
+                out.append([i, i])
+    return out
 
 
 def build(verbose: bool = True, allow_shallow: bool = False):
@@ -283,6 +389,15 @@ def build(verbose: bool = True, allow_shallow: bool = False):
         # run: an absent flag is indistinguishable from a complete one.
         **({"partialHistory": True} if truncated else {}),
         "priceEpochs": PRICE_EPOCHS,
+        # Sampling changes, and the day-index ranges they poison. A consumer
+        # computing arrivals, turnover, refresh rate or tenure MUST skip these:
+        # inside them, firstDay is a fact about the scraper. Emitted rather than
+        # merely documented for the same reason partialHistory is — an absent
+        # flag has to be indistinguishable from nothing to worry about, and the
+        # only way to guarantee that is to always emit the flag.
+        "samplingEpochs": SAMPLING_EPOCHS,
+        "epochSettleDays": EPOCH_SETTLE_DAYS,
+        "arrivalBlackout": arrival_blackout(days),
         "schema": "[firstDayIdx, daysSeen, minPrice, maxPrice, lastPrice, lastChangeDayIdx]",
         "products": products,
         "brands": brands,
@@ -301,6 +416,20 @@ def report(hist):
 
     tracked = {k: v for k, v in prods.items() if v[1] >= 7}
     print(f"  tracked 7+ days           : {len(tracked):,}")
+
+    # A sampling change makes thousands of pieces appear on one day. Say so
+    # before printing anything a reader could mistake for market movement.
+    blackout = hist.get("arrivalBlackout") or []
+    if blackout:
+        n_in = sum(1 for v in prods.values()
+                   if any(a <= v[0] <= b for a, b in blackout))
+        print(f"\n  !! SAMPLING EPOCH IN WINDOW {hist.get('samplingEpochs')}")
+        print(f"     day-index ranges where firstDay is NOT an arrival: {blackout}")
+        print(f"     pieces first seen inside them : {n_in:,} "
+              f"({100*n_in/max(len(prods),1):.0f}% of the file)")
+        print("     Those are pieces the old 60-item cap hid, not new listings, and")
+        print("     their daysSeen is a floor. No arrival, refresh-rate, turnover or")
+        print("     tenure claim may be computed across this boundary.")
 
     never = [k for k, v in tracked.items() if v[3] <= v[2] * (1 + MIN_MEANINGFUL_MOVE)]
     lowest = [k for k, v in tracked.items()
