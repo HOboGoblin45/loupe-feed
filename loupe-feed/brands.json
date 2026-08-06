@@ -1,6 +1,6 @@
 {
   "_comment": "Curated niche brands for the Loupe live catalog feed. Each runs on Shopify, which exposes a public /products.json endpoint (no auth). 'currency' is the store's base currency — the scraper converts to USD. 'perBrand' caps how many products are pulled from each brand to keep the catalog curated. To add a brand: confirm https://<domain>/products.json returns JSON, then add an entry. Bot-protected stores (return empty) are simply skipped at runtime. To REMOVE a brand, delete its entry here AND add it to EXCLUDE_BRANDS in build_catalog.py — deleting it here alone lets its items ride the grace-window carry-forward for days and does not stop it re-entering via a multi-brand reseller's vendor field. Removed 2026-07-29: Mackage, Marfa Stance.",
-  "_fx_comment": "Static FX rates -> USD. A WRONG per-brand 'currency' mis-prices that brand's ENTIRE catalog by the FX factor, so build_catalog.scrape_brand now probes https://<domain>/cart.js?country=US once per brand and prints a loud '⚠ CURRENCY MISMATCH' line in the run summary when the live currency differs from the value configured here. DKK 0.145 ≈ 1 DKK = 0.145 USD (the krone is pegged to the euro at ~7.46 DKK/EUR, so EUR 1.08 / 7.46 ≈ 0.145).",
+  "_fx_comment": "Static FX rates -> USD. A WRONG per-brand 'currency' mis-prices that brand's ENTIRE catalog by the FX factor. build_catalog.py probes https://<domain>/cart.js?country=US once per brand and, from 2026-08-06, CONVERTS ON THE LIVE ANSWER rather than on the value configured here — before that it only printed a '⚠ CURRENCY MISMATCH' line and priced on the annotation anyway, which is detection that never reached the arithmetic. The 'currency' below is therefore a cached probe result, not an authority: 'currencyVerified'/'currencyCheckedAt' record whether a live probe has ever confirmed it, and an unverified brand is excluded from every published price figure (Index, brand briefs, partner reports) instead of being guessed at. THE country=US PARAMETER IS LOAD-BEARING: measured 2026-08-06, 56 of 161 shops answer /cart.js with a foreign currency bare and USD under country=US, and the number stored in catalog.json is the country=US one in every case (206 archived rows matched it, 0 matched only the bare price) — probing bare and 'correcting' to that answer would FX-multiply prices that are already USD, which is the 2026-07-15 double-conversion bug re-introduced. DKK 0.145 ≈ 1 DKK = 0.145 USD (the krone is pegged to the euro at ~7.46 DKK/EUR, so EUR 1.08 / 7.46 ≈ 0.145). AED 0.27229 = the 3.6725 AED/USD peg the UAE central bank has held since 1997.",
   "fx_to_usd": {
     "USD": 1.0,
     "AUD": 0.66,
@@ -10,6 +10,7 @@
     "NZD": 0.61,
     "SEK": 0.092,
     "DKK": 0.145,
+    "AED": 0.27229,
     "EGP": 0.02
   },
   "_cap_comment": "TWO CAPS, TWO JOBS. 'perBrand' is the WALK DEPTH: how far into each store build_catalog.py looks and records, i.e. the measurement. 'perBrandDisplay' is how much of that ships in catalog.json, i.e. what the app downloads and what becomes a cutout and an embedding. They were ONE number (60) until 2026-08-06, and because /products.json returns published_at DESCENDING that made the tracked shelf a rotating 60-piece PUBLISHING FRONT rather than a catalogue: measured live on 2026-08-06 by walking the whole roster to exhaustion (157 of 161 stores answered), the median store publishes 157 eligible pieces (p75 324, p90 638, p95 897, max 3,104; 45,718 in total) and only 19% of stores fit inside 60 — 81% are bigger. For the rest, a new listing pushed an old piece out of the window and the old piece read as having left the market: 981 of 2,041 disappearances between 2026-07-16 and 2026-08-01, 48%, were whole-brand rotation. 750 = three Shopify pages of 250, the smallest whole number of pages that clears the roster's 90th percentile (638); it fully covers 93% of stores (146 of 157), against 19% at a cap of 60. The display cap stays 60 because catalog.json is 1.09 KB/product and is served to phones by jsDelivr (~20 MB/file ceiling), and every product in it also becomes a ~111 KB cutout blob on a repo already at 948 MB of GitHub's 5 GB. Raising THIS number is what would take the app off the air; raising the walk depth is free. The full walk is published in shelf.json.",
@@ -32,7 +33,9 @@
       "perVendorCap": 24,
       "pageDelaySeconds": 1.5,
       "_pagination_note": "Retailers are walked with page=N (scrape_retailer_pages), NOT the since_id walk brands use: Shopify's public products.json returns NEWEST FIRST (descending ids), so since_id — which asks for ids GREATER than the last one on a page — re-returns the same page and collapses the walk after one page. That capped Gemini at 89 of 400 items until 2026-07-29.",
-      "productTypes": ["womens"],
+      "productTypes": [
+        "womens"
+      ],
       "inStockOnly": true,
       "utm": "utm_source=loupe&utm_medium=app&utm_campaign=gemini",
       "store": {
@@ -44,819 +47,1143 @@
         "phoneDisplay": "(773) 394-1034",
         "mapUrl": "https://www.google.com/maps/search/?api=1&query=1911+W+Division+St+Chicago+IL+60622",
         "instagram": "https://www.instagram.com/shopgeminishop/"
-      }
+      },
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     }
   ],
   "brands": [
     {
       "brand": "Deiji Studios",
       "domain": "deijistudios.com",
-      "currency": "AUD"
+      "currency": "AUD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Frankies Bikinis",
       "domain": "frankiesbikinis.com",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Chan Luu",
       "domain": "chanluu.com",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Staud",
       "domain": "staud.clothing",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Paloma Wool",
       "domain": "palomawool.com",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Lisa Says Gah",
       "domain": "lisasaysgah.com",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Conner Ives",
       "domain": "connerives.com",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Sir the Label",
       "domain": "sirthelabel.com",
-      "currency": "USD"
+      "currency": "AUD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Cou Cou Intimates",
       "domain": "coucouintimates.com",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "St. Agni",
       "domain": "st-agni.com",
-      "currency": "AUD"
+      "currency": "AUD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Cult Gaia",
       "domain": "cultgaia.com",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Musier Paris",
       "domain": "www.musier-paris.com",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "The Frankie Shop",
       "domain": "thefrankieshop.com",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Baserange",
       "domain": "baserange.com",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Brooke Callahan",
       "domain": "brookecallahan.com",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Tyler McGillivary",
       "domain": "tylermcgillivary.com",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "SIEDRÉS",
       "domain": "siedres.com",
       "_currency_note": "Corrected 2026-07-29: was UNTAGGED (defaulted to USD) but siedres.com/cart.js?country=US reports EUR and products.json?country=US keeps publishing EUR — every SIEDRÉS price shipped 8% LOW.",
-      "currency": "EUR"
+      "currency": "EUR",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "With Jéan",
       "domain": "withjean.com",
-      "currency": "AUD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "MISBHV",
       "domain": "misbhv.com",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Ciao Lucia",
       "domain": "ciaolucia.com",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Mirror Palais",
       "domain": "mirrorpalais.com",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Bec + Bridge",
       "domain": "becandbridge.com.au",
-      "currency": "AUD"
+      "currency": "AUD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Damson Madder",
       "domain": "damsonmadder.com",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Stine Goya",
       "domain": "stinegoya.com",
       "_currency_note": "Corrected 2026-07-29: was EUR, but stinegoya.com/cart.js?country=US reports DKK and products.json?country=US publishes DKK (Danish label, Copenhagen). At EUR the whole brand shipped 7.4x over: 'Beanie - Blue' raw 499 -> $539 instead of $72.",
-      "currency": "DKK"
+      "currency": "DKK",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Anna October",
       "domain": "annaoctober.com",
-      "currency": "USD"
+      "currency": "EUR",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Sophie Buhai",
       "domain": "sophiebuhai.com",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Anni Lu",
       "domain": "anni-lu.com",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Martha Calvo",
       "domain": "marthacalvo.com",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "PDPAOLA",
       "domain": "pdpaola.com",
       "_currency_note": "Corrected 2026-07-29: was EUR, but this is a Shopify Markets store — with country=US it serves its US presentment in USD (cart.js?country=US -> USD). Multiplying by the EUR rate DOUBLE-CONVERTED every price (+8%).",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Agmes",
       "domain": "agmesnyc.com",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Mounser",
       "domain": "mounser.com",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Alighieri",
       "domain": "alighieri.com",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Mondo Mondo",
       "domain": "mondo-mondo.com",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Faris",
       "domain": "farisfaris.com",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Christopher Esber",
       "domain": "christopheresber.com",
-      "currency": "AUD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Miaou",
       "domain": "miaou.com",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Fruity Booty",
       "domain": "fruitybooty.co.uk",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Belle Anna",
       "domain": "belle-anna.com",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Gimaguas",
       "domain": "gimaguas.com",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Los Angeles Apparel",
       "domain": "losangelesapparel.net",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Flore Flore",
       "domain": "flore-flore.com",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "EB Denim",
       "domain": "ebdenim.com",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Guizio",
       "domain": "danielleguiziony.com",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Jeanerica",
       "domain": "jeanerica.com",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Lexxola",
       "domain": "lexxola.com",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "DMY Studios",
       "domain": "dmystudios.com",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Bonnie Clyde",
       "domain": "bonnieclyde.la",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Easton Marley",
       "domain": "eastonmarley.com",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Charlie Beads",
       "domain": "charliebeads.com",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Ella Mae",
       "domain": "ellamae.xyz",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Rat and Boa",
       "domain": "ratandboa.com",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Niihai",
       "domain": "niihai.com",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Eliou",
       "domain": "eliou.com",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Cafe Forgot",
       "domain": "cafeforgot.com",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Cowboys of Habit",
       "domain": "cowboysofhabit.com",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Woodrose Deli",
       "domain": "woodrosedeli.com",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Hernan Herdez",
       "domain": "hernanherdez.com",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Kernemilk",
       "domain": "kernemilk.com",
-      "currency": "DKK"
+      "currency": "DKK",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "A Bronze Age",
       "domain": "abronzeage.com",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Martine Rose",
       "domain": "martine-rose.com",
       "_currency_note": "Corrected 2026-07-29: was GBP, but this is a Shopify Markets store — with country=US it serves its US presentment in USD (cart.js?country=US -> USD). Multiplying by the GBP rate DOUBLE-CONVERTED every price (+27%).",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Tigra Tigra",
       "domain": "tigratigra.com",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Port Tanger",
       "domain": "porttanger.com",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Nicole Saldana",
       "domain": "nicolesaldana.com",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Aeyde",
       "domain": "aeyde.com",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Marland Backus",
       "domain": "marlandbackus.com",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Mode Mischief",
       "domain": "modemischief.com",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Wolf Circus",
       "domain": "www.wolfcircus.com",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Fashion Brand Company",
       "domain": "fashionbrandcompany.com",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Apres Studio",
       "domain": "apresstudio.com.au",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Buci NYC",
       "domain": "bucibucibuci.com",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Geel",
       "domain": "geel.us",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Audette",
       "domain": "audette-shop.com",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Tone Deaf Studios",
       "domain": "tonedeaf-studios.com",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Little Yarn",
       "domain": "littleyarn.com.au",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Mais x Frida",
       "domain": "maisxfrida.com",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Susmie's",
       "domain": "susmies.com",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Mirchi by Kim",
       "domain": "mirchibykim.com",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Gumi",
       "domain": "gumi.us",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Kinkifish",
       "domain": "kinkifish.com",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Orseund Iris",
       "domain": "orseundiris.com",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Susamusa",
       "domain": "susamusa.com",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Le Febour",
       "domain": "le-febour.com",
-      "currency": "CAD"
+      "currency": "CAD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Maem Disko",
       "domain": "maemdisko.com",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Tae Park",
       "domain": "tae-park.com",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Fait Par Foutch",
       "domain": "faitparfoutch.com",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Priscavera",
       "domain": "priscavera.com",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Unica Leathers",
       "domain": "unicaleathers.com",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "NUUK Jewelry",
       "domain": "nuukjewellery.com",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Phoebe Philo",
       "domain": "phoebephilo.com",
-      "currency": "GBP"
+      "currency": "GBP",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "The Row",
       "domain": "therow.com",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Toteme",
       "domain": "toteme-studio.com",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Khaite",
       "domain": "khaite.com",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Dries Van Noten",
       "domain": "driesvannoten.com",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Mpaz Studio",
       "domain": "mpazstudio.com",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Carmen Says",
       "domain": "carmensays.com",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Oddli",
       "domain": "oddli.com",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "DémodéMODÉ",
       "domain": "demodemode.com",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Ganni",
       "domain": "ganni.com",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": false,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "My Mum Made It",
       "domain": "mymum-madeit.com",
-      "currency": "AUD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Trashy Clothing",
       "domain": "trashyclothing.shop",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "ALEXIS",
       "domain": "shopalexis.com",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "SWF Boutique",
       "domain": "swfboutique.com",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Uniform Person",
       "domain": "uniform-person.com",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Find Me Now the Label",
       "domain": "findmenowthelabel.com",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Ancegria",
       "domain": "ancegria.com",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Nuri Studios",
       "domain": "nuristudios.com",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Nafsika Skourti",
       "domain": "nafsikaskourti.com",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Other Normal",
       "domain": "othernormal.com.au",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Peachy Den",
       "domain": "peachyden.co.uk",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "By Gianna",
       "domain": "bygianna.com",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Gaudir Swim",
       "domain": "gaudirswim.com",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "INSIS",
       "domain": "insis.shop",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Shop Peche",
       "domain": "shop-peche.com",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Attega",
       "domain": "attegastudio.com",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Moro Joyas",
       "domain": "morojoyas.shop",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Studio Nani",
       "domain": "studio-nani.com",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Paris Georgia",
       "domain": "shop.parisgeorgia.com",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Of Planet Earth",
       "domain": "ofplanet.earth",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Hand Over",
       "domain": "h-andover.com",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Feners",
       "domain": "feners.com",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Aknvas",
       "domain": "aknvas.com",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Collina Strada",
       "domain": "collinastrada.com",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Coperni",
       "domain": "coperni.com",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Proenza Schouler",
       "domain": "proenzaschouler.com",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Entremains",
       "domain": "entremains.com",
-      "currency": "EUR"
+      "currency": "EUR",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Romontio",
       "domain": "romontio.com",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Side Eye",
       "domain": "sideeye.com",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Heaven Mayhem",
       "domain": "heavenmayhem.com",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Arete Studios",
       "domain": "aretestudios.com",
       "currency": "USD",
-      "multiBrand": true
+      "multiBrand": true,
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "VESTIGE",
       "domain": "shop-vestige.com",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Eshim",
       "domain": "eshim.us",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Maguire",
       "domain": "maguireshoes.com",
-      "currency": "CAD"
+      "currency": "CAD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Flattered",
       "domain": "flattered.com",
-      "currency": "SEK"
+      "currency": "SEK",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "ALOHAS",
       "domain": "alohas.io",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Yuni Buffa",
       "domain": "yunibuffa.com",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Sentaler",
       "domain": "sentaler.com",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Yellow the Label",
       "domain": "yellowthelabel.com",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "1XBLUE",
       "domain": "1xblue.com",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Pärlemor",
       "domain": "parlemor.co.uk",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Eckhaus Latta",
       "domain": "checkout.eckhauslatta.com",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Anonie",
       "domain": "shopanonie.com",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Lauren Manoogian",
       "domain": "laurenmanoogian.com",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Blanch Wear",
       "domain": "blanchwear.com",
-      "currency": "AUD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Nuovo Paris",
       "domain": "nuovo-paris.com",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Maketh Thou",
       "domain": "makeththou.com",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "C'est Nous",
       "domain": "cestnous.co",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Allina Liu",
       "domain": "allinaliu.com",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Marge Sherwood",
       "domain": "global.margesherwood.com",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Nokshi New York",
       "domain": "nokshinewyork.com",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "RLT",
       "domain": "shoprlt.com",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "At First Sight Studio",
       "domain": "atfirstsightstudio.com",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Notte",
       "domain": "nottejewelry.com",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": false,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "The Line by K",
       "domain": "thelinebyk.com",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Donde Esteban",
       "domain": "dondeesteban.co",
-      "currency": "EUR"
+      "currency": "GBP",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Szade",
       "domain": "szade.com",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "The Isla",
       "domain": "the-isla.com",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "6397",
       "domain": "6397news.com",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Mali Marea",
       "domain": "malimarea.com",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Olivia Hurst",
       "domain": "oliviahurst.com",
-      "currency": "USD"
+      "currency": "USD",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "28natelier",
       "domain": "28natelier.com",
-      "currency": "USD"
+      "currency": "AED",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     },
     {
       "brand": "Darbary Paris",
       "domain": "darbaryparis.com",
-      "currency": "EUR"
+      "currency": "EUR",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-08-06"
     }
   ]
 }

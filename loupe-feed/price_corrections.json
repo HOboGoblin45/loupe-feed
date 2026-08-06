@@ -1,0 +1,98 @@
+{
+  "_comment": "FX CORRECTIONS FOR THE ARCHIVE. The daily catalog snapshots in this repo's git history are the record, and the record is never rewritten — a correction is published HERE and applied when the archive is read. Each entry says: for this brand, between these two days, the stored `price` was converted at wrongFx when it should have been converted at rightFx, so multiply it by `factor`. Applies ONLY to snapshot rows that carry NO `currency` field: from 2026-08-06 build_catalog.py converts on the live /cart.js?country=US answer and stamps every row with `priceRaw` + `currency`, so a row that has a currency was priced from the observed value and must never be corrected twice. That rule is what makes this file self-terminating.",
+  "_cause": "build_catalog.py multiplied the store's raw price by the FX rate for the per-brand `currency` ANNOTATION in brands.json. live_currency() had probed each store's real presentment currency since 2026-07-29 and printed a '⚠ CURRENCY MISMATCH' line when the two disagreed — but the probe's answer never reached the arithmetic, so the mismatch was logged daily and priced wrong daily. Only the converted USD integer was stored, which is what made the mistake permanent rather than recoverable.",
+  "_precision": "An archived price is p = round(raw * wrongFx), so raw is only known to lie in [(p-0.5)/wrongFx, (p+0.5)/wrongFx). The stated correction is round(p * factor); the true value is round(raw * rightFx) for the unknown raw in that interval. Measured over all 422 affected rows in the 2026-08-05 snapshot: 10.2% are provably exact, 89.8% could be off by at most $1, and NONE could be off by more than $1. Rounding cost the archive one dollar of precision per piece, and nothing else.",
+  "_evidence": "Every entry below was verified on 2026-08-06 by fetching the store's own /products.json?limit=8&country=US — the exact request the scraper makes — and matching its numbers against the ids in catalog.json. In all 8 cases 100% of matched products were priced at the ANNOTATED rate, which both confirms the error and confirms it is a clean single-factor inversion.",
+  "generatedAt": "2026-08-06",
+  "appliesToRowsWithout": "currency",
+  "corrections": [
+    {
+      "brand": "28natelier",
+      "domain": "28natelier.com",
+      "wrongCurrency": "USD", "wrongFx": 1.0,
+      "rightCurrency": "AED", "rightFx": 0.27229,
+      "factor": 0.27229,
+      "fromDay": "2026-07-21", "toDay": null,
+      "note": "Untagged store defaulted to USD; publishes AED. A 600 AED skirt shipped as $600 instead of $163 — the largest single error in the roster. AED is a hard 3.6725/USD peg."
+    },
+    {
+      "brand": "Anna October",
+      "domain": "annaoctober.com",
+      "wrongCurrency": "USD", "wrongFx": 1.0,
+      "rightCurrency": "EUR", "rightFx": 1.08,
+      "factor": 1.08,
+      "fromDay": "2026-07-15", "toDay": null,
+      "note": "Tagged USD, publishes EUR — the SIEDRÉS failure mode. Prices ran 8% LOW."
+    },
+    {
+      "brand": "Blanch Wear",
+      "domain": "blanchwear.com",
+      "wrongCurrency": "AUD", "wrongFx": 0.66,
+      "rightCurrency": "USD", "rightFx": 1.0,
+      "factor": 1.515152,
+      "fromDay": "2026-07-15", "toDay": null,
+      "note": "Markets store serving USD under country=US while tagged AUD — the DOUBLE-CONVERSION direction. Prices ran 34% low."
+    },
+    {
+      "brand": "Christopher Esber",
+      "domain": "christopheresber.com",
+      "wrongCurrency": "AUD", "wrongFx": 0.66,
+      "rightCurrency": "USD", "rightFx": 1.0,
+      "factor": 1.515152,
+      "fromDay": "2026-07-15", "toDay": null,
+      "note": "Same double-conversion. The costliest in absolute terms: a $2,750 one-piece published as $1,815."
+    },
+    {
+      "brand": "Donde Esteban",
+      "domain": "dondeesteban.co",
+      "wrongCurrency": "EUR", "wrongFx": 1.08,
+      "rightCurrency": "GBP", "rightFx": 1.27,
+      "factor": 1.175926,
+      "fromDay": "2026-07-21", "toDay": null,
+      "note": "Wrong FOREIGN currency, not a USD confusion — the Stine Goya DKK/EUR failure mode. Prices ran 15% low."
+    },
+    {
+      "brand": "My Mum Made It",
+      "domain": "mymum-madeit.com",
+      "wrongCurrency": "AUD", "wrongFx": 0.66,
+      "rightCurrency": "USD", "rightFx": 1.0,
+      "factor": 1.515152,
+      "fromDay": "2026-07-15", "toDay": null,
+      "note": "Double-conversion."
+    },
+    {
+      "brand": "Sir the Label",
+      "domain": "sirthelabel.com",
+      "wrongCurrency": "USD", "wrongFx": 1.0,
+      "rightCurrency": "AUD", "rightFx": 0.66,
+      "factor": 0.66,
+      "fromDay": "2026-07-15", "toDay": null,
+      "note": "Serves AUD even under country=US while tagged USD. Prices ran 52% HIGH."
+    },
+    {
+      "brand": "With Jéan",
+      "domain": "withjean.com",
+      "wrongCurrency": "AUD", "wrongFx": 0.66,
+      "rightCurrency": "USD", "rightFx": 1.0,
+      "factor": 1.515152,
+      "fromDay": "2026-07-15", "toDay": null,
+      "note": "Double-conversion."
+    }
+  ],
+  "_uncorrectable_comment": "Before 2026-07-15 the scrape sent NO country parameter (commit 10b4c79 added it), so a Shopify Markets store served whatever presentment currency it chose for the CI runner's geo on that day. That currency is not recorded anywhere, the raw price was discarded, and the runner's IP is not reconstructible — so for these windows there is no honest inversion and none is attempted. This is the same boundary build_price_history.PRICE_EPOCHS already voids price comparisons across; it is restated here so that a reader of the corrections cannot assume the untouched days are correct days.",
+  "uncorrectable": [
+    {"brand": "Anna October", "fromDay": "2026-06-17", "toDay": "2026-07-14", "productDays": 1356},
+    {"brand": "Blanch Wear", "fromDay": "2026-07-01", "toDay": "2026-07-14", "productDays": 266},
+    {"brand": "Christopher Esber", "fromDay": "2026-06-18", "toDay": "2026-07-14", "productDays": 1247},
+    {"brand": "My Mum Made It", "fromDay": "2026-06-24", "toDay": "2026-07-14", "productDays": 1220},
+    {"brand": "Sir the Label", "fromDay": "2026-06-17", "toDay": "2026-07-14", "productDays": 1465},
+    {"brand": "With Jéan", "fromDay": "2026-06-17", "toDay": "2026-07-14", "productDays": 1340}
+  ],
+  "_totals": {
+    "affectedProductDays": 13730,
+    "correctableProductDays": 6836,
+    "uncorrectableProductDays": 6894,
+    "brandsAffected": 8,
+    "archiveSpan": "2026-06-17 .. 2026-08-05 (46 daily snapshots)"
+  }
+}

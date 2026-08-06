@@ -121,6 +121,7 @@ HERE = pathlib.Path(__file__).resolve().parent
 REPO = HERE.parent
 CATALOG_REL = "loupe-feed/catalog.json"
 OUT = HERE / "price_history.json"
+CORRECTIONS = HERE / "price_corrections.json"
 
 # Dates on or after which the pricing METHODOLOGY changed. A price move that
 # straddles one of these is an artefact of our own pipeline, not the brand's
@@ -182,6 +183,54 @@ def git(*args: str) -> str:
         ["git", "-C", str(REPO), *args],
         capture_output=True, text=True, encoding="utf-8", errors="replace",
     ).stdout
+
+
+# ── FX corrections ───────────────────────────────────────────────────────────
+# Until 2026-08-06 every price here was converted using the per-brand `currency`
+# ANNOTATION in brands.json, while a live probe that knew better ran alongside
+# and only logged a warning. Eight stores were annotated wrong, so this file —
+# the asset the whole business rests on — carried 422 wrong prices a day.
+#
+# The snapshots are the record and the record is not rewritten. The repair is
+# published in price_corrections.json and applied on READ, here and in
+# loupe-site/tools/build_loupe_index.py, which are the only two things that walk
+# the archive. A missing table is a hard stop, not a silent zero: republishing
+# uncorrected prices because a path was wrong is exactly the failure it exists
+# to end.
+
+def load_corrections():
+    if not CORRECTIONS.exists():
+        sys.exit(f"REFUSING TO BUILD: {CORRECTIONS.name} is missing.\n"
+                 "  It records the FX errors this archive must correct before\n"
+                 "  quoting a price. Without it price_history.json would restate\n"
+                 "  8 brands' history wrong by up to 3.7x.")
+    doc = json.loads(CORRECTIONS.read_text(encoding="utf-8"))
+    return {c["brand"]: (c["fromDay"], c.get("toDay"), float(c["factor"]))
+            for c in doc.get("corrections", [])}
+
+
+def correct_price(price, brand, day, has_currency, corrections):
+    """The archived price restated in USD.
+
+    `has_currency` is the self-terminating guard: from 2026-08-06 every row
+    carries its own observed `currency`, and such a row was priced from the
+    observation — correcting it again would introduce the error a second time,
+    in the opposite direction.
+    """
+    if price is None or has_currency:
+        return price
+    hit = corrections.get(brand)
+    if not hit:
+        return price
+    lo, hi, factor = hit
+    if day < lo or (hi and day > hi):
+        return price
+    # Rounded to the DOLLAR, like every other price in the archive. The stored
+    # value is itself an integer, so the store's own number is only known to
+    # within half a unit of its currency; measured across all 422 affected rows,
+    # 89.8% of these corrections could be off by $1 and none by more. Emitting
+    # 163.37 would claim a precision the archive cannot support.
+    return round(price * factor)
 
 
 def history_is_truncated() -> bool:
@@ -299,6 +348,9 @@ def build(verbose: bool = True, allow_shallow: bool = False):
     start, end = days[0], days[-1]
     day_index = {d: i for i, d in enumerate(days)}
 
+    corrections = load_corrections()
+    n_corrected = 0
+
     # pid -> list of (dayIndex, price); brand/meta captured from the newest sighting
     seen = collections.defaultdict(list)
     brand_of = {}
@@ -318,8 +370,13 @@ def build(verbose: bool = True, allow_shallow: bool = False):
             pid, price = p.get("id"), p.get("price")
             if not pid or not isinstance(price, (int, float)) or price <= 0:
                 continue
-            seen[pid].append((i, float(price)))
-            brand_of[pid] = p.get("brand") or "?"
+            brand = p.get("brand") or "?"
+            fixed = correct_price(float(price), brand, day, bool(p.get("currency")),
+                                  corrections)
+            if fixed != price:
+                n_corrected += 1
+            seen[pid].append((i, float(fixed)))
+            brand_of[pid] = brand
         if verbose:
             print(f"  {day}  {len(doc.get('products', [])):>5} products", file=sys.stderr)
 
@@ -379,11 +436,22 @@ def build(verbose: bool = True, allow_shallow: bool = False):
         for b, st in brand_stats.items()
     }
 
+    if verbose:
+        # Announced every run. A repair that happens silently is one nobody
+        # notices has stopped happening.
+        print(f"  FX: {n_corrected:,} archived prices re-derived from "
+              f"{CORRECTIONS.name} ({len(corrections)} brands)", file=sys.stderr)
+
     return {
         "generatedAt": dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "windowStart": start,
         "windowEnd": end,
         "days": len(days),
+        # Which brands' archived prices were re-derived on read, and over what
+        # window. Emitted rather than merely applied: a consumer must be able to
+        # see that a number here is a correction and not the original reading.
+        "fxCorrections": {b: {"from": lo, "to": hi, "factor": f}
+                          for b, (lo, hi, f) in sorted(corrections.items())},
         # True when the clone could not see the whole history, so windowStart is a
         # lower bound rather than the real beginning. Never omit it on a partial
         # run: an absent flag is indistinguishable from a complete one.

@@ -638,6 +638,86 @@ def live_currency(domain, timeout=8):
     return None
 
 
+def load_fx_corrections(path=None):
+    """{brand: (fromDay, toDay|None, factor)} from price_corrections.json, or {}.
+
+    Used by the GRACE-WINDOW carry-forward. A row copied out of a catalog built
+    before 2026-08-06 carries a price converted on the old annotation and no
+    `currency` field, so without this a corrected brand would keep showing the
+    wrong number in the app for up to GRACE_DAYS more days. The same principle
+    the trinket rule had to learn: a policy enforced on the live path and not on
+    the carry-forward path does nothing at all.
+
+    A missing file WARNS rather than aborts. The blast radius of a hard stop here
+    is the whole daily catalog — that is the junk-filter incident, where a
+    correct gate cost four days of archive. The site build, whose only job is to
+    publish figures, does hard-stop.
+    """
+    p = Path(path) if path else (HERE / "price_corrections.json")
+    try:
+        doc = json.loads(p.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+    return {c["brand"]: (c["fromDay"], c.get("toDay"), float(c["factor"]))
+            for c in doc.get("corrections", [])}
+
+
+def resolve_currency(entry, fx_table, probe=live_currency, label=None):
+    """(currency, fx, verified, notes) — the currency this store's prices are
+    ACTUALLY quoted in, the rate to convert them at, whether we have live
+    evidence, and any lines the run summary should shout.
+
+    WHY THIS IS NOT JUST A WARNING ANY MORE (2026-08-06).
+
+    live_currency() above was written to catch the one error that mis-prices a
+    brand's WHOLE catalogue, and it WAS wired in — to `print`. It probed every
+    store, compared the answer against brands.json, wrote a "⚠ CURRENCY MISMATCH"
+    line into the run log, and then the FX multiply went on using the annotation
+    regardless. So the pipeline detected the error and published it anyway, every
+    day, in the file we hand to the brand it is about. Detection that never
+    reaches the arithmetic is not a fix. Eight stores were annotated wrong on
+    2026-08-06 and 422 rows a day — 5.3% of the tier — carried a price out by the
+    FX factor, up to 3.7x for one label.
+
+    The live answer now WINS. /cart.js?country=US is the shop telling us what it
+    charges the shopper we quote prices for; the annotation is a human's
+    recollection of that.
+
+    THE country=US PARAMETER IS LOAD-BEARING and both halves must use it. See the
+    products.json fetch: a Shopify Markets store serves a US shopper in USD, so
+    asking cart.js WITHOUT country=US answers about a different shopper than the
+    one whose prices we stored. Measured 2026-08-06 across the whole roster: 56 of
+    161 shops answer with a foreign currency bare and USD under country=US, and in
+    every case the number sitting in catalog.json is the country=US one (206
+    archived rows matched it; 0 matched only the bare price). "Correcting" to the
+    bare answer would FX-multiply prices that are already USD — the exact
+    double-conversion 2026-07-15 fixed, re-introduced under the banner of fixing it.
+
+    Where the probe cannot answer we fall back to the annotation and carry its
+    stored verification stamp: a transient network failure must not drop a brand
+    out of every published price figure, but an annotation that no probe has EVER
+    confirmed must never quietly reach one either.
+    """
+    label = label or entry.get("brand") or entry.get("name") or entry.get("domain") or "?"
+    configured = (entry.get("currency") or "USD").upper()
+    live = probe(entry.get("domain") or "")
+    notes = []
+    if live and live != configured:
+        notes.append(f"  ⚠ CURRENCY CORRECTED (brand={label} config={configured} "
+                     f"live={live}) — converting on the LIVE value")
+    currency = live or configured
+    verified = bool(live) or bool(entry.get("currencyVerified"))
+    fx = fx_table.get(currency)
+    if fx is None:
+        # An unknown currency is the WORST case, not a neutral one. The old
+        # `fx_table.get(cur, 1.0)` treated it as par, which would have published
+        # AED prices 3.7x high without a word. No rate -> no verified price.
+        notes.append(f"  ⚠ NO FX RATE for {currency} (brand={label}) — prices left "
+                     f"UNCONVERTED and marked unverified; add a rate to fx_to_usd")
+        fx, verified = 1.0, False
+    return currency, fx, verified, notes
+
+
 # "dress" used as an ADJECTIVE names a different garment — route it there BEFORE
 # the generic dresses rule ("Dress Pants" are bottoms, not a dress). _word_in's
 # plural tolerance covers "dress pants" / "dress shirts" / "dress shoes".
@@ -1295,7 +1375,8 @@ def first_price(product):
     return None
 
 
-def normalize(product, brand, domain, fx, multi_brand=False, retailer=None):
+def normalize(product, brand, domain, fx, multi_brand=False, retailer=None,
+              currency="USD", verified=True):
     title = (product.get("title") or "").strip()
     handle = product.get("handle")
     img = first_image(product)
@@ -1378,7 +1459,25 @@ def normalize(product, brand, domain, fx, multi_brand=False, retailer=None):
                else f"{slugify(display_brand)}-{handle}"),
         "brand": display_brand,
         "name": title,
+        # `price` is and stays the CONVERTED USD INTEGER. The iOS app reads it as
+        # a plain USD number in ~20 render sites and in every price-affinity,
+        # budget-filter and look-total calculation; changing what it means would
+        # break production silently. Adding fields beside it is free — the app
+        # rebuilds each row field-by-field in toProduct() and drops what it does
+        # not know (it has been discarding `lastSeenAt` for weeks).
         "price": price,
+        # ── the two fields that make an FX mistake RECOVERABLE ────────────────
+        # Until 2026-08-06 only the converted integer was stored, so a wrong
+        # `currency` annotation was permanent: the multiplicand was gone and
+        # there was nothing left to re-derive from. For an archive whose entire
+        # value is that it goes back in time, that is the wrong shape.
+        #   priceRaw — the store's own number, exactly as published, unconverted
+        #   currency — the currency it is quoted in, as OBSERVED by the live
+        #              /cart.js probe (not as annotated in brands.json)
+        # price == round(priceRaw * fx_to_usd[currency]), so a future correction
+        # is a re-derivation instead of a loss.
+        "priceRaw": round(raw_price, 2),
+        "currency": currency,
         "category": category,
         "colorTags": colors,
         "imageUrl": img,
@@ -1396,6 +1495,14 @@ def normalize(product, brand, domain, fx, multi_brand=False, retailer=None):
         "publishedAt": (product.get("published_at") or "")[:10] or None,
         "affiliateUrl": affiliate,
     }
+    if not verified:
+        # No live probe has ever confirmed this shop's presentment currency, so
+        # `price` above may be converted on a guess. Rare by construction (a
+        # domain whose /cart.js has never once answered), and a rare field so it
+        # costs nothing on the ~99% of rows that are verified. Every PUBLISHED
+        # price figure — the Index, the brand briefs, the partner reports —
+        # filters these out; the app ignores the flag and shows the price.
+        out["currencyUnverified"] = True
     if subtype:
         # Accessories and shoes only — garments carry no subtype, so this adds
         # nothing to the ~72% of the catalog that is clothing. The app reads it
@@ -1563,18 +1670,16 @@ def main():
                 return  # short page → store exhausted
             time.sleep(delay)
 
-    def check_currency(label, domain, configured):
-        """Probe the store's LIVE presentment currency once and shout if it
-        disagrees with brands.json. Appends to `summary` so the mismatch lands in
-        the run log the founder actually reads. Never raises, never blocks."""
-        live = live_currency(domain)
-        if live and live != (configured or "USD"):
-            line = (f"  ⚠ CURRENCY MISMATCH (brand={label} "
-                    f"config={configured or 'USD (untagged)'} live={live})")
+    def resolve_and_log(entry, label=None):
+        """resolve_currency() plus the shouting. Kept thin on purpose — the logic
+        is module level so a test can drive it without a network."""
+        currency, fx, verified, notes = resolve_currency(entry, fx_table, label=label)
+        for line in notes:
             summary.append(line)
             print(line, file=sys.stderr)
+        return currency, fx, verified
 
-    def scrape_brand(domain, cap, label=None, configured=None):
+    def scrape_brand(domain, cap):
         """Yield successive products.json pages for a brand, by PAGE NUMBER,
         until a short/empty page (store exhausted), MAX_PAGES, or the global
         request budget runs out.
@@ -1607,10 +1712,10 @@ def main():
         `page=N` is stable regardless of sort order. The caller de-duplicates by
         product id, so an overlap cannot double-count.
 
-        Also fires the one-shot currency probe (see live_currency): a wrong
-        per-brand `currency` silently mis-prices that brand's ENTIRE catalog by
-        the FX factor, and nothing else in the pipeline can detect it."""
-        check_currency(label or domain, domain, configured)
+        The currency probe used to fire from here. It now runs in the caller,
+        BEFORE the first page is normalized — its answer is an input to the price
+        arithmetic rather than a line in the log, so it has to be known before
+        there is a price to get wrong."""
         for n in range(1, MAX_PAGES + 1):
             if budget_left() <= 0:
                 return
@@ -1625,7 +1730,8 @@ def main():
 
     for entry in cfg["brands"]:
         brand, domain = entry["brand"], entry["domain"]
-        fx = fx_table.get(entry.get("currency", "USD"), 1.0)
+        # Ask the shop what currency it prices in BEFORE pricing anything.
+        currency, fx, cur_verified = resolve_and_log(entry)
         multi_brand = bool(entry.get("multiBrand"))
         # Two caps, two jobs (see the block above effective_cap).
         #   walk_cap    — how deep we LOOK. The measurement.
@@ -1642,15 +1748,15 @@ def main():
             # the walk depth. Unlike before 2026-08-06 this does NOT stop at the
             # display cap: stopping there is what made the tracked shelf a
             # rotating window instead of a catalogue.
-            for page in scrape_brand(domain, walk_cap, label=brand,
-                                     configured=entry.get("currency")):
+            for page in scrape_brand(domain, walk_cap):
                 pages_seen += 1
                 if len(page) < PAGE_LIMIT:
                     exhausted = True
                 for product in page:
                     if got >= walk_cap:
                         break
-                    norm = normalize(product, brand, domain, fx, multi_brand=multi_brand)
+                    norm = normalize(product, brand, domain, fx, multi_brand=multi_brand,
+                                     currency=currency, verified=cur_verified)
                     if not norm or norm["id"] in seen_ids:
                         continue
                     # Cap near-identical color variants of the same base product so
@@ -1737,12 +1843,13 @@ def main():
             # Parsed INSIDE the try: a typo'd "cap": "400 items" in brands.json is
             # a data error by a non-engineer, and it must cost this partner — not
             # the entire daily catalog build.
-            rfx = fx_table.get(r.get("currency", "USD"), 1.0)
+            # A partner's items are the ones where a wrong price damages a real
+            # business relationship — resolve their currency the same way, and
+            # convert on the live answer rather than on the annotation.
+            rcurrency, rfx, rverified = resolve_and_log(
+                r, label=f"[retailer] {r.get('name', rid)}")
             rcap = int(r.get("cap", 400))
             vcap = int(r.get("perVendorCap", 24))
-            # A partner's items are the ones where a wrong price damages a real
-            # business relationship — probe their live currency too.
-            check_currency(f"[retailer] {r.get('name', rid)}", rdomain, r.get("currency"))
             # Page-based walk (see scrape_retailer_pages): a retailer needs the
             # whole store paged through, and `since_id` silently collapses on a
             # newest-first store. 250 = Shopify's max page size.
@@ -1758,7 +1865,8 @@ def main():
                     if rgot >= rcap:
                         break
                     norm = normalize(product, r.get("name", rid), rdomain, rfx,
-                                     multi_brand=True, retailer=r)
+                                     multi_brand=True, retailer=r,
+                                     currency=rcurrency, verified=rverified)
                     if not norm or norm["id"] in seen_ids:
                         continue
                     label = norm["brand"]
@@ -1858,6 +1966,14 @@ def main():
                     # so a curated brand shows up in its own analytics too. add_utm
                     # is idempotent, so a curated row stored already-tagged is a no-op.
                     p["affiliateUrl"] = monetize(add_utm(p["affiliateUrl"]), p.get("brand"))
+                # Curated rows are hand-read off the brand's own US storefront
+                # (Ganni's links are literally ganni.com/us/...), so they are
+                # already USD and already unconverted — priceRaw == price, fx 1.0.
+                # Stamped explicitly rather than left absent: a missing currency
+                # on a published row is indistinguishable from an unanswered probe.
+                p.setdefault("currency", "USD")
+                if isinstance(p.get("price"), (int, float)):
+                    p.setdefault("priceRaw", round(float(p["price"]), 2))
                 products.append(p)
                 added += 1
             summary.append(f"  {'(curated)':<22} {added:>3} items")
@@ -1894,6 +2010,11 @@ def main():
 
     present_labels = {(p.get("brand") or "").strip() for p in products}
     grace_labels = grace_items = 0
+    _fx_corrections = load_fx_corrections()
+    _regraced = [0]
+    if not _fx_corrections:
+        summary.append("  ⚠ price_corrections.json unreadable — grace-carried rows "
+                       "from a corrected brand will keep their pre-correction price")
     for label, prev_items in prev_by_brand.items():
         if not label or label in present_labels:
             continue
@@ -1928,6 +2049,22 @@ def main():
                 p["accessorySubtype"] = sub
             else:
                 p.pop("accessorySubtype", None)  # in case a category was corrected
+            # Re-derive the price of a row carried out of a PRE-CORRECTION
+            # catalog, for the same reason the junk and subtype rules above are
+            # re-run: a fix applied only to the live path is a fix the grace
+            # window quietly undoes. A carried row has no `currency` (that field
+            # only exists from 2026-08-06), which is exactly the marker that says
+            # "priced on the old annotation". Rows that already carry one were
+            # priced from the observed currency and are left alone, so nothing
+            # can be corrected twice.
+            if not p.get("currency"):
+                _fix = _fx_corrections.get(p.get("brand"))
+                if _fix and isinstance(p.get("price"), (int, float)):
+                    _lo, _hi, _factor = _fix
+                    _day = (p.get("lastSeenAt") or "")[:10] or now_iso[:10]
+                    if _day >= _lo and (not _hi or _day <= _hi):
+                        p["price"] = round(p["price"] * _factor)
+                        _regraced[0] += 1
             if _seen_within(p, GRACE_DAYS):
                 seen_ids.add(pid)
                 # Badge grace-carried items STALE: their price/sizes are frozen at
@@ -1944,6 +2081,11 @@ def main():
         summary.append(
             f"  -> grace-carried {grace_items} items across {grace_labels} labels "
             f"(live within {GRACE_DAYS}d, missing today)"
+        )
+    if _regraced[0]:
+        summary.append(
+            f"  -> re-derived the price of {_regraced[0]} grace-carried rows that "
+            f"predate the FX correction"
         )
 
     # ── Drop products whose image won't actually render (no blank tiles) ───────

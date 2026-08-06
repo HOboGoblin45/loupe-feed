@@ -7,6 +7,11 @@ __pycache__/
 # and double the repo's growth for no gain.
 loupe-feed/price_history.json
 
+# probe_currency.py's per-run log. The RESULT (currency_probe.json) is the
+# evidence and is committed; this is just the transcript of one run, and it is
+# rewritten from scratch every time the probe is re-run.
+loupe-feed/currency_probe.log
+
 # Off-repo backups written by archive_backup.py (a ~23 MB git bundle of the whole
 # repo + the distilled price series). Same reasoning as above, and more so: the
 # entire point of these files is to exist SOMEWHERE THAT IS NOT THIS REPO.

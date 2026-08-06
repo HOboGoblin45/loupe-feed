@@ -121,6 +121,13 @@ jobs:
           python test_price_history.py
           python test_archive_integrity.py
           python test_shelf_sampling.py
+          # Currency/FX (added 2026-08-06). Pins that a live /cart.js?country=US
+          # answer contradicting brands.json is what the price is CONVERTED on --
+          # not merely what gets logged, which is how 8 brands shipped wrong
+          # prices daily for a week -- that `price` stays a converted USD integer
+          # the app can keep reading, and that priceRaw/currency round-trip so an
+          # FX mistake is re-derivable instead of permanent.
+          python test_currency_fx.py
 
       - name: Build catalog
         run: python loupe-feed/build_catalog.py
