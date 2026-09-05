@@ -328,7 +328,170 @@ except SystemExit:
     check("a missing corrections record stops the send", True)
 
 
+# ── 5. refreshing the FX TABLE is the same event, on a schedule ──────────────
+# Everything above is about a wrong ANNOTATION. This section is about a stale
+# RATE, which produces the identical signature — a whole brand's line moving by
+# one ratio overnight — for a completely different reason, and therefore has the
+# identical failure mode if it is published as a sale.
+#
+# Measured 2026-09-05 against ECB mid-market: SEK was 13.8% stale, AUD 9.1%,
+# EUR 7.6%, DKK 7.2%, GBP 6.5%. 17 of 185 brands price through that table.
+import refresh_fx as fx  # noqa: E402
+
+# The corrections table is keyed by BRAND in all three readers
+# (build_price_history.load_corrections, price_drop_push.load_price_corrections,
+# build_catalog.load_fx_corrections). A second row for a brand therefore does not
+# add a rule, it REPLACES one — silently deleting an archive repair. Nothing
+# enforced that before; the refresh tool is the first thing that could add one.
+_brands_listed = [c["brand"] for c in corr["corrections"]]
+check("no brand appears twice in the corrections table",
+      len(_brands_listed) == len(set(_brands_listed)),
+      f"duplicates: {sorted({b for b in _brands_listed if _brands_listed.count(b) > 1})}")
+
+# Providers quote UNITS PER USD; the table stores USD PER UNIT. Getting this
+# backwards would invert every non-USD price in the catalog, so the inversion
+# happens exactly once and this pins it: 1.3882 AUD per USD IS 0.720357.
+_live, _prov = fx.fetch_rates(["AUD", "EUR"],
+                              get=lambda url: {"date": "2026-09-04",
+                                               "rates": {"AUD": 1.3882, "EUR": 0.86044}})
+check("a provider's units-per-USD is stored as USD-per-unit",
+      abs(_live["AUD"] - 0.720357) < 1e-6 and abs(_live["EUR"] - 1.162196) < 1e-6,
+      str(_live))
+
+_rows = fx.compare_table({"USD": 1.0, "AUD": 0.66, "EUR": 1.08, "SEK": 0.092},
+                         {"AUD": 0.720357, "EUR": 1.162196})
+_by = {r["code"]: r for r in _rows}
+check("USD is never compared or fetched", "USD" not in _by)
+check("a moved rate reports its percentage", _by["AUD"]["pct"] == 9.14, str(_by["AUD"]))
+# A currency nobody could quote today keeps its old value and says so. The
+# alternative — treating a missing quote as par, or as 'unchanged and fine' —
+# is the same mistake fx_table.get(cur, 1.0) made.
+check("a currency with no quote keeps its rate and is flagged",
+      _by["SEK"]["new"] is None and _by["SEK"]["pct"] is None, str(_by["SEK"]))
+
+# A PEG IS A POLICY, NOT AN OBSERVATION. AED has been 3.6725/USD since 1997 and
+# 28natelier's whole shelf prices through it. A provider glitch must not move it.
+_notes = []
+_pegged = fx.apply_pegs({"AED": 0.30}, _notes)
+check("an off-peg quote does not move the pin",
+      abs(_pegged["AED"] - 1 / 3.6725) < 1e-9, str(_pegged))
+check("an off-peg quote is shouted about",
+      any("OFF ITS PEG" in n for n in _notes), str(_notes))
+
+_impact = fx.brand_impact(cfg, _rows)
+check("a brand's factor is new/old for ITS currency",
+      abs(_impact["Sir the Label"]["factor"] - 0.720357 / 0.66) < 1e-6,
+      str(_impact.get("Sir the Label")))
+check("a USD brand is never re-priced by an FX refresh",
+      not any(v["currency"] == "USD" for v in _impact.values()))
+check("a currency with no quote re-prices nobody",
+      not any(v["currency"] == "SEK" for v in _impact.values()))
+
+# THE ASYMMETRY THAT DECIDES WHO GETS A DIGEST GUARD. price_drop_push.py only
+# ever fires on a FALL of >= 10%. A rise cannot become a false "price drop in
+# your Dresser", and an entry it does not need is a PERMANENT suppression of that
+# brand's real markdowns — the digest ignores fromDay/toDay entirely.
+_rise = fx.compare_table({"USD": 1.0, "AUD": 0.66}, {"AUD": 0.720357})
+_guards, _blocked = fx.digest_guard_entries(
+    "2026-09-05", _rise, fx.brand_impact(cfg, _rise), set())
+check("a rate RISE writes no digest guard", _guards == [], str(_guards))
+
+_fall = fx.compare_table({"USD": 1.0, "TRY": 0.02102}, {"TRY": 0.0168})
+_fall_impact = fx.brand_impact(cfg, _fall)
+_guards, _blocked = fx.digest_guard_entries("2026-09-05", _fall, _fall_impact, set())
+check("a rate FALL past the digest's threshold writes a guard",
+      len(_guards) == 1 and _guards[0]["brand"] == "Marfa Istanbul", str(_guards))
+_g = _guards[0]
+# Same contract the eight 2026-08-06 rows are held to above, so a refreshed row
+# and a corrected row are the same kind of statement.
+check("a written guard obeys the table's own contract",
+      abs(_g["factor"] - _g["rightFx"] / _g["wrongFx"]) < 1e-6
+      and _g["fromDay"] >= "2026-07-15"
+      and _g["rightCurrency"] == "TRY", str(_g))
+
+# ...and it must actually silence the push. Not "is shaped like a guard" — the
+# 2026-07-29 lesson is that a record which never reaches the arithmetic is not a
+# fix, so this runs the real digest against the real suppressor.
+_live_fx = {"z": {"price": 79, "sizes": [], "brand": "Marfa Istanbul", "name": "Coat"}}
+_saved_fx = [{"product_id": "z", "price_at_save": 99, "product": {"id": "z", "sizes": []}}]
+check("WITHOUT the refresh guard the step is pushed as a 20% sale",
+      pdp.compute_alerts(_saved_fx, _live_fx)[0]["sale"]["pct"] == 20)
+check("WITH it the same step is not a sale at all",
+      pdp.compute_alerts(_saved_fx, _live_fx,
+                         {_g["brand"]: float(_g["factor"])}) == [],
+      "the refresh guard must reach compute_alerts, not merely exist")
+
+# A falling brand that ALREADY has a correction cannot be given a second row.
+_guards2, _blocked2 = fx.digest_guard_entries(
+    "2026-09-05", _fall, _fall_impact, {"Marfa Istanbul"})
+check("a brand already in the table is blocked, never duplicated",
+      _guards2 == [] and _blocked2 == ["Marfa Istanbul"], f"{_guards2} {_blocked2}")
+
+# The splice must leave the hand-written record byte-for-byte alone. This file is
+# prose as much as data, and a json.dump round-trip reflows all of it.
+_raw = (HERE / "price_corrections.json").read_text(encoding="utf-8")
+_spliced = fx.splice_into_array(_raw, "corrections", [{"brand": "ZZ Test", "factor": 1.0}])
+_doc = json.loads(_spliced)
+check("a spliced record still parses and gains exactly one row",
+      len(_doc["corrections"]) == len(corr["corrections"]) + 1
+      and _doc["corrections"][-1]["brand"] == "ZZ Test")
+check("splicing changes nothing else in the file",
+      {k: v for k, v in _doc.items() if k != "corrections"}
+      == {k: v for k, v in corr.items() if k != "corrections"})
+check("every existing correction survives the splice byte-for-byte",
+      all(line in _spliced for line in _raw.splitlines()
+          if line.strip().startswith('"brand"')))
+_empty = fx.splice_into_array('{\n  "fxEpochs": [],\n  "x": 1\n}\n', "fxEpochs",
+                              [{"day": "2026-09-05"}])
+check("an EMPTY array is spliced into correctly",
+      json.loads(_empty)["fxEpochs"] == [{"day": "2026-09-05"}], _empty)
+check("the record carries an fxEpochs list", isinstance(corr.get("fxEpochs"), list))
+
+# The PRICE_EPOCHS insert is a text edit to the file that GATES THE DAILY BUILD,
+# so it is ast-verified both ways and refuses rather than guesses.
+_SRC = 'X = 1\nPRICE_EPOCHS = [\n    "2026-07-15",  # note\n]\nY = 2\n'
+_out = fx.insert_price_epoch(_SRC, "2026-09-05")
+check("a day is inserted into PRICE_EPOCHS",
+      _out and '"2026-09-05"' in _out and _out.endswith("Y = 2\n"), repr(_out))
+_ns = {}
+exec(compile(_out, "t", "exec"), _ns)  # noqa: S102 — the point is that it still runs
+check("the edited module still executes and the list is sorted",
+      _ns["PRICE_EPOCHS"] == ["2026-07-15", "2026-09-05"], str(_ns.get("PRICE_EPOCHS")))
+check("inserting the same day twice is a no-op",
+      fx.insert_price_epoch(_out, "2026-09-05") is None)
+check("a file without the expected shape is refused, not guessed at",
+      fx.insert_price_epoch("PRICE_EPOCHS = f()\n", "2026-09-05") is None)
+
+
 def main():
+    # WARNINGS, NOT FAILURES, AND DELIBERATELY SO. This gate runs BEFORE the
+    # daily scrape (refresh-catalog.yml) and before every digest send, so a check
+    # that goes red costs a day of the archive — that is precisely how 2026-07-25
+    # lost four days. An unregistered epoch degrades some price COPY for the
+    # brands in one currency; a red gate stops the record itself. The louder
+    # failure is not the worse one.
+    warnings = []
+    epochs = [e.get("day") for e in corr.get("fxEpochs", [])]
+    unregistered = [d for d in epochs if d and d not in bph.PRICE_EPOCHS]
+    if unregistered:
+        warnings.append(
+            "  FX table refreshes NOT in build_price_history.PRICE_EPOCHS: "
+            + ", ".join(unregistered)
+            + "\n    Until they are, a price comparison may straddle a day on which "
+              "every\n    brand in a currency stepped by one ratio, and read it as a "
+              "markdown.\n    Add each day to PRICE_EPOCHS there AND to its verbatim "
+              "copy in\n    loupe-site/tools/build_loupe_index.py. "
+              "`python refresh_fx.py` prints both lines.")
+    if fx.insert_price_epoch(
+            (HERE / "build_price_history.py").read_text(encoding="utf-8"),
+            "9999-12-31") is None:
+        warnings.append(
+            "  refresh_fx.py can no longer find PRICE_EPOCHS in "
+            "build_price_history.py.\n    --write-epoch-registry will fall back to "
+            "printing the line for a human.")
+    if warnings:
+        print("CURRENCY/FX WARNINGS (not failures — see main()):")
+        print("\n".join(warnings))
     if failures:
         print("CURRENCY/FX REGRESSIONS:")
         print("\n".join(failures))

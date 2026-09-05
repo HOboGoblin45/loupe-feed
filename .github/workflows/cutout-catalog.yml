@@ -4,7 +4,8 @@ name: Cutout Loupe catalog
 # CPU) and hosts them on the orphan `cutouts` branch (jsDelivr-served, like catalog.json
 # and embeddings.json) so `main` stays lean. INCREMENTAL: each run cuts out up to `limit`
 # NEW products and skips everything already in cutouts.json, so the backfill completes
-# over several runs. Manual dispatch + a nightly pass that catches newly-added products.
+# over several runs. Manual dispatch + one pass after every successful catalog refresh,
+# which is when "newly-added product" acquires a meaning.
 #
 # ── WHY THIS BRANCH IS REPUBLISHED, NOT APPENDED TO (2026-08-01) ──────────────
 #
@@ -53,8 +54,17 @@ on:
       limit:
         description: "Max NEW cutouts to generate this run"
         default: "800"
-  schedule:
-    - cron: "0 4 * * *"   # 04:00 UTC nightly — well clear of the 08:00 catalog build
+  # RUNS WHEN THE CATALOG CHANGES (2026-09-05), for the same reason as
+  # embed-catalog.yml. This pass cuts out the products that are NEW in
+  # catalog.json, so a 04:00 cron ran it FOUR HOURS BEFORE the catalog that
+  # defines "new" was built: a product added at 08:00 waited until 04:00 the next
+  # morning for its cutout, and until the 08:00 build after that for the URL to
+  # be pinned into a catalog — two days from listing to a usable Look Builder
+  # cutout, all of it queueing artefact. Firing on the refresh's completion halves
+  # that, and the incremental skip (cutouts.json) makes an extra run cheap.
+  workflow_run:
+    workflows: ["Refresh Loupe catalog"]
+    types: [completed]
 
 permissions:
   contents: write
@@ -67,9 +77,20 @@ jobs:
   cutout:
     runs-on: ubuntu-latest
     timeout-minutes: 180
+    # Only a SUCCESSFUL catalog build. A workflow_run fires on every conclusion,
+    # and cutting out against a failed build's catalog.json means force-pushing a
+    # republished cutouts branch derived from stale input — the one operation here
+    # that is destructive rather than merely wasteful.
+    if: >-
+      ${{ github.event_name == 'workflow_dispatch'
+          || github.event.workflow_run.conclusion == 'success' }}
     steps:
-      - name: Checkout main (has the script)
+      - name: Checkout main (has the script AND the catalog this run cuts out)
         uses: actions/checkout@v4
+        with:
+          # The branch TIP, not the triggering run's head_sha — that sha predates
+          # the catalog commit this job exists to react to.
+          ref: ${{ github.event.workflow_run.head_branch || github.ref_name }}
 
       - uses: actions/setup-python@v5
         with:
@@ -183,8 +204,8 @@ jobs:
 
           # ── Pin support: record the pushed commit sha in the manifest ──────────
           # jsDelivr caches the branch→commit mapping (and 404s) up to 12h, so a webp
-          # pushed here at 04:xx can 404 against yesterday's cached commit when the
-          # 08:00 catalog stamps it as @cutouts. Point the manifest at THIS commit
+          # pushed here can 404 against an older cached commit when the NEXT catalog
+          # build stamps it as @cutouts. Point the manifest at THIS commit
           # (it contains every image just pushed) so build_catalog.py pins immutable
           # @<sha> URLs. A tiny follow-up commit records it; best-effort — the cutouts
           # are already live above, and build_catalog falls back to @cutouts if the

@@ -5,6 +5,87 @@
   "_evidence": "Every entry below was verified on 2026-08-06 by fetching the store's own /products.json?limit=8&country=US — the exact request the scraper makes — and matching its numbers against the ids in catalog.json. In all 8 cases 100% of matched products were priced at the ANNOTATED rate, which both confirms the error and confirms it is a clean single-factor inversion.",
   "generatedAt": "2026-08-06",
   "appliesToRowsWithout": "currency",
+  "_fxEpochs_comment": "FX TABLE REFRESHES. The `corrections` table below repairs prices that were WRONG when they were published. This list is the other half: days on which a price that was right became a different right number, because brands.json `fx_to_usd` was re-fetched from ECB mid-market. Both are our own arithmetic and neither is a markdown — the difference is that a correction is applied on read, while a refresh needs nothing applied and everything VOIDED. On the day named here every price of every brand in a moved currency steps by one identical ratio, which is the exact signature of a sitewide sale and must never be reported as one. Written by refresh_fx.py, which also prints the one line to add to build_price_history.PRICE_EPOCHS and to its verbatim copy in loupe-site/tools/build_loupe_index.py; those two lists are what actually void the comparisons, and this record is what explains them. A brand whose prices FALL by 10% or more in a refresh additionally gets a `corrections` row below, because price_drop_push.py suppresses a step only when it lands on a published factor — but only if that brand has no row already, since every reader keys `corrections` by brand and a duplicate would REPLACE the archive repair instead of adding to it.",
+  "fxEpochs": [
+    {
+      "day": "2026-09-05",
+      "kind": "fx-table-refresh",
+      "asOf": "2026-09-04",
+      "sources": {
+        "frankfurter(ECB)": "https://api.frankfurter.app/latest?from=USD",
+        "open.er-api.com": "https://open.er-api.com/v6/latest/USD"
+      },
+      "maxAbsPct": 13.8,
+      "rates": {
+        "SEK": {
+          "from": 0.092,
+          "to": 0.104698,
+          "pct": 13.8
+        },
+        "AUD": {
+          "from": 0.66,
+          "to": 0.720357,
+          "pct": 9.14
+        },
+        "EUR": {
+          "from": 1.08,
+          "to": 1.162196,
+          "pct": 7.61
+        },
+        "DKK": {
+          "from": 0.145,
+          "to": 0.155485,
+          "pct": 7.23
+        },
+        "GBP": {
+          "from": 1.27,
+          "to": 1.352997,
+          "pct": 6.54
+        },
+        "NZD": {
+          "from": 0.61,
+          "to": 0.588305,
+          "pct": -3.56
+        },
+        "EGP": {
+          "from": 0.02,
+          "to": 0.019629,
+          "pct": -1.85
+        },
+        "TRY": {
+          "from": 0.02102,
+          "to": 0.020643,
+          "pct": -1.79
+        },
+        "CAD": {
+          "from": 0.73,
+          "to": 0.724638,
+          "pct": -0.73
+        },
+        "AED": {
+          "from": 0.27229,
+          "to": 0.272294,
+          "pct": 0.0
+        }
+      },
+      "brands": {
+        "Anna October": 1.076107,
+        "Bec + Bridge": 1.09145,
+        "Darbary Paris": 1.076107,
+        "Deiji Studios": 1.09145,
+        "Donde Esteban": 1.065352,
+        "Entremains": 1.076107,
+        "Flattered": 1.138022,
+        "Kernemilk": 1.07231,
+        "Phoebe Philo": 1.065352,
+        "SIEDRÉS": 1.076107,
+        "Sir the Label": 1.09145,
+        "St. Agni": 1.09145,
+        "Stine Goya": 1.07231
+      },
+      "note": "Scheduled FX refresh by refresh_fx.py. Every price in these currencies steps by the brand ratio above on this day. It is our own arithmetic, never a markdown: void price comparisons across it (PRICE_EPOCHS) and never report it as a sale."
+    }
+  ],
   "corrections": [
     {
       "brand": "28natelier",

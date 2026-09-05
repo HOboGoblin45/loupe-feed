@@ -24,10 +24,11 @@ name: Archive watchdog
 #     down with the build;
 #   * it fails CLOSED -- if archive_integrity.py itself is broken, this goes red.
 #
-# TWICE A DAY, ON PURPOSE. The build is 08:00 UTC. At 23:00 on the day of a first
+# TWICE A DAY, ON PURPOSE. The build is 08:07 UTC. At 23:13 on the day of a first
 # missed run the newest snapshot is ~39h old, so the alarm lands the SAME EVENING
-# rather than four days later. 11:00 is the confirming check three hours after a
-# healthy build.
+# rather than four days later. 11:13 is the confirming check three hours after a
+# healthy build. Both minutes are off :00 on purpose: a watchdog that is itself
+# queued behind the top-of-the-hour rush reports late about lateness.
 #
 # WHAT IT DOES NOT ALARM ON: old, already-known gaps. A permanent historical hole
 # stays visible in ARCHIVE_STATUS.md and in this run's summary, but it never turns
@@ -41,7 +42,7 @@ name: Archive watchdog
 
 on:
   schedule:
-    - cron: "0 11,23 * * *"   # 11:00 and 23:00 UTC
+    - cron: "13 11,23 * * *"   # 11:13 and 23:13 UTC (still inside the 36h --check-age window)
   workflow_dispatch: {}
 
 permissions:

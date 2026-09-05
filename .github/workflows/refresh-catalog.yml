@@ -20,7 +20,7 @@ name: Refresh Loupe catalog
 
 on:
   schedule:
-    - cron: "0 8 * * *"   # every day at 08:00 UTC
+    - cron: "7 8 * * *"   # every day at 08:07 UTC — deliberately NOT :00, where GitHub queues the whole world's crons and deprioritises
   workflow_dispatch:       # manual "Run workflow" button
     inputs:
       override_heartbeat:
@@ -304,6 +304,66 @@ jobs:
             fi
           fi
 
+      - name: Publish the price record
+        # Rebuilds the price/availability archive from `git log` and publishes the
+        # app's slice of it (price_records.json) beside catalog.json.
+        #
+        # AFTER the catalog commit, deliberately. The builder's entire input is
+        # the commit history, so running it before the commit would publish a
+        # record that is missing TODAY -- every "price now" a day stale, and the
+        # first day of any move invisible until tomorrow. Running it here means
+        # the record and the catalog it describes are the same day's data.
+        #
+        # It needs the FULL history (this job's checkout is fetch-depth: 0, which
+        # it verifies for itself and refuses without).
+        #
+        # continue-on-error, and the retry loop below never fails the step: the
+        # catalog is already pushed by the time this runs, so a hiccup here must
+        # cost a day of the RECORD and never a day of the ARCHIVE. Yesterday's
+        # price_records.json simply stays live -- the app treats a stale payload
+        # as a payload that has stopped making dated claims (MAX_STALE_DAYS).
+        #
+        # price_history.json (the full analyst artefact) stays gitignored: it is a
+        # pure function of these commits, and committing it back would make the
+        # history self-referential. Only the ~190 KB app slice is published.
+        continue-on-error: true
+        run: |
+          set -uo pipefail
+          git config user.name  "loupe-catalog-bot"
+          git config user.email "actions@users.noreply.github.com"
+          # Checked explicitly: this block deliberately does NOT run under `set -e`
+          # (every failure path here is handled and none may abort the run), which
+          # means a failed build would otherwise fall through to "unchanged" and
+          # report success. A build that did not build is not a no-op.
+          if ! python loupe-feed/build_price_history.py; then
+            echo "WARNING: the price-record build failed. Yesterday's record stays" >&2
+            echo "live and the app treats a stale payload as one that has stopped" >&2
+            echo "making dated claims. No day of the archive was lost." >&2
+            exit 0
+          fi
+          if [[ -z "$(git status --porcelain loupe-feed/price_records.json)" ]]; then
+            echo "price_records.json unchanged this run."
+            exit 0
+          fi
+          git add loupe-feed/price_records.json
+          if ! git commit -m "chore: price record $(date -u +%Y-%m-%d)"; then
+            echo "WARNING: nothing to commit for the price record." >&2
+            exit 0
+          fi
+          branch="${GITHUB_REF_NAME:-main}"
+          for attempt in 1 2; do
+            if git pull --rebase --autostash -X theirs origin "$branch" \
+               && git push origin "HEAD:$branch"; then
+              echo "Price record published."
+              exit 0
+            fi
+            echo "publish attempt $attempt did not land; retrying"
+            git rebase --abort >/dev/null 2>&1 || true
+            sleep 3
+          done
+          echo "WARNING: could not publish price_records.json this run. The catalog" >&2
+          echo "is already live; yesterday's record stays up. No day was lost." >&2
+
       - name: Notify requesters & followers
         # Push notifications are best-effort and optional — never fail the run.
         continue-on-error: true
@@ -321,3 +381,4 @@ jobs:
           curl -fsS "https://purge.jsdelivr.net/gh/HOboGoblin45/loupe-feed@main/loupe-feed/catalog.json" || true
           curl -fsS "https://purge.jsdelivr.net/gh/HOboGoblin45/loupe-feed@main/loupe-feed/embeddings.json" || true
           curl -fsS "https://purge.jsdelivr.net/gh/HOboGoblin45/loupe-feed@main/loupe-feed/catalog.meta.json" || true
+          curl -fsS "https://purge.jsdelivr.net/gh/HOboGoblin45/loupe-feed@main/loupe-feed/price_records.json" || true

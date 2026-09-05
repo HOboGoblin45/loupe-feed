@@ -1,24 +1,41 @@
 name: Embed Loupe catalog
 
 on:
-  # 02:00 UTC daily. Added 2026-07-29: this workflow was dispatch-ONLY, so nobody
-  # ran it — embeddings.json went 29 days stale and 3,907 of 8,314 live products
-  # (47%) had no vector at all, silently degrading "More like this", "Similar to
-  # your saves" and the visual boost in the Discover deck for half the catalog.
-  # 02:00 is clear of the 04:00 cutout run and the 08:00 catalog rebuild, and this
-  # workflow already shares the `loupe-main-writers` concurrency group with them,
-  # so an overrunning job queues instead of racing the push.
-  schedule:
-    - cron: "0 2 * * *"
+  # RUNS WHEN THE CATALOG CHANGES, NOT AT A TIME OF DAY (2026-09-05).
+  #
+  # Added 2026-07-29 on a 02:00 cron because this workflow was dispatch-ONLY and
+  # nobody ran it: embeddings.json went 29 days stale and 3,907 of 8,314 live
+  # products (47%) had no vector at all, silently degrading "More like this",
+  # "Similar to your saves" and the visual boost in the Discover deck for half
+  # the catalog. The cron fixed the staleness and introduced a smaller version of
+  # the same fault: 02:00 lands SIX HOURS BEFORE the 08:00 catalog rebuild, so
+  # every night this embedded YESTERDAY's catalog. Anything published today had no
+  # vector until tomorrow morning — a permanent one-day lag for exactly the newest
+  # pieces, which are the ones the deck leads with.
+  #
+  # embed_catalog.py is a FULL rebuild keyed on today's catalog.json (that is what
+  # makes orphaned vectors impossible), so the only correct time to run it is
+  # immediately after catalog.json changes. workflow_run does that.
+  #
+  # It fires on EVERY successful refresh, not just the daily cron one — a
+  # brands.json push or an approved brand also rebuilds the catalog, and those
+  # runs are precisely the ones that add products. There is no wasted run to
+  # avoid: refresh-catalog.yml FAILS if the build left catalog.json unchanged
+  # (the archive heartbeat), so a success there always means new products.
+  workflow_run:
+    workflows: ["Refresh Loupe catalog"]
+    types: [completed]
   workflow_dispatch:
 
 permissions:
   contents: write
 
-# Share ONE queue with every workflow that pushes to `main` (refresh-catalog) so a
-# long embed run (up to 3h) can't commit embeddings.json / catalog.meta.json
-# concurrently with the 08:00 catalog build and lose one side's write or publish a
-# mismatched sha. cancel-in-progress: false lets an in-flight run finish first.
+# Share ONE queue with every workflow that pushes to `main` (refresh-catalog,
+# fx-refresh) so a long embed run (up to 3h) can't commit embeddings.json /
+# catalog.meta.json concurrently with a catalog build and lose one side's write or
+# publish a mismatched sha. cancel-in-progress: false lets an in-flight run finish
+# first. Since 2026-09-05 this job STARTS as the catalog run ends, so it takes the
+# queue immediately after that run releases it rather than racing it.
 concurrency:
   group: loupe-main-writers
   cancel-in-progress: false
@@ -27,8 +44,23 @@ jobs:
   embed:
     runs-on: ubuntu-latest
     timeout-minutes: 180
+    # A workflow_run fires on completion of ANY conclusion — failure, cancelled and
+    # skipped included. Embedding a catalog whose build failed would rebuild the
+    # index off a stale (or half-written) catalog.json and then commit it, which is
+    # worse than not running: the lag this trigger exists to remove would come back
+    # wearing a fresh timestamp.
+    if: >-
+      ${{ github.event_name == 'workflow_dispatch'
+          || github.event.workflow_run.conclusion == 'success' }}
     steps:
+      # EXPLICIT ref. On a workflow_run event the checked-out sha is not the
+      # triggering run's head_sha (that is the commit the catalog build STARTED
+      # from, i.e. yesterday's catalog) — taking the branch TIP is the whole point
+      # of moving off the cron, so ask for it by name rather than relying on the
+      # default resolution.
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_branch || github.ref_name }}
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'

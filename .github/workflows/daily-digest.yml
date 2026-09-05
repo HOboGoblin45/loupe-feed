@@ -12,7 +12,11 @@ name: Loupe daily digest
 
 on:
   schedule:
-    - cron: "0 17 * * *"   # daily 17:00 UTC (~1pm ET / 10am PT)
+    # 17:07, not 17:00. The send-time semantics are unchanged — this is still the
+    # ~1pm ET / 10am PT digest — but GitHub queues scheduled jobs at the top of the
+    # hour worst of all, and a delayed run here is a digest that arrives at the
+    # wrong time of day rather than a job that finishes late.
+    - cron: "7 17 * * *"   # daily ~17:00 UTC (~1pm ET / 10am PT)
   workflow_dispatch:
     inputs:
       dryrun:

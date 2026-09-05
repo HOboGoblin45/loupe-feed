@@ -734,8 +734,14 @@ def resolve_currency(entry, fx_table, probe=live_currency, label=None):
         # An unknown currency is the WORST case, not a neutral one. The old
         # `fx_table.get(cur, 1.0)` treated it as par, which would have published
         # AED prices 3.7x high without a word. No rate -> no verified price.
+        # ADDING a currency is a human decision (put the code in fx_to_usd once);
+        # KEEPING it current is not — refresh_fx.py re-fetches every code already
+        # in the table monthly and publishes the step as an epoch. Never hand-edit
+        # a rate that is already there: it re-prices that currency's whole shelf
+        # on one day, which is indistinguishable from a sitewide sale.
         notes.append(f"  ⚠ NO FX RATE for {currency} (brand={label}) — prices left "
-                     f"UNCONVERTED and marked unverified; add a rate to fx_to_usd")
+                     f"UNCONVERTED and marked unverified; add the code to "
+                     f"fx_to_usd, then `python refresh_fx.py --apply`")
         fx, verified = 1.0, False
     return currency, fx, verified, notes
 

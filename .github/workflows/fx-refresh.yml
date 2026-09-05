@@ -1,0 +1,176 @@
+name: Refresh FX rates
+
+# The FX table (brands.json `fx_to_usd`) converts 17 of 185 brands' prices into
+# the USD figure the app renders, the Index publishes and the brand briefs quote.
+# It was hand-typed, and by 2026-09-05 every floating rate in it had drifted:
+# SEK 13.8%, AUD 9.1%, EUR 7.6%, DKK 7.2%, GBP 6.5% against ECB mid-market. That
+# is a wrong price in the file we hand to the brand it is about — the same class
+# of error as a wrong `currency` annotation, only quieter, because a stale rate
+# never contradicts anything and so nothing ever shouts about it.
+#
+# WHY IT IS A WORKFLOW AND NOT A CALENDAR REMINDER. Refreshing a rate re-prices
+# every piece of every brand in that currency, on one day, by one identical
+# ratio — which is exactly what a sitewide sale looks like from the archive, and
+# what got one afternoon away from pushing "28natelier is 73% off" to real phones
+# on 2026-08-06. Done by hand it is a bare edit with no record; done here it is
+# refresh_fx.py, which publishes the step into price_corrections.json `fxEpochs`,
+# writes a digest-suppression row for any brand that FALLS far enough to be
+# pushed as a sale, and inserts the day into build_price_history.PRICE_EPOCHS so
+# no price comparison may straddle it.
+#
+# MONTHLY, AND ONLY WHEN SOMETHING MOVED >= 3%. A commit per month whatever the
+# market did would fill the archive with epochs that void real price history for
+# 0.4% of nothing. Below the threshold the job is a no-op that still prints the
+# table, so the rates are checked twelve times a year and changed only when the
+# change is worth a boundary.
+#
+# ONE THING IT CANNOT DO. loupe-site/tools/build_loupe_index.py keeps a verbatim
+# copy of PRICE_EPOCHS and lives in another repository. The exact line to paste
+# is printed by the script and lifted into this run's summary. Until it is
+# pasted, the Index still voids most of the step per-brand through
+# detect_uniform_steps() — but only for brands with >= 12 tracked pieces.
+
+on:
+  schedule:
+    # 1st of the month, 06:17 UTC. Off the top of the hour (GitHub deprioritises
+    # :00 crons) and ~2h ahead of the 08:07 catalog rebuild, which is what
+    # actually republishes prices at the new rates.
+    - cron: "17 6 1 * *"
+  workflow_dispatch:
+    inputs:
+      dryrun:
+        description: "Fetch and print the comparison, write nothing"
+        type: boolean
+        default: false
+      force:
+        description: "Apply even if no rate moved 3%"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+# Same queue as refresh-catalog.yml and embed-catalog.yml: this job commits to
+# `main`, so it must never race their rebase-and-verify push.
+concurrency:
+  group: loupe-main-writers
+  cancel-in-progress: false
+
+jobs:
+  fx:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # test_price_history.py, run as a gate below, reconstructs the archive
+          # from `git log` and refuses to certify a shallow clone.
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Fetch mid-market rates and apply if the table is stale
+        id: fx
+        shell: bash
+        run: |
+          set -euo pipefail
+          ARGS=""
+          if [ "${{ inputs.dryrun }}" != "true" ]; then
+            # --write-epoch-registry inserts the day into
+            # build_price_history.PRICE_EPOCHS. That file gates the daily catalog
+            # build, so the insert is ast-verified both ways inside the script and
+            # falls back to printing the line if the file is not in the shape it
+            # expects. The fixture gates below are the second net.
+            ARGS="--apply --write-epoch-registry"
+          fi
+          if [ "${{ inputs.force }}" = "true" ]; then ARGS="$ARGS --force"; fi
+          python loupe-feed/refresh_fx.py $ARGS | tee "$RUNNER_TEMP/fx.txt"
+          {
+            echo '## FX refresh'
+            echo '```'
+            cat "$RUNNER_TEMP/fx.txt"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Did anything change?
+        id: changed
+        shell: bash
+        run: |
+          set -euo pipefail
+          FILES="loupe-feed/brands.json loupe-feed/price_corrections.json loupe-feed/build_price_history.py"
+          if [ -z "$(git status --porcelain -- $FILES)" ]; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "No rate moved enough to be worth an epoch. Nothing to commit."
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            git --no-pager diff --stat -- $FILES
+          fi
+
+      # A rate change reaches a phone as a price. Gate it with the same fixtures
+      # that gate the catalog build and the digest send, BEFORE committing rather
+      # than after: an FX refresh that breaks a gate would otherwise land on main
+      # and take the next morning's catalog rebuild down with it, which is how
+      # four days of the archive were lost in July.
+      - name: Gate — currency/FX and price-record fixtures must still hold
+        if: steps.changed.outputs.changed == 'true'
+        working-directory: loupe-feed
+        run: |
+          python test_currency_fx.py
+          python test_price_history.py
+
+      - name: Commit the refreshed table
+        if: steps.changed.outputs.changed == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name  "loupe-catalog-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add loupe-feed/brands.json loupe-feed/price_corrections.json \
+                  loupe-feed/build_price_history.py
+          {
+            echo "chore: refresh FX table $(date -u +%Y-%m-%d)"
+            echo
+            cat "$RUNNER_TEMP/fx.txt"
+          } > "$RUNNER_TEMP/msg.txt"
+          git commit -F "$RUNNER_TEMP/msg.txt"
+          # Same rebase-and-VERIFY push the other main-writers use: a plain push
+          # after a racing commit can "succeed" as an up-to-date no-op and
+          # silently drop the change.
+          branch="${GITHUB_REF_NAME:-main}"
+          push_with_rebase() {
+            git rebase --abort >/dev/null 2>&1 || true
+            git pull --rebase --autostash -X theirs origin "$branch" || return 1
+            git push origin "HEAD:$branch" || return 1
+            git fetch --quiet origin "$branch"
+            [[ "$(git rev-parse HEAD)" == "$(git rev-parse "origin/$branch")" ]] || return 1
+          }
+          if push_with_rebase; then
+            echo "FX table updated."
+          else
+            echo "Push did not land — retrying once."
+            sleep 3
+            push_with_rebase || { echo "ERROR: FX refresh push failed." >&2; exit 1; }
+          fi
+          # The new rates only reach anyone when catalog.json is rebuilt at them.
+          # This commit is authored by GITHUB_TOKEN, and GitHub does not retrigger
+          # workflows on those commits, so refresh-catalog.yml's brands.json push
+          # trigger will NOT fire — the ~08:07 cron publishes them, about two
+          # hours after a scheduled run of this job. Dispatch that workflow by
+          # hand if a manual refresh needs to be live sooner.
+          echo "Rates land in the catalog at the next refresh-catalog run (~08:07 UTC)."
+
+      - name: Remind about the loupe-site copy of PRICE_EPOCHS
+        if: steps.changed.outputs.changed == 'true'
+        shell: bash
+        run: |
+          {
+            echo '### Still to do by hand'
+            echo 'Paste the printed `PRICE_EPOCHS` line into'
+            echo '`loupe-site/tools/build_loupe_index.py` — it is a verbatim copy of the'
+            echo 'feed list and lives in another repository, so nothing here can update it.'
+            echo 'Until then the Index voids this step only for brands with >= 12 tracked'
+            echo 'pieces, via `detect_uniform_steps()`.'
+          } >> "$GITHUB_STEP_SUMMARY"

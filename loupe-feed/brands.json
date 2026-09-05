@@ -1,18 +1,31 @@
 {
   "_comment": "Curated niche brands for the Loupe live catalog feed. Each runs on Shopify, which exposes a public /products.json endpoint (no auth). 'currency' is the store's base currency — the scraper converts to USD. 'perBrand' caps how many products are pulled from each brand to keep the catalog curated. To add a brand: confirm https://<domain>/products.json returns JSON, then add an entry. Bot-protected stores (return empty) are simply skipped at runtime. To REMOVE a brand, delete its entry here AND add it to EXCLUDE_BRANDS in build_catalog.py — deleting it here alone lets its items ride the grace-window carry-forward for days and does not stop it re-entering via a multi-brand reseller's vendor field. Removed 2026-07-29: Mackage, Marfa Stance. Added 2026-08-06: 24 brands from the founding tastemaker's 8/5 list (roster 161 -> 185). Every one was verified live before commit -- a non-empty /products.json?limit=250 and a presentment currency read from /cart.js?country=US, sequentially at 2.5s spacing, 0 throttled. TWO DOMAINS HERE LOOK WRONG AND ARE NOT, so do not 'tidy' them: Sandy Liang is 'www.sandyliang.info' AND THE www. IS LOAD-BEARING (the apex returns HTTP 404 on /products.json -- measured -- and build_catalog.py uses this string verbatim, so stripping it fails SILENTLY at build time, as an empty store is simply skipped); and Marfa Istanbul is '.co', not '.com'. Likewise aflalonyc.com (not aflalo.com, a podcast company) and 1215chicago.com (not 1215clothing.com, an unrelated boutique). Marfa Istanbul is the roster's only genuine TRY store: it has no US market, so a US shopper is still quoted lira. Four of these (Jude, Linda Farrow, Many Many Clothes, Scarlet & Sam) have a non-USD BASE currency and are nonetheless correctly USD here -- /meta.json would say otherwise and must not be used to 'correct' them. PAUSED 2026-08-06 (tastemaker's request, applied as a PAUSE NOT A DELETE -- no swipe history, analytics row or affiliate record is touched): INK + ALLOY, via EXCLUDE_BRANDS in build_catalog.py. It has no entry in this file to delete: its 4 products enter the catalog only as a VENDOR inside a partner retailer's storefront, which is exactly why the exclusion list is the right lever -- it also keeps the brand out if it re-enters through the next reseller added. Reverses in one edit: delete the \"INK + ALLOY\" line from EXCLUDE_BRANDS. ALSO REQUESTED AND DELIBERATELY NOT APPLIED, pending the founder's sign-off: pausing the Gemini partnership ('enabled': false on the retailer entry below). That is a one-line change, but it does not only remove Gemini -- measured against the 2026-08-06 catalog it also removes 33 designers and 257 pieces that reach the app ONLY through that shelf, which is a larger decision than the one that was asked for.",
   "_fx_comment": "Static FX rates -> USD. A WRONG per-brand 'currency' mis-prices that brand's ENTIRE catalog by the FX factor. build_catalog.py probes https://<domain>/cart.js?country=US once per brand and, from 2026-08-06, CONVERTS ON THE LIVE ANSWER rather than on the value configured here — before that it only printed a '⚠ CURRENCY MISMATCH' line and priced on the annotation anyway, which is detection that never reached the arithmetic. The 'currency' below is therefore a cached probe result, not an authority: 'currencyVerified'/'currencyCheckedAt' record whether a live probe has ever confirmed it, and an unverified brand is excluded from every published price figure (Index, brand briefs, partner reports) instead of being guessed at. THE country=US PARAMETER IS LOAD-BEARING: measured 2026-08-06, 56 of 161 shops answer /cart.js with a foreign currency bare and USD under country=US, and the number stored in catalog.json is the country=US one in every case (206 archived rows matched it, 0 matched only the bare price) — probing bare and 'correcting' to that answer would FX-multiply prices that are already USD, which is the 2026-07-15 double-conversion bug re-introduced. DKK 0.145 ≈ 1 DKK = 0.145 USD (the krone is pegged to the euro at ~7.46 DKK/EUR, so EUR 1.08 / 7.46 ≈ 0.145). AED 0.27229 = the 3.6725 AED/USD peg the UAE central bank has held since 1997. TRY 0.02102 was added 2026-08-06 with Marfa Istanbul (ECB mid-market for 2026-08-05, 47.58 TRY/USD). IT IS THE ONE RATE IN THIS TABLE THAT NEEDS PERIODIC REVIEW: every other entry is either par (USD), a hard peg (AED 3.6725 since 1997, DKK to the euro at ~7.46) or a major that drifts a few percent a year. The lira is a free-floating high-inflation currency that moves percent-scale in WEEKS, and because it is the smallest number here a stale rate is invisible by inspection -- it just silently re-prices that brand's entire shelf. Re-check TRY whenever this table is refreshed and treat any TRY figure more than a month old as suspect.",
+  "_fx_refreshed": {
+    "tool": "refresh_fx.py",
+    "day": "2026-09-05",
+    "asOf": "2026-09-04",
+    "sources": {
+      "frankfurter(ECB)": "https://api.frankfurter.app/latest?from=USD",
+      "open.er-api.com": "https://open.er-api.com/v6/latest/USD"
+    },
+    "pegged": [
+      "AED"
+    ],
+    "note": "Machine-written. Do not hand-edit a rate: a rate change re-prices every brand in that currency on one day and has to be published as an epoch (see price_corrections.json `fxEpochs`). Run refresh_fx.py instead."
+  },
   "fx_to_usd": {
     "USD": 1.0,
-    "AUD": 0.66,
-    "EUR": 1.08,
-    "GBP": 1.27,
-    "CAD": 0.73,
-    "NZD": 0.61,
-    "SEK": 0.092,
-    "DKK": 0.145,
-    "AED": 0.27229,
-    "EGP": 0.02,
-    "TRY": 0.02102
+    "AUD": 0.720357,
+    "EUR": 1.162196,
+    "GBP": 1.352997,
+    "CAD": 0.724638,
+    "NZD": 0.588305,
+    "SEK": 0.104698,
+    "DKK": 0.155485,
+    "AED": 0.272294,
+    "EGP": 0.019629,
+    "TRY": 0.020643
   },
   "_cap_comment": "TWO CAPS, TWO JOBS. 'perBrand' is the WALK DEPTH: how far into each store build_catalog.py looks and records, i.e. the measurement. 'perBrandDisplay' is how much of that ships in catalog.json, i.e. what the app downloads and what becomes a cutout and an embedding. They were ONE number (60) until 2026-08-06, and because /products.json returns published_at DESCENDING that made the tracked shelf a rotating 60-piece PUBLISHING FRONT rather than a catalogue: measured live on 2026-08-06 by walking the whole roster to exhaustion (157 of 161 stores answered), the median store publishes 157 eligible pieces (p75 324, p90 638, p95 897, max 3,104; 45,718 in total) and only 19% of stores fit inside 60 — 81% are bigger. For the rest, a new listing pushed an old piece out of the window and the old piece read as having left the market: 981 of 2,041 disappearances between 2026-07-16 and 2026-08-01, 48%, were whole-brand rotation. 750 = three Shopify pages of 250, the smallest whole number of pages that clears the roster's 90th percentile (638); it fully covers 93% of stores (146 of 157), against 19% at a cap of 60. The display cap stays 60 because catalog.json is 1.09 KB/product and is served to phones by jsDelivr (~20 MB/file ceiling), and every product in it also becomes a ~111 KB cutout blob on a repo already at 948 MB of GitHub's 5 GB. Raising THIS number is what would take the app off the air; raising the walk depth is free. The full walk is published in shelf.json.",
   "perBrand": 750,
