@@ -1,0 +1,145 @@
+name: Loupe weekly record digest
+
+# ONE push per user per WEEK, or nothing at all.
+#
+# The daily digest (daily-digest.yml) tells a user when a piece she saved fell
+# below the price she saved it at. This one tells her what the ARCHIVE knows —
+# the lowest price we have ever recorded for it, a markdown dated to the day it
+# happened, a size run down to its last two — from price_records.json, built
+# from a snapshot of every product in ~185 labels taken every day since
+# 2026-06-17. Nobody else has that file and nobody can backfill it.
+#
+# The rules it enforces are in loupe-feed/record_digest.py's header and are
+# gated by loupe-feed/test_record_digest.py, which runs BEFORE anything sends:
+# never within 24h of any marketing push, never more than one a week, never a
+# move that touches a pricing epoch or an open FX correction, never a number the
+# live catalog no longer agrees with, and nothing at all on a quiet week.
+#
+# It reads profiles.last_marketing_push_at and writes only that column — the
+# daily digest owns last_marketing_push_sig and a value written here would
+# defeat its anti-repeat. Missing SUPABASE secrets or un-migrated columns are a
+# safe no-op (supabase/2026-07_marketing_push_cols.sql).
+
+on:
+  schedule:
+    # Thursday 16:23 UTC = ~12:23pm ET / 9:23am PT, where the users are.
+    #
+    # :23, not :00, for the reason daily-digest.yml runs at :07 — GitHub queues
+    # scheduled jobs worst at the top of the hour, and a delayed run here is a
+    # notification that arrives at the wrong time of day rather than a job that
+    # merely finishes late.
+    #
+    # Thursday, not Monday, because the message is "here is what moved on the
+    # things you saved" and the answer is worth acting on going into a weekend.
+    - cron: "23 16 * * 4"
+  workflow_dispatch:
+    inputs:
+      dryrun:
+        description: "Dry run — compute and report, but send nothing"
+        type: boolean
+        default: true      # a manual run is a rehearsal unless you say otherwise
+      log_bodies:
+        description: "Also print the composed message bodies (PUBLIC repo log)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+# A slow run overlapping the next cron could double-send before the per-user
+# stamp lands. Never cancel one in flight: a cancelled send with un-stamped users
+# is the one state that can push twice.
+concurrency:
+  group: loupe-record-digest
+  cancel-in-progress: false
+
+jobs:
+  digest:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        # fetch-depth: 1 is correct here and is NOT the shallow-clone trap that
+        # build_price_history.py warns about. This job never walks git — it reads
+        # the PUBLISHED price_records.json over HTTP. The trap applies to the job
+        # that BUILDS the archive.
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # THE GATE. This workflow sends to real phones, so the rules that decide
+      # what it may say are fixtures, not comments. test_record_digest.py holds
+      # them; test_currency_fx.py holds the FX-epoch registry this job's own
+      # epoch union depends on. If either goes red, nothing is sent — a missed
+      # digest is recoverable, a false one is not.
+      #
+      # continue-on-error, deliberately: a red gate must stop the SEND without
+      # turning the repository red. This is the same repo whose catalog lost four
+      # days in July because a failing fixture gate went unnoticed as "the build
+      # is broken again"; the failure is reported in the job summary instead, so
+      # it is visible without being background noise.
+      - name: Gate — the push rules must still hold
+        id: gate
+        continue-on-error: true
+        working-directory: loupe-feed
+        run: |
+          python test_record_digest.py
+          python test_currency_fx.py
+
+      - name: Report a failed gate
+        if: steps.gate.outcome != 'success'
+        run: |
+          {
+            echo "### Weekly record digest: NOT SENT"
+            echo ""
+            echo "The pre-send gate failed, so no notification was sent."
+            echo "Re-run \`python test_record_digest.py\` in \`loupe-feed/\` and read the failures."
+          } >> "$GITHUB_STEP_SUMMARY"
+          echo "::warning title=Record digest not sent::pre-send gate failed"
+
+      - name: Send the weekly record digest
+        id: send
+        if: steps.gate.outcome == 'success'
+        continue-on-error: true
+        run: python loupe-feed/record_digest.py | tee "$RUNNER_TEMP/digest.log"
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          # Optional — an Expo access token hardens push auth. Safe if unset.
+          EXPO_ACCESS_TOKEN: ${{ secrets.EXPO_ACCESS_TOKEN }}
+          # Scheduled runs send; a manual run rehearses unless told otherwise.
+          RECORD_DRYRUN: ${{ inputs.dryrun && '1' || '' }}
+          # OFF by default: this repository is public and an Actions log is a
+          # public artifact. The per-user summary the script prints carries no
+          # id, no token and no product name; the bodies do.
+          RECORD_LOG_BODIES: ${{ inputs.log_bodies && '1' || '' }}
+          # Brand names in this feed are accented (DémodéMODÉ, Siedrės). Belt and
+          # braces with record_digest.say(), which degrades rather than raising.
+          PYTHONIOENCODING: utf-8
+
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "### Weekly record digest"
+            echo ""
+            if [ "${{ steps.gate.outcome }}" != "success" ]; then
+              echo "Gate failed — nothing sent."
+            elif [ -f "$RUNNER_TEMP/digest.log" ]; then
+              echo '```'
+              # Counts, skip reasons and lead kinds only. The script keeps ids,
+              # tokens and bodies out of this stream by default.
+              cat "$RUNNER_TEMP/digest.log"
+              echo '```'
+            else
+              echo "No log produced."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # This workflow must never leave the repository red. Everything that can
+      # fail above is continue-on-error and reported in the summary, so the job
+      # ends green whether it sent 21 pushes, sent none, or refused to send.
+      - name: Always green
+        run: 'echo "record-digest finished (gate=${{ steps.gate.outcome }}, send=${{ steps.send.outcome }})"'
