@@ -1,0 +1,204 @@
+name: Loupe weekly content sheet
+
+# Ten ready-to-shoot stories and three list posts, every Monday morning, written
+# out of the price/availability archive.
+#
+# WHY IT EXISTS. 84% of Loupe's installs come from Aniqa's TikTok and Instagram.
+# The bottleneck on that channel is Monday morning — deciding what to point a
+# camera at. Meanwhile this repository has photographed the price and the
+# in-stock size run of every product in ~185 independent labels every day since
+# 2026-06-17. A markdown dated to the day it happened, a size run down to its
+# last one from a run of seven, a piece a shop listed four days ago: those are
+# measurements, and a measurement is the only thing a small account can post
+# that a big one cannot copy.
+#
+# The rules that decide what may be said are in loupe-feed/build_content_sheet.py's
+# header and are gated by loupe-feed/test_content_sheet.py, which runs BEFORE the
+# builder: no unconfirmed price move, no claim that straddles a pricing epoch or
+# an open FX correction, no window claim on a window too short to be one, no
+# "new" a shop's own listing date contradicts, no banned word, and nothing at all
+# on a quiet week. An empty sheet costs a post; a false one costs the account.
+#
+# It reads only committed, already-public files (price_records.json, catalog.json,
+# brands.json, price_corrections.json) and writes only loupe-feed/content/. It
+# deliberately never reads stock.json: that file's own `use` block forbids naming
+# a brand's stock in any artefact, and every line here names a brand.
+
+on:
+  schedule:
+    # Monday 13:07 UTC = 08:07 in Chicago, where Aniqa is — the sheet is on the
+    # screen when the week starts rather than after it.
+    #
+    # :07 rather than :00 for the reason every other cron in this repo is offset:
+    # GitHub queues the whole world's scheduled jobs at the top of the hour and
+    # deprioritises them, and a late run here is a sheet that arrives after the
+    # morning it was written for.
+    #
+    # 13:07 rather than 08:07 so the daily catalog refresh (refresh-catalog.yml,
+    # 08:07 UTC) and the price-record publish that follows it have already landed:
+    # this job reads the COMMITTED price_records.json, so it wants today's.
+    - cron: "7 13 * * 1"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Build and report, but commit nothing"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+# This job commits to main. refresh-catalog.yml and embed-catalog.yml already
+# share this queue for the same reason — two workflows racing the rebase/verify
+# push on main is how run 63 silently discarded a freshly built catalog. Never
+# cancel one in flight; a cancelled run mid-commit is the one state that hurts.
+concurrency:
+  group: loupe-main-writers
+  cancel-in-progress: false
+
+jobs:
+  sheet:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        # fetch-depth: 1 is correct here and is NOT the shallow-clone trap
+        # build_price_history.py warns about. This job never walks git — it reads
+        # the committed price_records.json, which the refresh workflow publishes.
+        # The trap applies to the job that BUILDS the archive.
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # THE GATE, and it really gates: every step that follows is conditioned on
+      # this one succeeding. What it protects is a public caption, so a red gate
+      # must stop the WRITE — not merely warn about it.
+      #
+      # continue-on-error is on the step so a failure does not turn the whole
+      # repository red. This is the same repo that lost four days of the archive
+      # in July because a failing fixture gate was read as "the build is broken
+      # again"; the failure is reported in the job summary and as a workflow
+      # warning instead, so it is visible without becoming background noise.
+      #
+      # test_currency_fx.py is included because this sheet's epoch union reads
+      # the same FX registry, and test_record_digest.py because the confirmation,
+      # epoch and FX guards here are IMPORTED from record_digest.py rather than
+      # restated — if its rules move, these move with them.
+      - name: Gate — the copy rules must still hold
+        id: gate
+        continue-on-error: true
+        working-directory: loupe-feed
+        run: |
+          python test_content_sheet.py
+          python test_record_digest.py
+          python test_currency_fx.py
+
+      - name: Report a failed gate
+        if: steps.gate.outcome != 'success'
+        run: |
+          {
+            echo "### Weekly content sheet: NOT BUILT"
+            echo ""
+            echo "The pre-write gate failed, so no sheet was written or committed."
+            echo "Run \`python test_content_sheet.py\` in \`loupe-feed/\` and read the failures."
+          } >> "$GITHUB_STEP_SUMMARY"
+          echo "::warning title=Content sheet not built::pre-write gate failed"
+
+      - name: Build the sheet
+        id: build
+        if: steps.gate.outcome == 'success'
+        continue-on-error: true
+        run: python loupe-feed/build_content_sheet.py | tee "$RUNNER_TEMP/sheet.log"
+        env:
+          # Brand names in this feed are accented (DémodéMODÉ, Siedrės, SIEDRÉS)
+          # and a runner whose stdout is not UTF-8 would raise on them at the
+          # last step, after the work was done.
+          PYTHONIOENCODING: utf-8
+
+      - name: Commit the sheet if it changed
+        id: commit
+        if: steps.build.outcome == 'success' && !inputs.dry_run
+        continue-on-error: true
+        run: |
+          set -uo pipefail
+          git config user.name  "loupe-catalog-bot"
+          git config user.email "actions@users.noreply.github.com"
+
+          if [[ -z "$(git status --porcelain loupe-feed/content)" ]]; then
+            # NOT an error. The builder reuses the previous generatedAt when the
+            # output is otherwise identical (see write_sheet), precisely so a
+            # re-dispatch on a quiet day does not manufacture a commit and a CDN
+            # purge out of a wall clock.
+            echo "content/ unchanged this run — nothing to commit."
+            exit 0
+          fi
+          git add loupe-feed/content
+          git commit -m "chore: content sheet $(date -u +%Y-%m-%d)" || {
+            echo "nothing staged after all"; exit 0; }
+
+          # A human commit (or the daily refresh) can land between checkout and
+          # push even with the concurrency queue, because the queue only covers
+          # our own workflows. Rebase and retry once, then verify the remote
+          # actually advanced to OUR commit: a no-op push that reports success is
+          # how a build gets silently discarded (run 63, 2026-07-15).
+          branch="${GITHUB_REF_NAME:-main}"
+          push_with_rebase() {
+            git rebase --abort >/dev/null 2>&1 || true
+            git pull --rebase --autostash -X theirs origin "$branch" || return 1
+            git push origin "HEAD:$branch" || return 1
+            git fetch --quiet origin "$branch"
+            [[ "$(git rev-parse HEAD)" == "$(git rev-parse "origin/$branch")" ]] || return 1
+          }
+          if push_with_rebase; then
+            echo "Content sheet published."
+          else
+            echo "Push did not land — rebasing and retrying once."
+            sleep 3
+            push_with_rebase && echo "Content sheet published on retry." || {
+              echo "WARNING: could not publish the content sheet this run. Nothing" >&2
+              echo "else depends on it; next Monday's run will republish." >&2
+            }
+          fi
+
+      - name: Purge jsDelivr cache
+        # content/latest.* is what anything outside this repo would read, and
+        # jsDelivr caches aggressively. Best-effort — never fail a run over a CDN
+        # hiccup, and never purge a sheet that was not committed.
+        if: steps.commit.outcome == 'success' && !inputs.dry_run
+        continue-on-error: true
+        run: |
+          curl -fsS "https://purge.jsdelivr.net/gh/HOboGoblin45/loupe-feed@main/loupe-feed/content/latest.json" || true
+          curl -fsS "https://purge.jsdelivr.net/gh/HOboGoblin45/loupe-feed@main/loupe-feed/content/latest.md" || true
+
+      # The ten hooks on the run page, so the week's sheet is readable without
+      # opening the repository. Rendered by the builder (--summary reads the
+      # latest.json that was actually written) rather than by a shell heredoc
+      # nested in a YAML block scalar, which is an indentation bug waiting to
+      # happen and is untestable besides.
+      - name: Summary — the week's hooks
+        if: always()
+        # A failure to DESCRIBE the run must never be reported as a failure of
+        # the run. Everything above is already reported; this step is a courtesy.
+        continue-on-error: true
+        env:
+          PYTHONIOENCODING: utf-8
+        run: |
+          {
+            echo "## Loupe content sheet"
+            echo ""
+            if [ "${{ steps.gate.outcome }}" != "success" ]; then
+              echo "Gate failed — nothing was built."
+            elif [ -f loupe-feed/content/latest.json ]; then
+              python loupe-feed/build_content_sheet.py --summary
+            else
+              echo "No sheet was produced."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # This workflow must never leave the repository red. Everything that can
+      # fail above is continue-on-error and reported in the summary, so the job
+      # ends green whether it published ten stories, published none, or refused.
+      - name: Always green
+        run: 'echo "content-sheet finished (gate=${{ steps.gate.outcome }}, build=${{ steps.build.outcome }}, commit=${{ steps.commit.outcome }})"'

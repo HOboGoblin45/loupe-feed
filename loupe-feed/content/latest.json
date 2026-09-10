@@ -1,0 +1,517 @@
+{
+ "generatedAt": "2026-09-10T05:32:14Z",
+ "weekOf": "2026-09-07",
+ "builtOn": "2026-09-10",
+ "source": {
+  "priceRecords": {
+   "generatedAt": "2026-09-09T13:14:19Z",
+   "windowStart": "2026-06-17",
+   "windowEnd": "2026-09-09",
+   "days": 81,
+   "records": 2109,
+   "brands": 187,
+   "sha256": "c44a220403b708f4"
+  },
+  "catalog": {
+   "generatedAt": "2026-09-09T13:08:30Z",
+   "count": 9144,
+   "sha256": "c055c8d2b7e00ecc"
+  }
+ },
+ "gates": {
+  "comparableDays": 2,
+  "comparableFrom": "2026-09-08",
+  "comparableTo": "2026-09-09",
+  "windowClaimsAllowed": false,
+  "windowClaimsReturn": "2026-09-21",
+  "openFxBrands": [
+   "28natelier",
+   "Anna October",
+   "Blanch Wear",
+   "Christopher Esber",
+   "Donde Esteban",
+   "My Mum Made It",
+   "Sir the Label",
+   "With Jéan"
+  ],
+  "archiveStale": false
+ },
+ "counts": {
+  "moved_rows": 79,
+  "confirmed_moves": 0,
+  "available_drop": 0,
+  "available_lowest": 0,
+  "available_sizes": 223,
+  "available_new": 656,
+  "available_hold": 0,
+  "available_tenure": 655
+ },
+ "header": [
+  "Week of Monday 7 September 2026 — built 2026-09-10 from 81 daily snapshots (2026-06-17 to 2026-09-09), 2,109 pieces with a price record across 187 labels.",
+  "79 pieces changed price in the comparable window and none of those changes has yet been seen in a second snapshot, so none of them is reportable.",
+  "Prices can only be compared over 2 snapshots this week, so every price story is held; 223 pieces down to one or two sizes and 656 listed by their shop in the last 7 days are what the record supports today."
+ ],
+ "stories": [
+  {
+   "kind": "sizes",
+   "kindLabel": "about to sell out",
+   "id": "alohas-tb-490-club-vinyl-vintage-effect-brown-leather-sneakers",
+   "brand": "ALOHAS",
+   "piece": "ALOHAS Tb.490 Club Vinyl Vintage Effect Brown Leather Sneakers",
+   "price": 245.0,
+   "category": "shoes",
+   "retailer": "",
+   "url": "https://useloupe.shop/product/alohas-tb-490-club-vinyl-vintage-effect-brown-leather-sneakers/",
+   "image": "https://cdn.shopify.com/s/files/1/0762/7039/files/tb-490-club-vinyl-vintage-effect-brown-leather-sneakers-7.jpg?v=1779088794",
+   "format": "Piece on screen, the size count as a text overlay; cut on the number.",
+   "title": "ALOHAS Tb.490 Club Vinyl Vintage Effect Brown Leather Sneakers — down to 1 of 12 sizes",
+   "hook": "Down to 1 size from 12 on these ALOHAS shoes.",
+   "fact": "ALOHAS Tb.490 Club Vinyl Vintage Effect Brown Leather Sneakers, $245. We have seen this piece in 72 daily snapshots and the widest in-stock size run we recorded was 12; 1 size is left (35) as of 2026-09-09. 11 have gone.",
+   "measure": {
+    "sizesNow": 1,
+    "sizesMax": 12,
+    "gone": 11,
+    "sizesLeft": [
+     "35"
+    ]
+   },
+   "detail": "We have seen this piece in 72 daily snapshots and the widest in-stock size run we recorded was 12; 1 size is left (35) as of 2026-09-09. 11 have gone.",
+   "brandRecord": "",
+   "chicago": ""
+  },
+  {
+   "kind": "new",
+   "kindLabel": "new this week",
+   "id": "musier-paris-blouson-aurore-kaki",
+   "brand": "Musier Paris",
+   "piece": "Musier Paris Blouson Aurore Kaki",
+   "price": 588.0,
+   "category": "tops",
+   "retailer": "",
+   "url": "https://useloupe.shop/product/musier-paris-blouson-aurore-kaki/",
+   "image": "https://cdn.shopify.com/s/files/1/0752/9031/2867/files/Musier_31500_09.jpg?v=1774543041",
+   "format": "Try-on, with the date it went up as a text overlay.",
+   "title": "New at Musier Paris: Musier Paris Blouson Aurore Kaki",
+   "hook": "Musier Paris put this top up 7 days ago. $588.",
+   "fact": "Musier Paris Blouson Aurore Kaki, $588. The shop's own listing date is Sep 3 — 7 days ago; it first reached our daily snapshot on Sep 3. We track 58 pieces from this label and the median one has been in 81 of our daily snapshots.",
+   "measure": {
+    "firstSeen": "2026-09-03",
+    "ageDays": 7,
+    "publishedAt": "2026-09-03",
+    "publishedDaysAgo": 7,
+    "brandTracked": 58,
+    "brandMedianHold": 81,
+    "brandDisciplineKnown": false,
+    "brandDiscountPct": 0
+   },
+   "detail": "The shop's own listing date is Sep 3 — 7 days ago; it first reached our daily snapshot on Sep 3. We track 58 pieces from this label and the median one has been in 81 of our daily snapshots.",
+   "brandRecord": "",
+   "chicago": ""
+  },
+  {
+   "kind": "tenure",
+   "kindLabel": "shelf life",
+   "id": "aflalo-reysa-top-berry",
+   "brand": "Aflalo",
+   "piece": "Aflalo Reysa Top in Silk",
+   "price": 700.0,
+   "category": "tops",
+   "retailer": "",
+   "url": "https://useloupe.shop/product/aflalo-reysa-top-berry/",
+   "image": "https://cdn.shopify.com/s/files/1/0667/6142/5143/files/AFLALO_ECOM2602_SHOT_06_REYSA_TOP_IVORY_612_V02-22-07-202612-32-20.png?v=1784746557",
+   "format": "Piece on screen + text overlay. The point is that there is no rush.",
+   "title": "Aflalo Reysa Top in Silk has been on the shelf 32 days",
+   "hook": "This Aflalo top has been on the shelf 32 days.",
+   "fact": "Aflalo Reysa Top in Silk, $700. The shop listed it on Jul 22; it has been in our daily snapshot since Aug 9, 32 days ago, and it is still there. 2 sizes in stock.",
+   "measure": {
+    "firstSeen": "2026-08-09",
+    "ageDays": 32,
+    "sizesNow": 2,
+    "publishedAt": "2026-07-22"
+   },
+   "detail": "The shop listed it on Jul 22; it has been in our daily snapshot since Aug 9, 32 days ago, and it is still there. 2 sizes in stock.",
+   "brandRecord": "",
+   "chicago": ""
+  },
+  {
+   "kind": "sizes",
+   "kindLabel": "about to sell out",
+   "id": "lisa-says-gah-hannie-sheer-tie-jumper",
+   "brand": "Lisa Says Gah",
+   "piece": "Lisa Says Gah Hannie Sheer Tie Jumper - Stripe",
+   "price": 170.0,
+   "category": "tops",
+   "retailer": "",
+   "url": "https://useloupe.shop/product/lisa-says-gah-hannie-sheer-tie-jumper/",
+   "image": "https://cdn.shopify.com/s/files/1/3044/4744/files/8056000_8056000-R1-E002.jpg?v=1786493786",
+   "format": "Piece on screen, the size count as a text overlay; cut on the number.",
+   "title": "Lisa Says Gah Hannie Sheer Tie Jumper - Stripe — down to 1 of 8 sizes",
+   "hook": "Down to 1 size from 8 on this Lisa Says Gah top.",
+   "fact": "Lisa Says Gah Hannie Sheer Tie Jumper - Stripe, $170. We have seen this piece in 29 daily snapshots and the widest in-stock size run we recorded was 8; 1 size is left (US 10/UK 14) as of 2026-09-09. 7 have gone.",
+   "measure": {
+    "sizesNow": 1,
+    "sizesMax": 8,
+    "gone": 7,
+    "sizesLeft": [
+     "US 10/UK 14"
+    ]
+   },
+   "detail": "We have seen this piece in 29 daily snapshots and the widest in-stock size run we recorded was 8; 1 size is left (US 10/UK 14) as of 2026-09-09. 7 have gone.",
+   "brandRecord": "",
+   "chicago": ""
+  },
+  {
+   "kind": "new",
+   "kindLabel": "new this week",
+   "id": "gumi-blue-jiba-capri",
+   "brand": "Gumi",
+   "piece": "Gumi BLUE JIBA CAPRI",
+   "price": 162.0,
+   "category": "bottoms",
+   "retailer": "",
+   "url": "https://useloupe.shop/product/gumi-blue-jiba-capri/",
+   "image": "https://cdn.shopify.com/s/files/1/0833/1329/5678/files/05.jpg?v=1788807184",
+   "format": "Try-on, with the date it went up as a text overlay.",
+   "title": "New at Gumi: Gumi BLUE JIBA CAPRI",
+   "hook": "Gumi put this piece up 3 days ago. $162.",
+   "fact": "Gumi BLUE JIBA CAPRI, $162. The shop's own listing date is Sep 7 — 3 days ago; it first reached our daily snapshot on Sep 8. We track 52 pieces from this label and the median one has been in 80 of our daily snapshots.",
+   "measure": {
+    "firstSeen": "2026-09-08",
+    "ageDays": 2,
+    "publishedAt": "2026-09-07",
+    "publishedDaysAgo": 3,
+    "brandTracked": 52,
+    "brandMedianHold": 80,
+    "brandDisciplineKnown": false,
+    "brandDiscountPct": 0
+   },
+   "detail": "The shop's own listing date is Sep 7 — 3 days ago; it first reached our daily snapshot on Sep 8. We track 52 pieces from this label and the median one has been in 80 of our daily snapshots.",
+   "brandRecord": "",
+   "chicago": ""
+  },
+  {
+   "kind": "tenure",
+   "kindLabel": "shelf life",
+   "id": "alexis-ariane-dress-wht-white-a1260458-1147",
+   "brand": "ALEXIS",
+   "piece": "ALEXIS Ariane Dress",
+   "price": 920.0,
+   "category": "dresses",
+   "retailer": "",
+   "url": "https://useloupe.shop/product/alexis-ariane-dress-wht-white-a1260458-1147/",
+   "image": "https://cdn.shopify.com/s/files/1/1096/6024/files/white_ruffle_maxi_2.webp?v=1786025612",
+   "format": "Piece on screen + text overlay. The point is that there is no rush.",
+   "title": "ALEXIS Ariane Dress has been on the shelf 32 days",
+   "hook": "This ALEXIS dress has been on the shelf 32 days.",
+   "fact": "ALEXIS Ariane Dress, $920. The shop listed it on Aug 6; it has been in our daily snapshot since Aug 9, 32 days ago, and it is still there. 5 sizes in stock.",
+   "measure": {
+    "firstSeen": "2026-08-09",
+    "ageDays": 32,
+    "sizesNow": 5,
+    "publishedAt": "2026-08-06"
+   },
+   "detail": "The shop listed it on Aug 6; it has been in our daily snapshot since Aug 9, 32 days ago, and it is still there. 5 sizes in stock.",
+   "brandRecord": "",
+   "chicago": ""
+  },
+  {
+   "kind": "sizes",
+   "kindLabel": "about to sell out",
+   "id": "nou-the-mule-cat-call",
+   "brand": "Nou",
+   "piece": "Nou THE MULE",
+   "price": 425.0,
+   "category": "shoes",
+   "retailer": "",
+   "url": "https://useloupe.shop/product/nou-the-mule-cat-call/",
+   "image": "https://cdn.shopify.com/s/files/1/0040/4612/7171/files/nou-tiger-print-mule-stiletto.jpg?v=1786990686",
+   "format": "Piece on screen, the size count as a text overlay; cut on the number.",
+   "title": "Nou THE MULE — down to 1 of 8 sizes",
+   "hook": "Down to 1 size from 8 on these Nou shoes.",
+   "fact": "Nou THE MULE, $425. We have seen this piece in 17 daily snapshots and the widest in-stock size run we recorded was 8; 1 size is left (37) as of 2026-09-09. 7 have gone.",
+   "measure": {
+    "sizesNow": 1,
+    "sizesMax": 8,
+    "gone": 7,
+    "sizesLeft": [
+     "37"
+    ]
+   },
+   "detail": "We have seen this piece in 17 daily snapshots and the widest in-stock size run we recorded was 8; 1 size is left (37) as of 2026-09-09. 7 have gone.",
+   "brandRecord": "",
+   "chicago": ""
+  },
+  {
+   "kind": "new",
+   "kindLabel": "new this week",
+   "id": "marland-backus-entangled-stars",
+   "brand": "Marland Backus",
+   "piece": "Marland Backus Entangled Stars",
+   "price": 95.0,
+   "category": "tops",
+   "retailer": "",
+   "url": "https://useloupe.shop/product/marland-backus-entangled-stars/",
+   "image": "https://cdn.shopify.com/s/files/1/0765/1183/8453/files/entangledstars2.jpg?v=1788528685",
+   "format": "Try-on, with the date it went up as a text overlay.",
+   "title": "New at Marland Backus: Marland Backus Entangled Stars",
+   "hook": "Marland Backus put this top up 6 days ago. $95.",
+   "fact": "Marland Backus Entangled Stars, $95. The shop's own listing date is Sep 4 — 6 days ago; it first reached our daily snapshot on Sep 5. We track 49 pieces from this label and the median one has been in 80 of our daily snapshots.",
+   "measure": {
+    "firstSeen": "2026-09-05",
+    "ageDays": 5,
+    "publishedAt": "2026-09-04",
+    "publishedDaysAgo": 6,
+    "brandTracked": 49,
+    "brandMedianHold": 80,
+    "brandDisciplineKnown": false,
+    "brandDiscountPct": 0
+   },
+   "detail": "The shop's own listing date is Sep 4 — 6 days ago; it first reached our daily snapshot on Sep 5. We track 49 pieces from this label and the median one has been in 80 of our daily snapshots.",
+   "brandRecord": "",
+   "chicago": ""
+  },
+  {
+   "kind": "tenure",
+   "kindLabel": "shelf life",
+   "id": "gemini-damson-madder-antonia-pj-set-in-navy-gingham",
+   "brand": "Damson Madder",
+   "piece": "Damson Madder Antonia PJ Set in Navy Gingham",
+   "price": 119.0,
+   "category": "tops",
+   "retailer": "gemini",
+   "url": "https://useloupe.shop/product/gemini-damson-madder-antonia-pj-set-in-navy-gingham/",
+   "image": "https://cdn.shopify.com/s/files/1/0025/1707/3986/files/Antonia_2.webp?v=1759954617",
+   "format": "Piece on screen + text overlay. The point is that there is no rush.",
+   "title": "Damson Madder Antonia PJ Set in Navy Gingham has been on the shelf 32 days",
+   "hook": "This Damson Madder top has been on the shelf 32 days.",
+   "fact": "Damson Madder Antonia PJ Set in Navy Gingham, $119. The shop listed it on Oct 8, 2025; it has been in our daily snapshot since Aug 9, 32 days ago, and it is still there. 2 sizes in stock.",
+   "measure": {
+    "firstSeen": "2026-08-09",
+    "ageDays": 32,
+    "sizesNow": 2,
+    "publishedAt": "2025-10-08"
+   },
+   "detail": "The shop listed it on Oct 8, 2025; it has been in our daily snapshot since Aug 9, 32 days ago, and it is still there. 2 sizes in stock.",
+   "brandRecord": "",
+   "chicago": "In stock at Gemini, 1911 W. Division St., Chicago, IL 60622"
+  },
+  {
+   "kind": "sizes",
+   "kindLabel": "about to sell out",
+   "id": "cou-cou-intimates-the-baby-tee-regular-baby-pink-pointelle",
+   "brand": "Cou Cou Intimates",
+   "piece": "Cou Cou Intimates The Baby Tee: Baby Pink Pointelle",
+   "price": 58.0,
+   "category": "tops",
+   "retailer": "",
+   "url": "https://useloupe.shop/product/cou-cou-intimates-the-baby-tee-regular-baby-pink-pointelle/",
+   "image": "https://cdn.shopify.com/s/files/1/0539/8924/5106/files/The_Baby_Tee_Pointelle_Pink_Flat.jpg?v=1783348975",
+   "format": "Piece on screen, the size count as a text overlay; cut on the number.",
+   "title": "Cou Cou Intimates The Baby Tee: Baby Pink Pointelle — down to 1 of 7 sizes",
+   "hook": "Down to 1 size from 7 on this Cou Cou Intimates top.",
+   "fact": "Cou Cou Intimates The Baby Tee: Baby Pink Pointelle, $58. We have seen this piece in 60 daily snapshots and the widest in-stock size run we recorded was 7; 1 size is left (XXS) as of 2026-09-09. 6 have gone.",
+   "measure": {
+    "sizesNow": 1,
+    "sizesMax": 7,
+    "gone": 6,
+    "sizesLeft": [
+     "XXS"
+    ]
+   },
+   "detail": "We have seen this piece in 60 daily snapshots and the widest in-stock size run we recorded was 7; 1 size is left (XXS) as of 2026-09-09. 6 have gone.",
+   "brandRecord": "",
+   "chicago": ""
+  }
+ ],
+ "lists": [
+  {
+   "title": "5 pieces under $150 with one size left",
+   "want": 5,
+   "why": "one in-stock size left, priced under $150",
+   "swappedFrom": "5 pieces under $150 that dropped this week",
+   "swapReason": "No confirmed markdown under $150 this week — every dated move in the archive is still unconfirmed (2 comparable snapshots).",
+   "items": [
+    {
+     "id": "cou-cou-intimates-the-baby-tee-regular-baby-pink-pointelle",
+     "piece": "Cou Cou Intimates The Baby Tee: Baby Pink Pointelle",
+     "brand": "Cou Cou Intimates",
+     "price": 58.0,
+     "url": "https://useloupe.shop/product/cou-cou-intimates-the-baby-tee-regular-baby-pink-pointelle/",
+     "image": "https://cdn.shopify.com/s/files/1/0539/8924/5106/files/The_Baby_Tee_Pointelle_Pink_Flat.jpg?v=1783348975",
+     "fact": "Cou Cou Intimates The Baby Tee: Baby Pink Pointelle, $58. We have seen this piece in 60 daily snapshots and the widest in-stock size run we recorded was 7; 1 size is left (XXS) as of 2026-09-09. 6 have gone.",
+     "kind": "sizes"
+    },
+    {
+     "id": "cou-cou-intimates-the-boy-short-navy-french-stripe-cotton-jersey",
+     "piece": "Cou Cou Intimates The Boyshort: Navy French Stripe Cotton Jersey",
+     "brand": "Cou Cou Intimates",
+     "price": 42.0,
+     "url": "https://useloupe.shop/product/cou-cou-intimates-the-boy-short-navy-french-stripe-cotton-jersey/",
+     "image": "https://cdn.shopify.com/s/files/1/0539/8924/5106/files/TheShortNavyStripe.jpg?v=1783355692",
+     "fact": "Cou Cou Intimates The Boyshort: Navy French Stripe Cotton Jersey, $42. We have seen this piece in 51 daily snapshots and the widest in-stock size run we recorded was 7; 1 size is left (XS) as of 2026-09-09. 6 have gone.",
+     "kind": "sizes"
+    },
+    {
+     "id": "oddli-halter-one-piece",
+     "piece": "Oddli Halter One Piece",
+     "brand": "Oddli",
+     "price": 140.0,
+     "url": "https://useloupe.shop/product/oddli-halter-one-piece/",
+     "image": "https://cdn.shopify.com/s/files/1/0515/3662/5860/files/SWIM_MAROON_HALTER1_a9edcc5a-a09f-4a37-82c8-94046df5b21a.jpg?v=1782933419",
+     "fact": "Oddli Halter One Piece, $140. We have seen this piece in 75 daily snapshots and the widest in-stock size run we recorded was 7; 1 size is left (XS) as of 2026-09-09. 6 have gone.",
+     "kind": "sizes"
+    },
+    {
+     "id": "mode-mischief-bamboo-shorts-grey",
+     "piece": "Mode Mischief BAMBOO SHORTS",
+     "brand": "Mode Mischief",
+     "price": 28.0,
+     "url": "https://useloupe.shop/product/mode-mischief-bamboo-shorts-grey/",
+     "image": "https://cdn.shopify.com/s/files/1/0592/4959/0440/files/Gris_shorts_d1.jpg?v=1741046352",
+     "fact": "Mode Mischief BAMBOO SHORTS, $28. We have seen this piece in 24 daily snapshots and the widest in-stock size run we recorded was 6; 1 size is left (XS) as of 2026-09-09. 5 have gone.",
+     "kind": "sizes"
+    },
+    {
+     "id": "ciao-lucia-601614002lem-pointelle-knit-lemon",
+     "piece": "Ciao Lucia HATCH x Ciao Lucia The Pointelle Skirt",
+     "brand": "Ciao Lucia",
+     "price": 98.0,
+     "url": "https://useloupe.shop/product/ciao-lucia-601614002lem-pointelle-knit-lemon/",
+     "image": "https://cdn.shopify.com/s/files/1/1615/1221/files/28_54eecd5e-9a52-4e3a-b219-46ecaaea5c11.jpg?v=1783703321",
+     "fact": "Ciao Lucia HATCH x Ciao Lucia The Pointelle Skirt, $98. We have seen this piece in 53 daily snapshots and the widest in-stock size run we recorded was 5; 1 size is left (L) as of 2026-09-09. 4 have gone.",
+     "kind": "sizes"
+    }
+   ]
+  },
+  {
+   "title": "The 4 dresses about to sell out",
+   "want": 4,
+   "why": "dresses down to one or two in-stock sizes from a run of four or more",
+   "items": [
+    {
+     "id": "ancegria-atlein-gown-plum",
+     "piece": "Ancegria Atlein Gown - Plum",
+     "brand": "Ancegria",
+     "price": 430.0,
+     "url": "https://useloupe.shop/product/ancegria-atlein-gown-plum/",
+     "image": "https://cdn.shopify.com/s/files/1/0636/1759/7626/files/Atlein_Plum_K_7-4.jpg?v=1788431308",
+     "fact": "Ancegria Atlein Gown - Plum, $430. We have seen this piece in 74 daily snapshots and the widest in-stock size run we recorded was 5; 1 size is left (XS) as of 2026-09-09. 4 have gone.",
+     "kind": "sizes"
+    },
+    {
+     "id": "anna-october-justina-dress-beige-pf2627",
+     "piece": "Anna October Justina dress",
+     "brand": "Anna October",
+     "price": 744.0,
+     "url": "https://useloupe.shop/product/anna-october-justina-dress-beige-pf2627/",
+     "image": "https://cdn.shopify.com/s/files/1/1051/8656/files/pf2627-justina-dress-beige-lookbook-back.jpg?v=1780236361",
+     "fact": "Anna October Justina dress, $744. We have seen this piece in 81 daily snapshots and the widest in-stock size run we recorded was 5; 1 size is left (XXS) as of 2026-09-09. 4 have gone.",
+     "kind": "sizes"
+    },
+    {
+     "id": "find-me-now-the-label-viva-dress",
+     "piece": "Find Me Now the Label VIVA DRESS IN CHARCOAL",
+     "brand": "Find Me Now the Label",
+     "price": 189.0,
+     "url": "https://useloupe.shop/product/find-me-now-the-label-viva-dress/",
+     "image": "https://cdn.shopify.com/s/files/1/0410/7570/3976/files/FW5171DRCHARCOAL_1.jpg?v=1779451380",
+     "fact": "Find Me Now the Label VIVA DRESS IN CHARCOAL, $189. We have seen this piece in 74 daily snapshots and the widest in-stock size run we recorded was 5; 1 size is left (S) as of 2026-09-09. 4 have gone.",
+     "kind": "sizes"
+    },
+    {
+     "id": "flore-flore-lauren-polo-dress-white",
+     "piece": "Flore Flore LAUREN POLO DRESS, White",
+     "brand": "Flore Flore",
+     "price": 210.0,
+     "url": "https://useloupe.shop/product/flore-flore-lauren-polo-dress-white/",
+     "image": "https://cdn.shopify.com/s/files/1/0574/1474/6297/files/260310_FLOREFLORE6738_HIGHRES_TIF_144.jpg?v=1779975826",
+     "fact": "Flore Flore LAUREN POLO DRESS, White, $210. We have seen this piece in 78 daily snapshots and the widest in-stock size run we recorded was 5; 1 size is left (XL) as of 2026-09-09. 4 have gone.",
+     "kind": "sizes"
+    }
+   ]
+  },
+  {
+   "title": "New this week from the labels whose pieces stay longest",
+   "want": 5,
+   "why": "arrived in the last seven days, ranked by how many of our daily snapshots the label's median piece survives",
+   "swappedFrom": "New this week from labels that never discount",
+   "swapReason": "Brand price discipline is not measurable this week: prices can only be compared over 2 snapshots, so \"never discounts\" would be a claim about 2 days rather than about the label.",
+   "items": [
+    {
+     "id": "musier-paris-blouson-aurore-kaki",
+     "piece": "Musier Paris Blouson Aurore Kaki",
+     "brand": "Musier Paris",
+     "price": 588.0,
+     "url": "https://useloupe.shop/product/musier-paris-blouson-aurore-kaki/",
+     "image": "https://cdn.shopify.com/s/files/1/0752/9031/2867/files/Musier_31500_09.jpg?v=1774543041",
+     "fact": "Musier Paris Blouson Aurore Kaki, $588. The shop's own listing date is Sep 3 — 7 days ago; it first reached our daily snapshot on Sep 3. We track 58 pieces from this label and the median one has been in 81 of our daily snapshots.",
+     "kind": "new"
+    },
+    {
+     "id": "musier-paris-jupe-brise-rose",
+     "piece": "Musier Paris Jupe Brise Rose",
+     "brand": "Musier Paris",
+     "price": 181.0,
+     "url": "https://useloupe.shop/product/musier-paris-jupe-brise-rose/",
+     "image": "https://cdn.shopify.com/s/files/1/0752/9031/2867/files/brise-rayee-1_d23c4433-d186-49e1-840b-476ccdbd01a9.jpg?v=1788517365",
+     "fact": "Musier Paris Jupe Brise Rose, $181. The shop's own listing date is Sep 4 — 6 days ago; it first reached our daily snapshot on Sep 3. We track 58 pieces from this label and the median one has been in 81 of our daily snapshots.",
+     "kind": "new"
+    },
+    {
+     "id": "gumi-blue-jiba-capri",
+     "piece": "Gumi BLUE JIBA CAPRI",
+     "brand": "Gumi",
+     "price": 162.0,
+     "url": "https://useloupe.shop/product/gumi-blue-jiba-capri/",
+     "image": "https://cdn.shopify.com/s/files/1/0833/1329/5678/files/05.jpg?v=1788807184",
+     "fact": "Gumi BLUE JIBA CAPRI, $162. The shop's own listing date is Sep 7 — 3 days ago; it first reached our daily snapshot on Sep 8. We track 52 pieces from this label and the median one has been in 80 of our daily snapshots.",
+     "kind": "new"
+    },
+    {
+     "id": "gumi-jersey-bubble-skirt",
+     "piece": "Gumi JERSEY BUBBLE SKIRT",
+     "brand": "Gumi",
+     "price": 238.0,
+     "url": "https://useloupe.shop/product/gumi-jersey-bubble-skirt/",
+     "image": "https://cdn.shopify.com/s/files/1/0833/1329/5678/files/03.jpg?v=1788807474",
+     "fact": "Gumi JERSEY BUBBLE SKIRT, $238. The shop's own listing date is Sep 7 — 3 days ago; it first reached our daily snapshot on Sep 8. We track 52 pieces from this label and the median one has been in 80 of our daily snapshots.",
+     "kind": "new"
+    },
+    {
+     "id": "marland-backus-entangled-stars",
+     "piece": "Marland Backus Entangled Stars",
+     "brand": "Marland Backus",
+     "price": 95.0,
+     "url": "https://useloupe.shop/product/marland-backus-entangled-stars/",
+     "image": "https://cdn.shopify.com/s/files/1/0765/1183/8453/files/entangledstars2.jpg?v=1788528685",
+     "fact": "Marland Backus Entangled Stars, $95. The shop's own listing date is Sep 4 — 6 days ago; it first reached our daily snapshot on Sep 5. We track 49 pieces from this label and the median one has been in 80 of our daily snapshots.",
+     "kind": "new"
+    }
+   ]
+  }
+ ],
+ "doNotSay": [
+  "AI",
+  "algorithm",
+  "recommend / recommended for you",
+  "personalised / personalized",
+  "stunning, must-have, obsessed, iconic, insane",
+  "!"
+ ],
+ "notes": [
+  "Lowest-ever prices, brand price discipline (\"this label discounts N%\") and \"this price has held\" are all HELD this week. price_records.json measures those inside the current pricing epoch, and the 2026-09-05 change plus its 3-day settle leaves only 2 comparable snapshots (2026-09-08 to 2026-09-09). Quoting them would be a statement about 2 days dressed up as one about 81. They come back on 2026-09-21 at the earliest.",
+  "All 79 dated price moves in the archive land on the last snapshot, so none has been seen twice yet. A move becomes reportable on the first later snapshot that still shows the new price (MOVE_MIN_CONFIRM_SNAPSHOTS); a move that reverts overnight never earns a post, which is the point of the rule.",
+  "No price claim is made about 28natelier, Anna October, Blanch Wear, Christopher Esber, Donde Esteban, My Mum Made It, Sir the Label, With Jéan: price_corrections.json still has an open FX repair window for each of them, which is that file's own statement that it does not vouch for those prices.",
+  "The Chicago story is a piece stocked by Gemini, 1911 W. Division St., Chicago, IL 60622 — the label itself is not Chicago-based, and the sheet does not say it is. brands.json has no city field on any label entry, so a Chicago DESIGNER cannot be identified from this data.",
+  "No story of these kinds was available: drop (confirmed markdown), lowest (lowest price on our record), hold (a price that will not move)."
+ ],
+ "rejected": {
+  "no_live_product_page": 243,
+  "store_listing_date_is_not_this_week": 138,
+  "move_seen_in_only_one_snapshot": 64,
+  "price_window_too_short_for_a_lowest_claim": 63,
+  "listing_date_contradicts_our_first_sighting": 29,
+  "label_has_too_little_record": 12,
+  "copy_refused": 1
+ }
+}
