@@ -301,6 +301,18 @@ MAINSTREAM_BRANDS = {
         # spelling a store's vendor field uses, one of the two matches; drop
         # either and the cap silently stops applying.
         "DÔEN", "Doen", "Linda Farrow", "WARDROBE.NYC",
+        # Added 2026-09-22 with the 8/6 list. Each is a direct peer of a house
+        # already capped above, not a discovery: Oséree is an Italian swim house
+        # at Net-a-Porter, Kith, The Webster and The Outnet -- the same tier as
+        # Frankies Bikinis -- and Retrosuperfuture is a Milan eyewear house
+        # founded 2007 with a standing collaboration business (Marni, MM6,
+        # Warhol), which is the Linda Farrow case exactly. Both run 250+ SKU
+        # feeds, so uncapped they would take 120 slots between them.
+        # BOTH OSÉREE SPELLINGS ARE LOAD-BEARING for the same reason as DÔEN:
+        # "é" IS folded by _norm_brand, so "Oséree" and "Oseree" both fold to
+        # "oseree" -- but retailers also write it "Osèree" with a grave, which
+        # is NOT folded, so it is listed explicitly.
+        "Oséree", "Oseree", "Osèree", "Retrosuperfuture",
     ]
 }
 
