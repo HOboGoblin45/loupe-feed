@@ -53,7 +53,12 @@ on:
     inputs:
       limit:
         description: "Max NEW cutouts to generate this run"
-        default: "800"
+        # v2 runs a clothes parser and a person detector per image, ~3-4x u2net's cost
+        # on CPU; the --budget-min guard below is what actually protects the timeout.
+        default: "300"
+      recheck_limit:
+        description: "Max v1 cutouts to re-examine (person -> garment) this run"
+        default: "300"
   # RUNS WHEN THE CATALOG CHANGES (2026-09-05), for the same reason as
   # embed-catalog.yml. This pass cuts out the products that are NEW in
   # catalog.json, so a 04:00 cron ran it FOUR HOURS BEFORE the catalog that
@@ -104,10 +109,46 @@ jobs:
           path: ~/.u2net
           key: u2net-model-v1
 
+      # v2 (garment-aware cutouts) adds a clothes parser + person detector from the
+      # HuggingFace hub (~230 MB together). Cache them like the U²-Net model.
+      - name: Cache garment models
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/huggingface
+          key: hf-garment-models-v1
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install "rembg[cpu]" pillow numpy onnxruntime
+          # CPU-only torch wheel: the default PyPI wheel drags in ~2 GB of CUDA.
+          pip install torch --index-url https://download.pytorch.org/whl/cpu
+          pip install "rembg[cpu]" pillow numpy onnxruntime transformers scipy
+
+      # Recheck the products people actually have in their Dressers first: the Look
+      # Builder tray only ever offers Dresser + Liked items. Best-effort — without the
+      # secrets the recheck just runs in catalog order.
+      - name: Rank Dresser products for the recheck
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: |
+          python - <<'PY' || echo "priority list unavailable - recheck runs in catalog order"
+          import collections, json, os, urllib.request
+          url, key = os.environ.get("SUPABASE_URL"), os.environ.get("SUPABASE_SERVICE_KEY")
+          if not url or not key:
+              raise SystemExit("no Supabase secrets")
+          counts, start = collections.Counter(), 0
+          while True:
+              req = urllib.request.Request(f"{url}/rest/v1/saved_items?select=product_id",
+                  headers={"apikey": key, "Authorization": f"Bearer {key}", "Range": f"{start}-{start + 999}"})
+              rows = json.load(urllib.request.urlopen(req, timeout=30))
+              counts.update(r["product_id"] for r in rows)
+              if len(rows) < 1000:
+                  break
+              start += 1000
+          open("priority.txt", "w").write("\n".join(pid for pid, _ in counts.most_common()))
+          print(f"priority list: {len(counts)} Dresser products")
+          PY
 
       # The cutouts live on an orphan branch. Clone it if it exists; otherwise start
       # an empty orphan history. All cutout state (img/*.webp + cutouts.json) lives
@@ -132,7 +173,12 @@ jobs:
 
       - name: Generate cutouts
         id: cut
-        run: python loupe-feed/cutout_catalog.py --dir cutrepo --limit ${{ github.event.inputs.limit || '800' }}
+        run: |
+          PRIO=""; [ -s priority.txt ] && PRIO="--priority-ids priority.txt"
+          python loupe-feed/cutout_catalog.py --dir cutrepo \
+            --limit ${{ github.event.inputs.limit || '300' }} \
+            --recheck-limit ${{ github.event.inputs.recheck_limit || '300' }} \
+            --budget-min 140 $PRIO
 
       - name: Commit & push cutouts branch
         env:
@@ -247,3 +293,4 @@ jobs:
       - name: Backfill progress
         run: |
           echo "Remaining to cut out: ${{ steps.cut.outputs.remaining || 'n/a' }}"
+          echo "v1 cutouts still to recheck: ${{ steps.cut.outputs.recheck_remaining || 'n/a' }}"
