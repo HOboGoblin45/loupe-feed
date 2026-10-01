@@ -188,6 +188,7 @@ CORRECTIONS = HERE / "price_corrections.json"
 PRICE_EPOCHS = [
     "2026-07-15",  # 10b4c79 — pinned scrape to country=US, 49 brands flipped to USD
     "2026-09-05",  # fx-refresh — fx_to_usd re-fetched (ECB 2026-09-04); every brand in a moved currency steps by one ratio on this day
+    "2026-10-01",  # fx-refresh — fx_to_usd re-fetched; every brand in a moved currency steps by one ratio on this day
 ]
 
 # Dates on or after which the SAMPLING methodology changed — WHICH products we

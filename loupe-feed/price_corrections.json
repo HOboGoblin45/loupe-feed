@@ -84,6 +84,86 @@
         "Stine Goya": 1.07231
       },
       "note": "Scheduled FX refresh by refresh_fx.py. Every price in these currencies steps by the brand ratio above on this day. It is our own arithmetic, never a markdown: void price comparisons across it (PRICE_EPOCHS) and never report it as a sale."
+    },
+    {
+      "day": "2026-10-01",
+      "kind": "fx-table-refresh",
+      "asOf": "2026-09-30",
+      "sources": {
+        "frankfurter(ECB)": "https://api.frankfurter.app/latest?from=USD",
+        "open.er-api.com": "https://open.er-api.com/v6/latest/USD"
+      },
+      "maxAbsPct": 4.29,
+      "rates": {
+        "SEK": {
+          "from": 0.104698,
+          "to": 0.100211,
+          "pct": -4.29
+        },
+        "NZD": {
+          "from": 0.588305,
+          "to": 0.564493,
+          "pct": -4.05
+        },
+        "AUD": {
+          "from": 0.720357,
+          "to": 0.696767,
+          "pct": -3.27
+        },
+        "CAD": {
+          "from": 0.724638,
+          "to": 0.705069,
+          "pct": -2.7
+        },
+        "DKK": {
+          "from": 0.155485,
+          "to": 0.151897,
+          "pct": -2.31
+        },
+        "EUR": {
+          "from": 1.162196,
+          "to": 1.135499,
+          "pct": -2.3
+        },
+        "EGP": {
+          "from": 0.019629,
+          "to": 0.019243,
+          "pct": -1.97
+        },
+        "GBP": {
+          "from": 1.352997,
+          "to": 1.328639,
+          "pct": -1.8
+        },
+        "TRY": {
+          "from": 0.020643,
+          "to": 0.020401,
+          "pct": -1.17
+        },
+        "JPY": {
+          "from": 0.006359,
+          "to": 0.006369,
+          "pct": 0.16
+        }
+      },
+      "brands": {
+        "Anna October": 0.977029,
+        "Bec + Bridge": 0.967252,
+        "Darbary Paris": 0.977029,
+        "Deiji Studios": 0.967252,
+        "Entremains": 0.977029,
+        "Flattered": 0.957143,
+        "Kernemilk": 0.976924,
+        "Le Febour": 0.972995,
+        "Maguire": 0.972995,
+        "Moja Rowa": 0.977029,
+        "Róhe": 0.977029,
+        "SIEDRÉS": 0.977029,
+        "Sir the Label": 0.967252,
+        "St. Agni": 0.967252,
+        "Stine Goya": 0.976924
+      },
+      "note": "Scheduled FX refresh by refresh_fx.py. Every price in these currencies steps by the brand ratio above on this day. It is our own arithmetic, never a markdown: void price comparisons across it (PRICE_EPOCHS) and never report it as a sale."
     }
   ],
   "corrections": [
