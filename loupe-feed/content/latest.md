@@ -1,156 +1,155 @@
-# Loupe content sheet — week of Monday 5 October 2026
+# Loupe content sheet — week of Monday 12 October 2026
 
-Week of Monday 5 October 2026 — built 2026-10-05 from 107 daily snapshots (2026-06-17 to 2026-10-05), 3,387 pieces with a price record across 211 labels.
+Week of Monday 12 October 2026 — built 2026-10-12 from 114 daily snapshots (2026-06-17 to 2026-10-12), 4,064 pieces with a price record across 214 labels.
 
-5 pieces changed price in the comparable window and none of those changes has yet been seen in a second snapshot, so none of them is reportable.
+416 pieces changed price and 384 of those moves are confirmed by a later snapshot; the biggest is 40% at Arcina Ori.
 
-Prices can only be compared over 2 snapshots this week, so every price story is held; 276 pieces down to one or two sizes and 774 listed by their shop in the last 7 days are what the record supports today.
+Prices can only be compared over 9 snapshots this week, so every price story is held; 309 pieces down to one or two sizes and 903 listed by their shop in the last 7 days are what the record supports today.
 
 ---
 
 ## 10 stories
 
-### 1. Sandy Liang ANTONIA PUMP 40 IN BRUSHED BROWN — down to 1 of 14 sizes
+### 1. Arcina Ori cut Arcina Ori ELLERY DRESS PLUM by 40%
 
-- **Hook** (50 characters) — Down to 1 size from 14 on these Sandy Liang shoes.
-- **Fact** — Sandy Liang ANTONIA PUMP 40 IN BRUSHED BROWN, $495. We have seen this piece in 36 daily snapshots and the widest in-stock size run we recorded was 14; 1 size is left (43) as of 2026-10-05. 13 have gone.
-- **Link** — https://useloupe.shop/product/sandy-liang-antonia-pump-40-in-brushed-brown/
+- **Hook** (39 characters) — Arcina Ori cut this dress 40% on Oct 8.
+- **Fact** — Arcina Ori ELLERY DRESS PLUM. $520 on Oct 7, $310 on Oct 8 — a 40% cut, still there in a later snapshot and still $310 in today's feed. No other piece from this label moved that day.
+- **Link** — https://useloupe.shop/product/arcina-ori-ellery-dress-plum/
+- **Format** — Two frames — the piece with the old price, then the new one. No voiceover needed.
+- **Image** — https://cdn.shopify.com/s/files/1/0004/8863/6475/files/Arcina_Ori_Highsummer_Ecom_15052510381.jpg?v=1780281377
+- **Type** — confirmed markdown
+
+### 2. Tyler McGillivary Arlo Cami - Pink and Red — down to 1 of 9 sizes
+
+- **Hook** (52 characters) — Down to 1 size from 9 on this Tyler McGillivary top.
+- **Fact** — Tyler McGillivary Arlo Cami - Pink and Red, $125. We have seen this piece in 86 daily snapshots and the widest in-stock size run we recorded was 9; 1 size is left (XL) as of 2026-10-12. 8 have gone.
+- **Link** — https://useloupe.shop/product/tyler-mcgillivary-arlo-cami-pink/
 - **Format** — Piece on screen, the size count as a text overlay; cut on the number.
-- **Image** — https://cdn.shopify.com/s/files/1/0645/7451/files/Bow_Pump_1.jpg?v=1785956822
+- **Image** — https://cdn.shopify.com/s/files/1/0338/7057/7709/files/RedArloCami-2_5d81101b-9d60-4ebc-8fe2-55ff3db2d323.jpg?v=1782232234
 - **Type** — about to sell out
 
-### 2. New at Mirchi by Kim: Mirchi by Kim Anne Dress
+### 3. New at Woodrose Deli: Woodrose Deli CLOY TOP
 
-- **Hook** (49 characters) — Mirchi by Kim put this dress up 4 days ago. $350.
-- **Fact** — Mirchi by Kim Anne Dress, $350. The shop's own listing date is Oct 1 — 4 days ago; it first reached our daily snapshot on Oct 2. We track 66 pieces from this label and the median one has been in 106 of our daily snapshots.
-- **Link** — https://useloupe.shop/product/mirchi-by-kim-anne-dress/
+- **Hook** (47 characters) — Woodrose Deli put this top up 6 days ago. $145.
+- **Fact** — Woodrose Deli CLOY TOP, $145. The shop's own listing date is Oct 6 — 6 days ago; it first reached our daily snapshot on Oct 7. We track 63 pieces from this label and the median one has been in 113 of our daily snapshots.
+- **Link** — https://useloupe.shop/product/woodrose-deli-cloy-top/
 - **Format** — Try-on, with the date it went up as a text overlay.
-- **Image** — https://cdn.shopify.com/s/files/1/0818/1936/9764/files/mirchiv2-062.jpg?v=1790815625
+- **Image** — https://cdn.shopify.com/s/files/1/0529/1861/6264/files/Untitled-October06_2026at13.07.56-6.png?v=1791334939
 - **Type** — new this week
 
-### 3. Damson Madder Antonia PJ Set in Navy Gingham has been on the shelf 57 days
+### 4. Damson Madder Antonia PJ Set in Navy Gingham has been on the shelf 64 days
 
-- **Hook** (53 characters) — This Damson Madder top has been on the shelf 57 days.
-- **Fact** — Damson Madder Antonia PJ Set in Navy Gingham, $119. The shop listed it on Oct 8, 2025; it has been in our daily snapshot since Aug 9, 57 days ago, and it is still there. 2 sizes in stock.
+- **Hook** (53 characters) — This Damson Madder top has been on the shelf 64 days.
+- **Fact** — Damson Madder Antonia PJ Set in Navy Gingham, $119. The shop listed it on Oct 8, 2025; it has been in our daily snapshot since Aug 9, 64 days ago, and it is still there. 2 sizes in stock.
 - **Link** — https://useloupe.shop/product/gemini-damson-madder-antonia-pj-set-in-navy-gingham/
 - **Chicago** — In stock at Gemini, 1911 W. Division St., Chicago, IL 60622
 - **Format** — Piece on screen + text overlay. The point is that there is no rush.
 - **Image** — https://cdn.shopify.com/s/files/1/0025/1707/3986/files/Antonia_2.webp?v=1759954617
 - **Type** — shelf life
 
-### 4. Fashion Brand Company 1 left - Bikini Bod Zip-Up Sweatshirt Green/Blue — down to 1 of 9 sizes
+### 5. Hernan Herdez cut Hernan Herdez diamond cigar ring by 36%
 
-- **Hook** (56 characters) — Down to 1 size from 9 on this Fashion Brand Company top.
-- **Fact** — Fashion Brand Company 1 left - Bikini Bod Zip-Up Sweatshirt Green/Blue, $148. We have seen this piece in 26 daily snapshots and the widest in-stock size run we recorded was 9; 1 size is left (S) as of 2026-10-05. 8 have gone.
-- **Link** — https://useloupe.shop/product/fashion-brand-company-bikini-bod-zip-up-sweatshirt-green-blue-1/
-- **Format** — Piece on screen, the size count as a text overlay; cut on the number.
-- **Image** — https://cdn.shopify.com/s/files/1/0101/9278/1369/files/Finley_412.jpg?v=1779210658
-- **Type** — about to sell out
+- **Hook** (42 characters) — Hernan Herdez cut this piece 36% on Oct 9.
+- **Fact** — Hernan Herdez diamond cigar ring. $1,234 on Oct 8, $795 on Oct 9 — a 36% cut, still there in a later snapshot and still $795 in today's feed. 3 of the 102 pieces we track from this label moved the same day, so it is a house-wide markdown rather than one piece.
+- **Link** — https://useloupe.shop/product/hernan-herdez-diamond-cigar-ring/
+- **Format** — Two frames — the piece with the old price, then the new one. No voiceover needed.
+- **Image** — https://cdn.shopify.com/s/files/1/0104/8854/5338/files/hernan-herdez-diamond-cigar-ring-gold-silver.jpg?v=1783101193
+- **Type** — confirmed markdown
 
-### 5. New at Woodrose Deli: Woodrose Deli THE SPEED JACKET IN PATENT BLACK
-
-- **Hook** (49 characters) — Woodrose Deli put this piece up 1 days ago. $198.
-- **Fact** — Woodrose Deli THE SPEED JACKET IN PATENT BLACK, $198. The shop's own listing date is Oct 4 — 1 days ago; it first reached our daily snapshot on Oct 5. We track 51 pieces from this label and the median one has been in 106 of our daily snapshots.
-- **Link** — https://useloupe.shop/product/woodrose-deli-the-speed-jacket-in-patent-black/
-- **Format** — Try-on, with the date it went up as a text overlay.
-- **Image** — https://cdn.shopify.com/s/files/1/0529/1861/6264/files/Untitled-October04_2026at14.59.24.jpg?v=1791150283
-- **Type** — new this week
-
-### 6. Eliou Vaquiero Hat has been on the shelf 56 days
-
-- **Hook** (47 characters) — This Eliou piece has been on the shelf 56 days.
-- **Fact** — Eliou Vaquiero Hat, $250. The shop listed it on Aug 7; it has been in our daily snapshot since Aug 10, 56 days ago, and it is still there. The shop lists no sizes for it.
-- **Link** — https://useloupe.shop/product/eliou-vaquiero-hat-2/
-- **Format** — Piece on screen + text overlay. The point is that there is no rush.
-- **Image** — https://cdn.shopify.com/s/files/1/0031/8016/7279/files/Vaquiero_Hat_Brown.png?v=1787342544
-- **Type** — shelf life
-
-### 7. Tyler McGillivary Heidi Long Sleeve - Wild Horses — down to 1 of 9 sizes
-
-- **Hook** (52 characters) — Down to 1 size from 9 on this Tyler McGillivary top.
-- **Fact** — Tyler McGillivary Heidi Long Sleeve - Wild Horses, $125. We have seen this piece in 41 daily snapshots and the widest in-stock size run we recorded was 9; 1 size is left (M) as of 2026-10-05. 8 have gone.
-- **Link** — https://useloupe.shop/product/tyler-mcgillivary-heidi-longsleeve-wh/
-- **Format** — Piece on screen, the size count as a text overlay; cut on the number.
-- **Image** — https://cdn.shopify.com/s/files/1/0338/7057/7709/files/Heidi_Long_Sleeve_-_Wild_Horses_Flat.jpg?v=1784901440
-- **Type** — about to sell out
-
-### 8. New at Conner Ives: Conner Ives The Silk Tapestry Bag - Burgundy
-
-- **Hook** (47 characters) — Conner Ives put this piece up 2 days ago. $560.
-- **Fact** — Conner Ives The Silk Tapestry Bag - Burgundy, $560. The shop's own listing date is Oct 3 — 2 days ago; it first reached our daily snapshot on Oct 4. We track 75 pieces from this label and the median one has been in 104 of our daily snapshots.
-- **Link** — https://useloupe.shop/product/conner-ives-burgundy-silk-bag-tassel/
-- **Format** — Piece on screen, slow pan, with the date it went up as a text overlay.
-- **Image** — https://cdn.shopify.com/s/files/1/0573/7663/7120/files/A0018685.jpg?v=1791033331
-- **Type** — new this week
-
-### 9. Maguire Dome Clip Black has been on the shelf 56 days
-
-- **Hook** (47 characters) — This Maguire top has been on the shelf 56 days.
-- **Fact** — Maguire Dome Clip Black, $11. The shop listed it on Aug 9; it has been in our daily snapshot since Aug 10, 56 days ago, and it is still there. The shop lists no sizes for it.
-- **Link** — https://useloupe.shop/product/maguire-dome-clip-black/
-- **Format** — Piece on screen + text overlay. The point is that there is no rush.
-- **Image** — https://cdn.shopify.com/s/files/1/1439/9726/files/Black_Dome_Clip_Front.png?v=1785943547
-- **Type** — shelf life
-
-### 10. ALOHAS Roebar Black Leather Ankle Boots — down to 1 of 8 sizes
+### 6. ALOHAS Tb.490 World Club Germany Leather Sneakers — down to 1 of 8 sizes
 
 - **Hook** (44 characters) — Down to 1 size from 8 on these ALOHAS shoes.
-- **Fact** — ALOHAS Roebar Black Leather Ankle Boots, $242. We have seen this piece in 32 daily snapshots and the widest in-stock size run we recorded was 8; 1 size is left (36) as of 2026-10-05. 7 have gone.
-- **Link** — https://useloupe.shop/product/alohas-roebar-black-leather-ankle-boots/
+- **Fact** — ALOHAS Tb.490 World Club Germany Leather Sneakers, $158. We have seen this piece in 26 daily snapshots and the widest in-stock size run we recorded was 8; 1 size is left (36) as of 2026-10-12. 7 have gone.
+- **Link** — https://useloupe.shop/product/alohas-tb-490-world-club-germany-leather-sneakers/
 - **Format** — Piece on screen, the size count as a text overlay; cut on the number.
-- **Image** — https://cdn.shopify.com/s/files/1/0762/7039/files/roebar-black-ankle-boots-5.jpg?v=1785852881
+- **Image** — https://cdn.shopify.com/s/files/1/0762/7039/files/tb-490-club-world-cup-germany-leather-2.jpg?v=1763395441
+- **Type** — about to sell out
+
+### 7. New at Susamusa: Susamusa Sienna Shirt - Black Lace
+
+- **Hook** (41 characters) — Susamusa put this top up 7 days ago. $72.
+- **Fact** — Susamusa Sienna Shirt - Black Lace, $72. The shop's own listing date is Oct 5 — 7 days ago; it first reached our daily snapshot on Oct 5. We track 68 pieces from this label and the median one has been in 112 of our daily snapshots.
+- **Link** — https://useloupe.shop/product/susamusa-the-sienna-in-black/
+- **Format** — Try-on, with the date it went up as a text overlay.
+- **Image** — https://cdn.shopify.com/s/files/1/0291/1243/4748/files/Sienna_Shirt_Black_1_c7df6f81-5d64-413e-9af3-8fb993a5969b.jpg?v=1719495826
+- **Type** — new this week
+
+### 8. Scarlet & Sam Mohair Rib Sweater has been on the shelf 64 days
+
+- **Hook** (53 characters) — This Scarlet & Sam top has been on the shelf 64 days.
+- **Fact** — Scarlet & Sam Mohair Rib Sweater, $237. The shop listed it on May 7; it has been in our daily snapshot since Aug 9, 64 days ago, and it is still there. 3 sizes in stock.
+- **Link** — https://useloupe.shop/product/scarlet---sam-mohair-rib-sweater/
+- **Format** — Piece on screen + text overlay. The point is that there is no rush.
+- **Image** — https://cdn.shopify.com/s/files/1/0517/8133/7285/files/IMG_1697_4.jpg?v=1779857276
+- **Type** — shelf life
+
+### 9. Loup cut Loup Miranda Pointelle Tee in Strawberry by 35%
+
+- **Hook** (31 characters) — Loup cut this top 35% on Oct 6.
+- **Fact** — Loup Miranda Pointelle Tee in Strawberry. $75 on Oct 5, $49 on Oct 6 — a 35% cut, still there in a later snapshot and still $49 in today's feed. 10 pieces from this label moved the same day.
+- **Link** — https://useloupe.shop/product/gemini-loup-miranda-pointelle-tee-in-strawberry/
+- **Chicago** — In stock at Gemini, 1911 W. Division St., Chicago, IL 60622
+- **Format** — Two frames — the piece with the old price, then the new one. No voiceover needed.
+- **Image** — https://cdn.shopify.com/s/files/1/0025/1707/3986/files/StrawberryMiranda_BlueberryTonicu.webp?v=1772976135
+- **Type** — confirmed markdown
+
+### 10. Flattered Anita Leather Black — down to 1 of 8 sizes
+
+- **Hook** (47 characters) — Down to 1 size from 8 on these Flattered shoes.
+- **Fact** — Flattered Anita Leather Black, $350. We have seen this piece in 63 daily snapshots and the widest in-stock size run we recorded was 8; 1 size is left (40) as of 2026-10-12. 7 have gone.
+- **Link** — https://useloupe.shop/product/flattered-anita/
+- **Format** — Piece on screen, the size count as a text overlay; cut on the number.
+- **Image** — https://cdn.shopify.com/s/files/1/0705/7224/5259/files/FLATTERED-ANITABLACKLEATHER-SIDE_c70a849c-6724-4c0d-b0a8-9a007e843f2c.jpg?v=1790329802
 - **Type** — about to sell out
 
 ---
 
 ## List posts
 
-### 5 pieces under $150 with one size left
+### 5 pieces under $150 that dropped this week
 
-*Swapped in for "5 pieces under $150 that dropped this week". No confirmed markdown under $150 this week — every dated move in the archive is still unconfirmed (2 comparable snapshots).*
+Definition: confirmed markdowns, priced under $150.
 
-Definition: one in-stock size left, priced under $150.
-
-- **Fashion Brand Company 1 left - Bikini Bod Zip-Up Sweatshirt Green/Blue** — $148. We have seen this piece in 26 daily snapshots and the widest in-stock size run we recorded was 9; 1 size is left (S) as of 2026-10-05. 8 have gone.
-  - https://useloupe.shop/product/fashion-brand-company-bikini-bod-zip-up-sweatshirt-green-blue-1/
-- **Tyler McGillivary Heidi Long Sleeve - Wild Horses** — $125. We have seen this piece in 41 daily snapshots and the widest in-stock size run we recorded was 9; 1 size is left (M) as of 2026-10-05. 8 have gone.
-  - https://useloupe.shop/product/tyler-mcgillivary-heidi-longsleeve-wh/
-- **Fashion Brand Company 1 left - Bikini Bod Ref Stripe Short Sleeve Tee** — $118. We have seen this piece in 20 daily snapshots and the widest in-stock size run we recorded was 8; 1 size is left (M) as of 2026-10-05. 7 have gone.
-  - https://useloupe.shop/product/fashion-brand-company-bikini-bod-vertical-striped-short-sleeve-tee-black-white/
-- **Tyler McGillivary Thea Long Sleeve - Sculpture** — $128. We have seen this piece in 12 daily snapshots and the widest in-stock size run we recorded was 8; 1 size is left (XS) as of 2026-10-05. 7 have gone.
-  - https://useloupe.shop/product/tyler-mcgillivary-thea-long-sleeve-s/
-- **Cou Cou Intimates The Boyshort: White French Stripe Cotton Jersey** — $42. We have seen this piece in 77 daily snapshots and the widest in-stock size run we recorded was 7; 1 size is left (XS) as of 2026-10-05. 6 have gone.
-  - https://useloupe.shop/product/cou-cou-intimates-the-boy-short-white-french-stripe-cotton-jersey/
+- **Loup Miranda Pointelle Tee in Strawberry** — $49. $75 on Oct 5, $49 on Oct 6 — a 35% cut, still there in a later snapshot and still $49 in today's feed. 10 pieces from this label moved the same day.
+  - https://useloupe.shop/product/gemini-loup-miranda-pointelle-tee-in-strawberry/
+- **Loup Miranda Pointelle Tee in White** — $49. $75 on Oct 5, $49 on Oct 6 — a 35% cut, still there in a later snapshot and still $49 in today's feed. 10 pieces from this label moved the same day.
+  - https://useloupe.shop/product/gemini-loup-miranda-pointelle-tee-in-white/
+- **Esthé Pleated Floral Mini Dress** — $99. $149 on Oct 5, $99 on Oct 6 — a 34% cut, still there in a later snapshot and still $99 in today's feed. 8 of the 23 pieces we track from this label moved the same day, so it is a house-wide markdown rather than one piece.
+  - https://useloupe.shop/product/gemini-esth%C3%A9-pleated-floral-mini-dress/
+- **Susmie's Duality Roses Top** — $24. $35 on Oct 10, $24 on Oct 11 — a 31% cut, still there in a later snapshot and still $24 in today's feed. 3 of the 246 pieces we track from this label moved the same day, so it is a house-wide markdown rather than one piece.
+  - https://useloupe.shop/product/susmie-s-duality-roses-top/
+- **Esthé One Shoulder Pleated Floral Top** — $89. $125 on Oct 5, $89 on Oct 6 — a 29% cut, still there in a later snapshot and still $89 in today's feed. 8 of the 23 pieces we track from this label moved the same day, so it is a house-wide markdown rather than one piece.
+  - https://useloupe.shop/product/gemini-esth%C3%A9-one-shoulder-pleated-floral-top/
 
 ### The 4 dresses about to sell out
 
 Definition: dresses down to one or two in-stock sizes from a run of four or more.
 
-- **Tyler McGillivary Pompeii Dress - Wilderness** — $215. We have seen this piece in 12 daily snapshots and the widest in-stock size run we recorded was 7; 1 size is left (S) as of 2026-10-05. 6 have gone.
+- **Tyler McGillivary Swan Mini Dress - Swan** — $165. We have seen this piece in 87 daily snapshots and the widest in-stock size run we recorded was 9; 1 size is left (4XL) as of 2026-10-12. 8 have gone.
+  - https://useloupe.shop/product/tyler-mcgillivary-swan-mini-dress/
+- **Tyler McGillivary Pompeii Dress - Wilderness** — $215. We have seen this piece in 19 daily snapshots and the widest in-stock size run we recorded was 7; 1 size is left (S) as of 2026-10-12. 6 have gone.
   - https://useloupe.shop/product/tyler-mcgillivary-pompeii-dress-w/
-- **Ancegria Romeo Gown - Red** — $380. We have seen this piece in 98 daily snapshots and the widest in-stock size run we recorded was 5; 1 size is left (XS) as of 2026-10-05. 4 have gone.
+- **Ciao Lucia Julian Poppy Printed Silk Dress** — $365. We have seen this piece in 61 daily snapshots and the widest in-stock size run we recorded was 6; 1 size is left (XXS) as of 2026-10-12. 5 have gone.
+  - https://useloupe.shop/product/ciao-lucia-julian-dress/
+- **Ancegria Romeo Gown - Red** — $380. We have seen this piece in 105 daily snapshots and the widest in-stock size run we recorded was 5; 1 size is left (XS) as of 2026-10-12. 4 have gone.
   - https://useloupe.shop/product/ancegria-romeo-gown-red/
-- **Apres Studio Meg Wool Dress** — $406. We have seen this piece in 106 daily snapshots and the widest in-stock size run we recorded was 5; 1 size is left (M) as of 2026-10-05. 4 have gone.
-  - https://useloupe.shop/product/apres-studio-meg-wool-dress/
-- **Bec + Bridge CAMILLE BLOUSON DRESS - PISTACHIO** — $265. We have seen this piece in 22 daily snapshots and the widest in-stock size run we recorded was 5; 1 size is left (16) as of 2026-10-05. 4 have gone.
-  - https://useloupe.shop/product/bec---bridge-camille-blouson-dress-pistachio/
 
 ### New this week from the labels whose pieces stay longest
 
-*Swapped in for "New this week from labels that never discount". Brand price discipline is not measurable this week: prices can only be compared over 2 snapshots, so "never discounts" would be a claim about 2 days rather than about the label.*
+*Swapped in for "New this week from labels that never discount". Brand price discipline is not measurable this week: prices can only be compared over 9 snapshots, so "never discounts" would be a claim about 9 days rather than about the label.*
 
 Definition: arrived in the last seven days, ranked by how many of our daily snapshots the label's median piece survives.
 
-- **Mirchi by Kim Anne Dress** — $350. The shop's own listing date is Oct 1 — 4 days ago; it first reached our daily snapshot on Oct 2. We track 66 pieces from this label and the median one has been in 106 of our daily snapshots.
-  - https://useloupe.shop/product/mirchi-by-kim-anne-dress/
-- **Mirchi by Kim Ingrid Dress** — $280. The shop's own listing date is Oct 1 — 4 days ago; it first reached our daily snapshot on Oct 2. We track 66 pieces from this label and the median one has been in 106 of our daily snapshots.
-  - https://useloupe.shop/product/mirchi-by-kim-ingrid-dress/
-- **Woodrose Deli THE SPEED JACKET IN PATENT BLACK** — $198. The shop's own listing date is Oct 4 — 1 days ago; it first reached our daily snapshot on Oct 5. We track 51 pieces from this label and the median one has been in 106 of our daily snapshots.
-  - https://useloupe.shop/product/woodrose-deli-the-speed-jacket-in-patent-black/
-- **Conner Ives The Silk Tapestry Bag - Burgundy** — $560. The shop's own listing date is Oct 3 — 2 days ago; it first reached our daily snapshot on Oct 4. We track 75 pieces from this label and the median one has been in 104 of our daily snapshots.
-  - https://useloupe.shop/product/conner-ives-burgundy-silk-bag-tassel/
-- **Conner Ives The Leather Paillette Bag** — $780. The shop's own listing date is Oct 3 — 2 days ago; it first reached our daily snapshot on Oct 4. We track 75 pieces from this label and the median one has been in 104 of our daily snapshots.
-  - https://useloupe.shop/product/conner-ives-leather-sequin-bag/
+- **Woodrose Deli CLOY TOP** — $145. The shop's own listing date is Oct 6 — 6 days ago; it first reached our daily snapshot on Oct 7. We track 63 pieces from this label and the median one has been in 113 of our daily snapshots.
+  - https://useloupe.shop/product/woodrose-deli-cloy-top/
+- **Woodrose Deli EGG JACKET** — $188. The shop's own listing date is Oct 6 — 6 days ago; it first reached our daily snapshot on Oct 7. We track 63 pieces from this label and the median one has been in 113 of our daily snapshots.
+  - https://useloupe.shop/product/woodrose-deli-egg-jacket/
+- **Susamusa Sienna Shirt - Black Lace** — $72. The shop's own listing date is Oct 5 — 7 days ago; it first reached our daily snapshot on Oct 5. We track 68 pieces from this label and the median one has been in 112 of our daily snapshots.
+  - https://useloupe.shop/product/susamusa-the-sienna-in-black/
+- **Susamusa Sienna Shirt - Ivory Lace** — $72. The shop's own listing date is Oct 5 — 7 days ago; it first reached our daily snapshot on Oct 5. We track 68 pieces from this label and the median one has been in 112 of our daily snapshots.
+  - https://useloupe.shop/product/susamusa-the-sienna-in-ivory/
+- **Attega Bella Skirt** — $158. The shop's own listing date is Oct 7 — 5 days ago; it first reached our daily snapshot on Oct 7. We track 72 pieces from this label and the median one has been in 107 of our daily snapshots.
+  - https://useloupe.shop/product/attega-bella-skirt-purple/
 
 ---
 
@@ -169,10 +168,9 @@ Definition: arrived in the last seven days, ranked by how many of our daily snap
 
 ## What this sheet could not say this week
 
-- Lowest-ever prices, brand price discipline ("this label discounts N%") and "this price has held" are all HELD this week. price_records.json measures those inside the current pricing epoch, and the 2026-10-01 change plus its 3-day settle leaves only 2 comparable snapshots (2026-10-04 to 2026-10-05). Quoting them would be a statement about 2 days dressed up as one about 107. They come back on 2026-10-17 at the earliest.
-- All 5 dated price moves in the archive land on the last snapshot, so none has been seen twice yet. A move becomes reportable on the first later snapshot that still shows the new price (MOVE_MIN_CONFIRM_SNAPSHOTS); a move that reverts overnight never earns a post, which is the point of the rule.
+- Lowest-ever prices, brand price discipline ("this label discounts N%") and "this price has held" are all HELD this week. price_records.json measures those inside the current pricing epoch, and the 2026-10-01 change plus its 3-day settle leaves only 9 comparable snapshots (2026-10-04 to 2026-10-12). Quoting them would be a statement about 9 days dressed up as one about 114. They come back on 2026-10-17 at the earliest.
 - No price claim is made about 28natelier, Anna October, Blanch Wear, Christopher Esber, Donde Esteban, My Mum Made It, Sir the Label, With Jéan: price_corrections.json still has an open FX repair window for each of them, which is that file's own statement that it does not vouch for those prices.
 - The Chicago story is a piece stocked by Gemini, 1911 W. Division St., Chicago, IL 60622 — the label itself is not Chicago-based, and the sheet does not say it is. brands.json has no city field on any label entry, so a Chicago DESIGNER cannot be identified from this data.
-- No story of these kinds was available: drop (confirmed markdown), lowest (lowest price on our record), hold (a price that will not move).
+- No story of these kinds was available: lowest (lowest price on our record), hold (a price that will not move).
 
-<sub>Built by loupe-feed/build_content_sheet.py from price_records.json (2026-10-05T17:27:05Z) and catalog.json (2026-10-05T17:17:55Z). Prices can be compared over 2 snapshots (2026-10-04 to 2026-10-05). No inventory data (stock.json) is used: naming a brand's stock is forbidden by that file's own use policy.</sub>
+<sub>Built by loupe-feed/build_content_sheet.py from price_records.json (2026-10-12T18:06:04Z) and catalog.json (2026-10-12T17:59:34Z). Prices can be compared over 9 snapshots (2026-10-04 to 2026-10-12). No inventory data (stock.json) is used: naming a brand's stock is forbidden by that file's own use policy.</sub>
