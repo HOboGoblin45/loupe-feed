@@ -1,114 +1,114 @@
-# Loupe content sheet — week of Monday 19 October 2026
+# Loupe content sheet — week of Monday 26 October 2026
 
-Week of Monday 19 October 2026 — built 2026-10-19 from 121 daily snapshots (2026-06-17 to 2026-10-19), 5,154 pieces with a price record across 213 labels.
+Week of Monday 26 October 2026 — built 2026-10-26 from 128 daily snapshots (2026-06-17 to 2026-10-26), 5,344 pieces with a price record across 217 labels.
 
-577 pieces changed price and 557 of those moves are confirmed by a later snapshot; the biggest is 46% at DMY Studios.
+764 pieces changed price and 728 of those moves are confirmed by a later snapshot; the biggest is 67% at Gil Rodriguez.
 
-289 pieces are down to one or two in-stock sizes from a run of four or more, and 914 were listed by their own shop in the last 7 days.
+302 pieces are down to one or two in-stock sizes from a run of four or more, and 957 were listed by their own shop in the last 7 days.
 
 ---
 
 ## 10 stories
 
-### 1. DMY Studios cut DMY Studios Sylvia Transparent Gold Sunglasses by 46%
+### 1. Gil Rodriguez cut Gil Rodriguez Via Olympia Unitard - Chocolate by 67%
 
-- **Hook** (41 characters) — DMY Studios cut this piece 46% on Oct 14.
-- **Fact** — DMY Studios Sylvia Transparent Gold Sunglasses. $285 on Oct 13, $155 on Oct 14 — a 46% cut, still there in a later snapshot and still $155 in today's feed. 25 of the 75 pieces we track from this label moved the same day, so it is a house-wide markdown rather than one piece.
-- **Link** — https://useloupe.shop/product/dmy-studios-sylvia-transparent-gold/
-- **Label** — This label has marked down 48% of the 75 pieces we track from it.
+- **Hook** (43 characters) — Gil Rodriguez cut this dress 67% on Oct 21.
+- **Fact** — Gil Rodriguez Via Olympia Unitard - Chocolate. $165 on Oct 20, $55 on Oct 21 — a 67% cut, still there in a later snapshot and still $55 in today's feed. No other piece from this label moved that day.
+- **Link** — https://useloupe.shop/product/gil-rodriguez-via-olympia-unitard-chocolate/
+- **Label** — This label has marked down 2% of the 219 pieces we track from it.
 - **Format** — Two frames — the piece with the old price, then the new one. No voiceover needed.
-- **Image** — https://cdn.shopify.com/s/files/1/0598/4265/8484/files/DMYSUN21TG_1.jpg?v=1773331007
+- **Image** — https://cdn.shopify.com/s/files/1/0282/9955/8972/files/chocolate-long-unitard-2_619e5762-84d2-4298-bbe8-6dfc314d4877.jpg?v=1762457711
 - **Type** — confirmed markdown
 
-### 2. Arcina Ori ELLERY DRESS PLUM at the lowest price on our record
+### 2. DMY Studios Sylvia Transparent Gold Sunglasses at the lowest price on our record
 
-- **Hook** (69 characters) — $310, the lowest we have logged for this Arcina Ori dress in 16 days.
-- **Fact** — Arcina Ori ELLERY DRESS PLUM. Across the last 16 days we can compare prices over, our record has it between $310 and $520; it is $310 in today's feed, at the bottom of that range — a 40% spread.
-- **Link** — https://useloupe.shop/product/arcina-ori-ellery-dress-plum/
-- **Label** — This label has marked down 10% of the 78 pieces we track from it.
+- **Hook** (70 characters) — $155, the lowest we have logged for this DMY Studios piece in 23 days.
+- **Fact** — DMY Studios Sylvia Transparent Gold Sunglasses. Across the last 23 days we can compare prices over, our record has it between $155 and $285; it is $155 in today's feed, at the bottom of that range — a 46% spread.
+- **Link** — https://useloupe.shop/product/dmy-studios-sylvia-transparent-gold/
+- **Label** — This label has marked down 43% of the 84 pieces we track from it.
 - **Format** — Piece on screen, price as a text overlay held for the whole clip.
-- **Image** — https://cdn.shopify.com/s/files/1/0004/8863/6475/files/ELLERY-PLUM-SQUARE-1.jpg?v=1792058679
+- **Image** — https://cdn.shopify.com/s/files/1/0598/4265/8484/files/DMYSUN21TG_1.jpg?v=1773331007
 - **Type** — lowest price on our record
 
-### 3. Fashion Brand Company 2 left - Trunchbull Cotton Sweatshirt Gray — down to 1 of 9 sizes
+### 3. Tyler McGillivary Dover Tank - Vintage Rose — down to 1 of 9 sizes
 
-- **Hook** (56 characters) — Down to 1 size from 9 on this Fashion Brand Company top.
-- **Fact** — Fashion Brand Company 2 left - Trunchbull Cotton Sweatshirt Gray, $98. We have seen this piece in 13 daily snapshots and the widest in-stock size run we recorded was 9; 1 size is left (XS) as of 2026-10-19. 8 have gone.
-- **Link** — https://useloupe.shop/product/fashion-brand-company-trunchbull-cotton-sweatshirt-gray/
-- **Label** — This label has marked down 4% of the 795 pieces we track from it.
+- **Hook** (52 characters) — Down to 1 size from 9 on this Tyler McGillivary top.
+- **Fact** — Tyler McGillivary Dover Tank - Vintage Rose, $90. We have seen this piece in 97 daily snapshots and the widest in-stock size run we recorded was 9; 1 size is left (XS) as of 2026-10-26. 8 have gone.
+- **Link** — https://useloupe.shop/product/tyler-mcgillivary-dover-tank-rose/
+- **Label** — This label has marked down 4% of the 249 pieces we track from it.
 - **Format** — Piece on screen, the size count as a text overlay; cut on the number.
-- **Image** — https://cdn.shopify.com/s/files/1/0101/9278/1369/files/tess_baldwin_350.jpg?v=1779825504
+- **Image** — https://cdn.shopify.com/s/files/1/0338/7057/7709/files/DoverTankVintageRose_Flat.jpg?v=1790715237
 - **Type** — about to sell out
 
-### 4. New at Unica Leathers: Unica Leathers La Cruzaa in Mango
+### 4. New at Woodrose Deli: Woodrose Deli NIGHTLOOM KNIT TOP IN GROVE
 
-- **Hook** (51 characters) — Unica Leathers put these shoes up 6 days ago. $169.
-- **Fact** — Unica Leathers La Cruzaa in Mango, $169. The shop's own listing date is Oct 13 — 6 days ago; it first reached our daily snapshot on Oct 13. This label has marked down 0% of the 78 pieces we track from it.
-- **Link** — https://useloupe.shop/product/unica-leathers-la-cruzaa-in-mango/
-- **Label** — This label has marked down 0% of the 78 pieces we track from it.
+- **Hook** (47 characters) — Woodrose Deli put this top up 4 days ago. $126.
+- **Fact** — Woodrose Deli NIGHTLOOM KNIT TOP IN GROVE, $126. The shop's own listing date is Oct 22 — 4 days ago; it first reached our daily snapshot on Oct 23. This label has marked down 9% of the 64 pieces we track from it.
+- **Link** — https://useloupe.shop/product/woodrose-deli-nightloom-knit-top-in-grove/
+- **Label** — This label has marked down 9% of the 64 pieces we track from it.
 - **Format** — Try-on, with the date it went up as a text overlay.
-- **Image** — https://cdn.shopify.com/s/files/1/0767/7732/4818/files/MustardSuedeCross-StrapSandals.png?v=1791326284
+- **Image** — https://cdn.shopify.com/s/files/1/0529/1861/6264/files/TaupeAsymmetricalKnitEnsemblePose_9a541da9-a249-418e-8c3c-8f890341bdfd.png?v=1792966155
 - **Type** — new this week
 
-### 5. Charlie Beads has not moved this price in 120 days
+### 5. Charlie Beads has not moved this price in 127 days
 
-- **Hook** (61 characters) — $140 for 120 days. This label marks down 3% of what we track.
-- **Fact** — Charlie Beads Charlie Button Up Black. $140 in every one of the 120 daily snapshots we have seen it in, with no move inside the window we can compare prices over. This label has marked down 3% of the 98 pieces we track from it.
+- **Hook** (61 characters) — $140 for 127 days. This label marks down 3% of what we track.
+- **Fact** — Charlie Beads Charlie Button Up Black. $140 in every one of the 127 daily snapshots we have seen it in, with no move inside the window we can compare prices over. This label has marked down 3% of the 98 pieces we track from it.
 - **Link** — https://useloupe.shop/product/charlie-beads-charlie-button-up-black/
 - **Label** — This label has marked down 3% of the 98 pieces we track from it.
 - **Format** — Piece on screen + text overlay: the price, then the number of days it has held.
 - **Image** — https://cdn.shopify.com/s/files/1/0457/5477/7752/files/22C46C6A-68A6-4416-8234-111B78006A3B_1_201_a.jpg?v=1785189986
 - **Type** — a price that will not move
 
-### 6. Damson Madder Antonia PJ Set in Navy Gingham has been on the shelf 71 days
+### 6. Damson Madder Antonia PJ Set in Navy Gingham has been on the shelf 78 days
 
-- **Hook** (53 characters) — This Damson Madder top has been on the shelf 71 days.
-- **Fact** — Damson Madder Antonia PJ Set in Navy Gingham, $119. The shop listed it on Oct 8, 2025; it has been in our daily snapshot since Aug 9, 71 days ago, and it is still there. 2 sizes in stock.
+- **Hook** (53 characters) — This Damson Madder top has been on the shelf 78 days.
+- **Fact** — Damson Madder Antonia PJ Set in Navy Gingham, $119. The shop listed it on Oct 8, 2025; it has been in our daily snapshot since Aug 9, 78 days ago, and it is still there. 2 sizes in stock.
 - **Link** — https://useloupe.shop/product/gemini-damson-madder-antonia-pj-set-in-navy-gingham/
-- **Label** — This label has marked down 2% of the 634 pieces we track from it.
+- **Label** — This label has marked down 2% of the 635 pieces we track from it.
 - **Chicago** — In stock at Gemini, 1911 W. Division St., Chicago, IL 60622
 - **Format** — Piece on screen + text overlay. The point is that there is no rush.
 - **Image** — https://cdn.shopify.com/s/files/1/0025/1707/3986/files/Antonia_2.webp?v=1759954617
 - **Type** — shelf life
 
-### 7. Guizio cut Guizio Leila Twill Dress by 40%
+### 7. Fashion Brand Company cut Fashion Brand Company Diana Bear Velvet Rose Low Rise Garter Briefs by 59%
 
-- **Hook** (36 characters) — Guizio cut this dress 40% on Oct 14.
-- **Fact** — Guizio Leila Twill Dress. $248 on Oct 13, $149 on Oct 14 — a 40% cut, still there in a later snapshot and still $149 in today's feed. No other piece from this label moved that day.
-- **Link** — https://useloupe.shop/product/guizio-leila-dress-red-love/
-- **Label** — This label has marked down 4% of the 372 pieces we track from it.
+- **Hook** (49 characters) — Fashion Brand Company cut this top 59% on Oct 25.
+- **Fact** — Fashion Brand Company Diana Bear Velvet Rose Low Rise Garter Briefs. $58 on Oct 24, $24 on Oct 25 — a 59% cut, still there in a later snapshot and still $24 in today's feed. No other piece from this label moved that day.
+- **Link** — https://useloupe.shop/product/fashion-brand-company-diana-bear-velvet-rose-low-rise-garter-briefs/
+- **Label** — This label has marked down 4% of the 819 pieces we track from it.
 - **Format** — Two frames — the piece with the old price, then the new one. No voiceover needed.
-- **Image** — https://cdn.shopify.com/s/files/1/0449/3508/6234/files/DEC5_ECOMM_SPRING2163.jpg?v=1738126005
+- **Image** — https://cdn.shopify.com/s/files/1/0101/9278/1369/files/0J4A8110.jpg?v=1789596806
 - **Type** — confirmed markdown
 
-### 8. MISBHV Logo Boxers at the lowest price on our record
+### 8. One Mile The Label Amelia Long Sleeve Top Grey Marl at the lowest price on our record
 
-- **Hook** (64 characters) — $33, the lowest we have logged for this MISBHV piece in 16 days.
-- **Fact** — MISBHV Logo Boxers. Across the last 16 days we can compare prices over, our record has it between $33 and $52; it is $33 in today's feed, at the bottom of that range — a 37% spread.
-- **Link** — https://useloupe.shop/product/misbhv-logo-boxers-270u601/
-- **Label** — This label has marked down 52% of the 135 pieces we track from it.
+- **Hook** (74 characters) — $67, the lowest we have logged for this One Mile The Label top in 23 days.
+- **Fact** — One Mile The Label Amelia Long Sleeve Top Grey Marl. Across the last 23 days we can compare prices over, our record has it between $67 and $115; it is $67 in today's feed, at the bottom of that range — a 42% spread.
+- **Link** — https://useloupe.shop/product/one-mile-the-label-amelia-long-sleeve-top-grey-marl/
+- **Label** — This label has marked down 96% of the 82 pieces we track from it.
 - **Format** — Piece on screen, price as a text overlay held for the whole clip.
-- **Image** — https://cdn.shopify.com/s/files/1/0893/1472/2131/files/270U601-1.png?v=1791377497
+- **Image** — https://cdn.shopify.com/s/files/1/0334/8171/9945/files/Artboard160_ca60804f-1330-4308-9d5a-e6040bcb4f21.jpg?v=1784168475
 - **Type** — lowest price on our record
 
-### 9. Tyler McGillivary Dover Tank - Vintage Rose — down to 1 of 9 sizes
+### 9. ALOHAS Berlin Rift Burgundy Leather Ankle Boots — down to 1 of 8 sizes
 
-- **Hook** (52 characters) — Down to 1 size from 9 on this Tyler McGillivary top.
-- **Fact** — Tyler McGillivary Dover Tank - Vintage Rose, $90. We have seen this piece in 90 daily snapshots and the widest in-stock size run we recorded was 9; 1 size is left (XS) as of 2026-10-19. 8 have gone.
-- **Link** — https://useloupe.shop/product/tyler-mcgillivary-dover-tank-rose/
-- **Label** — This label has marked down 4% of the 248 pieces we track from it.
+- **Hook** (44 characters) — Down to 1 size from 8 on these ALOHAS shoes.
+- **Fact** — ALOHAS Berlin Rift Burgundy Leather Ankle Boots, $345. We have seen this piece in 18 daily snapshots and the widest in-stock size run we recorded was 8; 1 size is left (41) as of 2026-10-26. 7 have gone.
+- **Link** — https://useloupe.shop/product/alohas-berlin-rift-burgundy-leather-boots/
+- **Label** — This label has marked down 17% of the 284 pieces we track from it.
 - **Format** — Piece on screen, the size count as a text overlay; cut on the number.
-- **Image** — https://cdn.shopify.com/s/files/1/0338/7057/7709/files/DoverTankVintageRose_Flat.jpg?v=1790715237
+- **Image** — https://cdn.shopify.com/s/files/1/0762/7039/files/berlin-rift-burgundy-leather-boots-1.jpg?v=1759918733
 - **Type** — about to sell out
 
-### 10. New at Brooke Callahan: Brooke Callahan A–Line Wool Skirt - Black
+### 10. New at Marland Backus: Marland Backus Heart Strings Bracelet
 
-- **Hook** (51 characters) — Brooke Callahan put this piece up 5 days ago. $210.
-- **Fact** — Brooke Callahan A–Line Wool Skirt - Black, $210. The shop's own listing date is Oct 14 — 5 days ago; it first reached our daily snapshot on Oct 15. This label has marked down 0% of the 77 pieces we track from it.
-- **Link** — https://useloupe.shop/product/brooke-callahan-a-line-wool-skirt/
-- **Label** — This label has marked down 0% of the 77 pieces we track from it.
-- **Format** — Try-on, with the date it went up as a text overlay.
-- **Image** — https://cdn.shopify.com/s/files/1/0891/6798/6935/files/IMG_9001NEW.jpg?v=1792021550
+- **Hook** (49 characters) — Marland Backus put this piece up 5 days ago. $45.
+- **Fact** — Marland Backus Heart Strings Bracelet, $45. The shop's own listing date is Oct 21 — 5 days ago; it first reached our daily snapshot on Oct 22. This label has marked down 5% of the 55 pieces we track from it.
+- **Link** — https://useloupe.shop/product/marland-backus-heart-strings-bracelet/
+- **Label** — This label has marked down 5% of the 55 pieces we track from it.
+- **Format** — Piece on screen, slow pan, with the date it went up as a text overlay.
+- **Image** — https://cdn.shopify.com/s/files/1/0765/1183/8453/files/DSC02278.jpg?v=1792630506
 - **Type** — new this week
 
 ---
@@ -119,44 +119,44 @@ Week of Monday 19 October 2026 — built 2026-10-19 from 121 daily snapshots (20
 
 Definition: confirmed markdowns, priced under $150.
 
-- **Guizio Leila Twill Dress** — $149. $248 on Oct 13, $149 on Oct 14 — a 40% cut, still there in a later snapshot and still $149 in today's feed. No other piece from this label moved that day.
-  - https://useloupe.shop/product/guizio-leila-dress-red-love/
-- **Guizio Clifton Zip Up Hoodie** — $84. $134 on Oct 11, $84 on Oct 12 — a 37% cut, still there in a later snapshot and still $84 in today's feed. 3 of the 372 pieces we track from this label moved the same day, so it is a house-wide markdown rather than one piece.
-  - https://useloupe.shop/product/guizio-clifton-zip-up-hoodie-ivory/
-- **MISBHV Logo Boxers** — $33. $51 on Oct 11, $33 on Oct 12 — a 35% cut, still there in a later snapshot and still $33 in today's feed. 2 of the 135 pieces we track from this label moved the same day, so it is a house-wide markdown rather than one piece.
-  - https://useloupe.shop/product/misbhv-logo-boxers-270u601/
-- **Charlie Beads Rabbit Tank Pointelle** — $48. $68 on Oct 16, $48 on Oct 17 — a 29% cut, still there in a later snapshot and still $48 in today's feed. No other piece from this label moved that day.
-  - https://useloupe.shop/product/charlie-beads-pointelle-tank-top-thick-strap/
-- **Nokshi New York The Loom Trouser** — $130. $175 on Oct 13, $130 on Oct 14 — a 26% cut, still there in a later snapshot and still $130 in today's feed. No other piece from this label moved that day.
-  - https://useloupe.shop/product/nokshi-new-york-the-loom-pants/
+- **Gil Rodriguez Via Olympia Unitard - Chocolate** — $55. $165 on Oct 20, $55 on Oct 21 — a 67% cut, still there in a later snapshot and still $55 in today's feed. No other piece from this label moved that day.
+  - https://useloupe.shop/product/gil-rodriguez-via-olympia-unitard-chocolate/
+- **Fashion Brand Company Diana Bear Velvet Rose Low Rise Garter Briefs** — $24. $58 on Oct 24, $24 on Oct 25 — a 59% cut, still there in a later snapshot and still $24 in today's feed. No other piece from this label moved that day.
+  - https://useloupe.shop/product/fashion-brand-company-diana-bear-velvet-rose-low-rise-garter-briefs/
+- **Susmie's Rumba Reversible Top/Skirt** — $39. $78 on Oct 20, $39 on Oct 21 — a 50% cut, still there in a later snapshot and still $39 in today's feed. No other piece from this label moved that day.
+  - https://useloupe.shop/product/susmie-s-rumba-reversible-top-skirt-1/
+- **Gil Rodriguez Turtleneck L/S Bellevue Tee - Navy** — $45. $85 on Oct 21, $45 on Oct 22 — a 47% cut, still there in a later snapshot and still $45 in today's feed. No other piece from this label moved that day.
+  - https://useloupe.shop/product/gil-rodriguez-turtleneck-l-s-bellevue-tee-navy/
+- **Ella Mae RIPPLE SHORTS IN LAPIS** — $65. $120 on Oct 23, $65 on Oct 24 — a 46% cut, still there in a later snapshot and still $65 in today's feed. 3 of the 116 pieces we track from this label moved the same day, so it is a house-wide markdown rather than one piece.
+  - https://useloupe.shop/product/ella-mae-ripple-shorts-in-lapis/
 
 ### The 4 dresses about to sell out
 
 Definition: dresses down to one or two in-stock sizes from a run of four or more.
 
-- **Fashion Brand Company 1 left - Barefoot Mini Dress Soft Linen Purple Plaid** — $174. We have seen this piece in 12 daily snapshots and the widest in-stock size run we recorded was 8; 1 size is left (XS) as of 2026-10-19. 7 have gone.
-  - https://useloupe.shop/product/fashion-brand-company-barefoot-mini-dress-soft-linen-purple-plaid/
-- **Tyler McGillivary Thea Dress - Ink Blue** — $178. We have seen this piece in 26 daily snapshots and the widest in-stock size run we recorded was 7; 1 size is left (S) as of 2026-10-19. 6 have gone.
+- **Tyler McGillivary Thea Dress - Ink Blue** — $178. We have seen this piece in 33 daily snapshots and the widest in-stock size run we recorded was 7; 1 size is left (S) as of 2026-10-26. 6 have gone.
   - https://useloupe.shop/product/tyler-mcgillivary-thea-dress-ib/
-- **De La Vali EMERALD MAXI DRESS IN IVORY LACE** — $1,200. We have seen this piece in 11 daily snapshots and the widest in-stock size run we recorded was 5; 1 size is left (UK12) as of 2026-10-19. 4 have gone.
-  - https://useloupe.shop/product/de-la-vali-emerald-maxi-dress-in-ivory-lace/
-- **Feners Caracola Granate Dress** — $109. We have seen this piece in 112 daily snapshots and the widest in-stock size run we recorded was 5; 1 size is left (S) as of 2026-10-19. 4 have gone.
+- **With Jéan Mika Dress, Slate** — $164. We have seen this piece in 61 daily snapshots and the widest in-stock size run we recorded was 6; 1 size is left (XL) as of 2026-10-26. 5 have gone.
+  - https://useloupe.shop/product/with-j%C3%A9an-mika-dress-slate/
+- **Feners Caracola Granate Dress** — $109. We have seen this piece in 119 daily snapshots and the widest in-stock size run we recorded was 5; 1 size is left (S) as of 2026-10-26. 4 have gone.
   - https://useloupe.shop/product/feners-caracola-granate-dress/
+- **Find Me Now the Label VIVA DRESS IN CHARCOAL** — $189. We have seen this piece in 97 daily snapshots and the widest in-stock size run we recorded was 5; 1 size is left (S) as of 2026-10-26. 4 have gone.
+  - https://useloupe.shop/product/find-me-now-the-label-viva-dress/
 
 ### New this week from labels that never discount
 
 Definition: arrived in the last seven days, from a label that has marked down 10% or less of what we track.
 
-- **Unica Leathers La Cruzaa in Mango** — $169. The shop's own listing date is Oct 13 — 6 days ago; it first reached our daily snapshot on Oct 13. This label has marked down 0% of the 78 pieces we track from it.
-  - https://useloupe.shop/product/unica-leathers-la-cruzaa-in-mango/
-- **Unica Leathers La Cruzaa in Mar Azul** — $169. The shop's own listing date is Oct 13 — 6 days ago; it first reached our daily snapshot on Oct 13. This label has marked down 0% of the 78 pieces we track from it.
-  - https://useloupe.shop/product/unica-leathers-la-cruzaa-in-mar-azul/
-- **Brooke Callahan A–Line Wool Skirt - Black** — $210. The shop's own listing date is Oct 14 — 5 days ago; it first reached our daily snapshot on Oct 15. This label has marked down 0% of the 77 pieces we track from it.
-  - https://useloupe.shop/product/brooke-callahan-a-line-wool-skirt/
-- **Brooke Callahan A–Line Wool Skirt - Grey** — $210. The shop's own listing date is Oct 14 — 5 days ago; it first reached our daily snapshot on Oct 15. This label has marked down 0% of the 77 pieces we track from it.
-  - https://useloupe.shop/product/brooke-callahan-a-line-wool-skirt-grey/
-- **Oddli Club 3/4 Sleeve Cashmere Cardigan** — $150. The shop's own listing date is Oct 14 — 5 days ago; it first reached our daily snapshot on Oct 15. This label has marked down 0% of the 77 pieces we track from it.
-  - https://useloupe.shop/product/oddli-oddli-club-3-4-sleeve-cashmere-cardigan/
+- **Woodrose Deli NIGHTLOOM KNIT TOP IN GROVE** — $126. The shop's own listing date is Oct 22 — 4 days ago; it first reached our daily snapshot on Oct 23. This label has marked down 9% of the 64 pieces we track from it.
+  - https://useloupe.shop/product/woodrose-deli-nightloom-knit-top-in-grove/
+- **Marland Backus Heart Strings Bracelet** — $45. The shop's own listing date is Oct 21 — 5 days ago; it first reached our daily snapshot on Oct 22. This label has marked down 5% of the 55 pieces we track from it.
+  - https://useloupe.shop/product/marland-backus-heart-strings-bracelet/
+- **Marland Backus Baby Star Necklace** — $75. The shop's own listing date is Oct 21 — 5 days ago; it first reached our daily snapshot on Oct 21. This label has marked down 5% of the 55 pieces we track from it.
+  - https://useloupe.shop/product/marland-backus-heart-strings-bracelet-copy/
+- **Brooke Callahan 3/4 Sleeve Wrap Top - Navy** — $145. The shop's own listing date is Oct 21 — 5 days ago; it first reached our daily snapshot on Oct 22. This label has marked down 3% of the 79 pieces we track from it.
+  - https://useloupe.shop/product/brooke-callahan-3-4-sleeve-wrap-top-navy/
+- **Brooke Callahan 3/4 Sleeve Wrap Top - White** — $145. The shop's own listing date is Oct 21 — 5 days ago; it first reached our daily snapshot on Oct 22. This label has marked down 3% of the 79 pieces we track from it.
+  - https://useloupe.shop/product/brooke-callahan-3-4-sleeve-wrap-top-white/
 
 ---
 
@@ -178,4 +178,4 @@ Definition: arrived in the last seven days, from a label that has marked down 10
 - No price claim is made about 28natelier, Anna October, Blanch Wear, Christopher Esber, Donde Esteban, My Mum Made It, Sir the Label, With Jéan: price_corrections.json still has an open FX repair window for each of them, which is that file's own statement that it does not vouch for those prices.
 - The Chicago story is a piece stocked by Gemini, 1911 W. Division St., Chicago, IL 60622 — the label itself is not Chicago-based, and the sheet does not say it is. brands.json has no city field on any label entry, so a Chicago DESIGNER cannot be identified from this data.
 
-<sub>Built by loupe-feed/build_content_sheet.py from price_records.json (2026-10-19T15:53:20Z) and catalog.json (2026-10-19T15:45:42Z). Prices can be compared over 16 snapshots (2026-10-04 to 2026-10-19). No inventory data (stock.json) is used: naming a brand's stock is forbidden by that file's own use policy.</sub>
+<sub>Built by loupe-feed/build_content_sheet.py from price_records.json (2026-10-26T15:27:11Z) and catalog.json (2026-10-26T15:20:01Z). Prices can be compared over 23 snapshots (2026-10-04 to 2026-10-26). No inventory data (stock.json) is used: naming a brand's stock is forbidden by that file's own use policy.</sub>
