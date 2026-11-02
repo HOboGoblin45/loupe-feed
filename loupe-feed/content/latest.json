@@ -1,28 +1,28 @@
 {
- "generatedAt": "2026-10-26T19:11:25Z",
- "weekOf": "2026-10-26",
- "builtOn": "2026-10-26",
+ "generatedAt": "2026-11-02T22:16:26Z",
+ "weekOf": "2026-11-02",
+ "builtOn": "2026-11-02",
  "source": {
   "priceRecords": {
-   "generatedAt": "2026-10-26T15:27:11Z",
+   "generatedAt": "2026-10-29T15:30:55Z",
    "windowStart": "2026-06-17",
-   "windowEnd": "2026-10-26",
-   "days": 128,
-   "records": 5344,
-   "brands": 217,
-   "sha256": "6c7b6cbb2109425b"
+   "windowEnd": "2026-10-29",
+   "days": 131,
+   "records": 5555,
+   "brands": 219,
+   "sha256": "9c914486dabcaad9"
   },
   "catalog": {
-   "generatedAt": "2026-10-26T15:20:01Z",
-   "count": 10223,
-   "sha256": "d9ec151b2153edcf"
+   "generatedAt": "2026-10-29T15:23:31Z",
+   "count": 10222,
+   "sha256": "5df82fcb75e47678"
   }
  },
  "gates": {
-  "comparableDays": 23,
-  "comparableFrom": "2026-10-04",
-  "comparableTo": "2026-10-26",
-  "windowClaimsAllowed": true,
+  "comparableDays": 0,
+  "comparableFrom": "",
+  "comparableTo": "",
+  "windowClaimsAllowed": false,
   "windowClaimsReturn": "",
   "openFxBrands": [
    "28natelier",
@@ -34,451 +34,42 @@
    "Sir the Label",
    "With Jéan"
   ],
-  "archiveStale": false
+  "archiveStale": true
  },
  "counts": {
-  "moved_rows": 764,
-  "confirmed_moves": 728,
-  "available_drop": 144,
-  "available_lowest": 218,
-  "available_sizes": 302,
-  "available_new": 957,
-  "available_hold": 501,
-  "available_tenure": 2923
+  "moved_rows": 853,
+  "confirmed_moves": 791,
+  "available_drop": 0,
+  "available_lowest": 0,
+  "available_sizes": 0,
+  "available_new": 0,
+  "available_hold": 0,
+  "available_tenure": 0
  },
  "header": [
-  "Week of Monday 26 October 2026 — built 2026-10-26 from 128 daily snapshots (2026-06-17 to 2026-10-26), 5,344 pieces with a price record across 217 labels.",
-  "764 pieces changed price and 728 of those moves are confirmed by a later snapshot; the biggest is 67% at Gil Rodriguez.",
-  "302 pieces are down to one or two in-stock sizes from a run of four or more, and 957 were listed by their own shop in the last 7 days."
+  "Week of Monday 2 November 2026 — built 2026-11-02 from 131 daily snapshots (2026-06-17 to 2026-10-29), 5,555 pieces with a price record across 219 labels.",
+  "853 pieces changed price and 791 of those moves are confirmed by a later snapshot.",
+  "Prices can only be compared over 0 snapshots this week, so every price story is held; 0 pieces down to one or two sizes and 0 listed by their shop in the last 7 days are what the record supports today."
  ],
- "stories": [
-  {
-   "kind": "drop",
-   "kindLabel": "confirmed markdown",
-   "id": "gil-rodriguez-via-olympia-unitard-chocolate",
-   "brand": "Gil Rodriguez",
-   "piece": "Gil Rodriguez Via Olympia Unitard - Chocolate",
-   "price": 55.0,
-   "category": "dresses",
-   "retailer": "",
-   "url": "https://useloupe.shop/product/gil-rodriguez-via-olympia-unitard-chocolate/",
-   "image": "https://cdn.shopify.com/s/files/1/0282/9955/8972/files/chocolate-long-unitard-2_619e5762-84d2-4298-bbe8-6dfc314d4877.jpg?v=1762457711",
-   "format": "Two frames — the piece with the old price, then the new one. No voiceover needed.",
-   "title": "Gil Rodriguez cut Gil Rodriguez Via Olympia Unitard - Chocolate by 67%",
-   "hook": "Gil Rodriguez cut this dress 67% on Oct 21.",
-   "fact": "Gil Rodriguez Via Olympia Unitard - Chocolate. $165 on Oct 20, $55 on Oct 21 — a 67% cut, still there in a later snapshot and still $55 in today's feed. No other piece from this label moved that day.",
-   "measure": {
-    "pct": 67,
-    "from": 165.0,
-    "to": 55.0,
-    "changedOn": "2026-10-21",
-    "labelPiecesMoved": 1
-   },
-   "detail": "$165 on Oct 20, $55 on Oct 21 — a 67% cut, still there in a later snapshot and still $55 in today's feed. No other piece from this label moved that day.",
-   "brandRecord": "This label has marked down 2% of the 219 pieces we track from it.",
-   "chicago": ""
-  },
-  {
-   "kind": "lowest",
-   "kindLabel": "lowest price on our record",
-   "id": "dmy-studios-sylvia-transparent-gold",
-   "brand": "DMY Studios",
-   "piece": "DMY Studios Sylvia Transparent Gold Sunglasses",
-   "price": 155.0,
-   "category": "accessories",
-   "retailer": "",
-   "url": "https://useloupe.shop/product/dmy-studios-sylvia-transparent-gold/",
-   "image": "https://cdn.shopify.com/s/files/1/0598/4265/8484/files/DMYSUN21TG_1.jpg?v=1773331007",
-   "format": "Piece on screen, price as a text overlay held for the whole clip.",
-   "title": "DMY Studios Sylvia Transparent Gold Sunglasses at the lowest price on our record",
-   "hook": "$155, the lowest we have logged for this DMY Studios piece in 23 days.",
-   "fact": "DMY Studios Sylvia Transparent Gold Sunglasses. Across the last 23 days we can compare prices over, our record has it between $155 and $285; it is $155 in today's feed, at the bottom of that range — a 46% spread.",
-   "measure": {
-    "low": 155.0,
-    "high": 285.0,
-    "now": 155.0,
-    "spreadPct": 46,
-    "comparableDays": 23
-   },
-   "detail": "Across the last 23 days we can compare prices over, our record has it between $155 and $285; it is $155 in today's feed, at the bottom of that range — a 46% spread.",
-   "brandRecord": "This label has marked down 43% of the 84 pieces we track from it.",
-   "chicago": ""
-  },
-  {
-   "kind": "sizes",
-   "kindLabel": "about to sell out",
-   "id": "tyler-mcgillivary-dover-tank-rose",
-   "brand": "Tyler McGillivary",
-   "piece": "Tyler McGillivary Dover Tank - Vintage Rose",
-   "price": 90.0,
-   "category": "tops",
-   "retailer": "",
-   "url": "https://useloupe.shop/product/tyler-mcgillivary-dover-tank-rose/",
-   "image": "https://cdn.shopify.com/s/files/1/0338/7057/7709/files/DoverTankVintageRose_Flat.jpg?v=1790715237",
-   "format": "Piece on screen, the size count as a text overlay; cut on the number.",
-   "title": "Tyler McGillivary Dover Tank - Vintage Rose — down to 1 of 9 sizes",
-   "hook": "Down to 1 size from 9 on this Tyler McGillivary top.",
-   "fact": "Tyler McGillivary Dover Tank - Vintage Rose, $90. We have seen this piece in 97 daily snapshots and the widest in-stock size run we recorded was 9; 1 size is left (XS) as of 2026-10-26. 8 have gone.",
-   "measure": {
-    "sizesNow": 1,
-    "sizesMax": 9,
-    "gone": 8,
-    "sizesLeft": [
-     "XS"
-    ]
-   },
-   "detail": "We have seen this piece in 97 daily snapshots and the widest in-stock size run we recorded was 9; 1 size is left (XS) as of 2026-10-26. 8 have gone.",
-   "brandRecord": "This label has marked down 4% of the 249 pieces we track from it.",
-   "chicago": ""
-  },
-  {
-   "kind": "new",
-   "kindLabel": "new this week",
-   "id": "woodrose-deli-nightloom-knit-top-in-grove",
-   "brand": "Woodrose Deli",
-   "piece": "Woodrose Deli NIGHTLOOM KNIT TOP IN GROVE",
-   "price": 126.0,
-   "category": "tops",
-   "retailer": "",
-   "url": "https://useloupe.shop/product/woodrose-deli-nightloom-knit-top-in-grove/",
-   "image": "https://cdn.shopify.com/s/files/1/0529/1861/6264/files/TaupeAsymmetricalKnitEnsemblePose_9a541da9-a249-418e-8c3c-8f890341bdfd.png?v=1792966155",
-   "format": "Try-on, with the date it went up as a text overlay.",
-   "title": "New at Woodrose Deli: Woodrose Deli NIGHTLOOM KNIT TOP IN GROVE",
-   "hook": "Woodrose Deli put this top up 4 days ago. $126.",
-   "fact": "Woodrose Deli NIGHTLOOM KNIT TOP IN GROVE, $126. The shop's own listing date is Oct 22 — 4 days ago; it first reached our daily snapshot on Oct 23. This label has marked down 9% of the 64 pieces we track from it.",
-   "measure": {
-    "firstSeen": "2026-10-23",
-    "ageDays": 3,
-    "publishedAt": "2026-10-22",
-    "publishedDaysAgo": 4,
-    "brandTracked": 64,
-    "brandMedianHold": 127,
-    "brandDisciplineKnown": true,
-    "brandDiscountPct": 9
-   },
-   "detail": "The shop's own listing date is Oct 22 — 4 days ago; it first reached our daily snapshot on Oct 23. This label has marked down 9% of the 64 pieces we track from it.",
-   "brandRecord": "This label has marked down 9% of the 64 pieces we track from it.",
-   "chicago": ""
-  },
-  {
-   "kind": "hold",
-   "kindLabel": "a price that will not move",
-   "id": "charlie-beads-charlie-button-up-black",
-   "brand": "Charlie Beads",
-   "piece": "Charlie Beads Charlie Button Up Black",
-   "price": 140.0,
-   "category": "tops",
-   "retailer": "",
-   "url": "https://useloupe.shop/product/charlie-beads-charlie-button-up-black/",
-   "image": "https://cdn.shopify.com/s/files/1/0457/5477/7752/files/22C46C6A-68A6-4416-8234-111B78006A3B_1_201_a.jpg?v=1785189986",
-   "format": "Piece on screen + text overlay: the price, then the number of days it has held.",
-   "title": "Charlie Beads has not moved this price in 127 days",
-   "hook": "$140 for 127 days. This label marks down 3% of what we track.",
-   "fact": "Charlie Beads Charlie Button Up Black. $140 in every one of the 127 daily snapshots we have seen it in, with no move inside the window we can compare prices over. This label has marked down 3% of the 98 pieces we track from it.",
-   "measure": {
-    "daysSeen": 127,
-    "brandDiscountPct": 3,
-    "brandTracked": 98
-   },
-   "detail": "$140 in every one of the 127 daily snapshots we have seen it in, with no move inside the window we can compare prices over. This label has marked down 3% of the 98 pieces we track from it.",
-   "brandRecord": "This label has marked down 3% of the 98 pieces we track from it.",
-   "chicago": ""
-  },
-  {
-   "kind": "tenure",
-   "kindLabel": "shelf life",
-   "id": "gemini-damson-madder-antonia-pj-set-in-navy-gingham",
-   "brand": "Damson Madder",
-   "piece": "Damson Madder Antonia PJ Set in Navy Gingham",
-   "price": 119.0,
-   "category": "tops",
-   "retailer": "gemini",
-   "url": "https://useloupe.shop/product/gemini-damson-madder-antonia-pj-set-in-navy-gingham/",
-   "image": "https://cdn.shopify.com/s/files/1/0025/1707/3986/files/Antonia_2.webp?v=1759954617",
-   "format": "Piece on screen + text overlay. The point is that there is no rush.",
-   "title": "Damson Madder Antonia PJ Set in Navy Gingham has been on the shelf 78 days",
-   "hook": "This Damson Madder top has been on the shelf 78 days.",
-   "fact": "Damson Madder Antonia PJ Set in Navy Gingham, $119. The shop listed it on Oct 8, 2025; it has been in our daily snapshot since Aug 9, 78 days ago, and it is still there. 2 sizes in stock.",
-   "measure": {
-    "firstSeen": "2026-08-09",
-    "ageDays": 78,
-    "sizesNow": 2,
-    "publishedAt": "2025-10-08"
-   },
-   "detail": "The shop listed it on Oct 8, 2025; it has been in our daily snapshot since Aug 9, 78 days ago, and it is still there. 2 sizes in stock.",
-   "brandRecord": "This label has marked down 2% of the 635 pieces we track from it.",
-   "chicago": "In stock at Gemini, 1911 W. Division St., Chicago, IL 60622"
-  },
-  {
-   "kind": "drop",
-   "kindLabel": "confirmed markdown",
-   "id": "fashion-brand-company-diana-bear-velvet-rose-low-rise-garter-briefs",
-   "brand": "Fashion Brand Company",
-   "piece": "Fashion Brand Company Diana Bear Velvet Rose Low Rise Garter Briefs",
-   "price": 24.0,
-   "category": "tops",
-   "retailer": "",
-   "url": "https://useloupe.shop/product/fashion-brand-company-diana-bear-velvet-rose-low-rise-garter-briefs/",
-   "image": "https://cdn.shopify.com/s/files/1/0101/9278/1369/files/0J4A8110.jpg?v=1789596806",
-   "format": "Two frames — the piece with the old price, then the new one. No voiceover needed.",
-   "title": "Fashion Brand Company cut Fashion Brand Company Diana Bear Velvet Rose Low Rise Garter Briefs by 59%",
-   "hook": "Fashion Brand Company cut this top 59% on Oct 25.",
-   "fact": "Fashion Brand Company Diana Bear Velvet Rose Low Rise Garter Briefs. $58 on Oct 24, $24 on Oct 25 — a 59% cut, still there in a later snapshot and still $24 in today's feed. No other piece from this label moved that day.",
-   "measure": {
-    "pct": 59,
-    "from": 58.0,
-    "to": 24.0,
-    "changedOn": "2026-10-25",
-    "labelPiecesMoved": 1
-   },
-   "detail": "$58 on Oct 24, $24 on Oct 25 — a 59% cut, still there in a later snapshot and still $24 in today's feed. No other piece from this label moved that day.",
-   "brandRecord": "This label has marked down 4% of the 819 pieces we track from it.",
-   "chicago": ""
-  },
-  {
-   "kind": "lowest",
-   "kindLabel": "lowest price on our record",
-   "id": "one-mile-the-label-amelia-long-sleeve-top-grey-marl",
-   "brand": "One Mile The Label",
-   "piece": "One Mile The Label Amelia Long Sleeve Top Grey Marl",
-   "price": 67.0,
-   "category": "tops",
-   "retailer": "",
-   "url": "https://useloupe.shop/product/one-mile-the-label-amelia-long-sleeve-top-grey-marl/",
-   "image": "https://cdn.shopify.com/s/files/1/0334/8171/9945/files/Artboard160_ca60804f-1330-4308-9d5a-e6040bcb4f21.jpg?v=1784168475",
-   "format": "Piece on screen, price as a text overlay held for the whole clip.",
-   "title": "One Mile The Label Amelia Long Sleeve Top Grey Marl at the lowest price on our record",
-   "hook": "$67, the lowest we have logged for this One Mile The Label top in 23 days.",
-   "fact": "One Mile The Label Amelia Long Sleeve Top Grey Marl. Across the last 23 days we can compare prices over, our record has it between $67 and $115; it is $67 in today's feed, at the bottom of that range — a 42% spread.",
-   "measure": {
-    "low": 67.0,
-    "high": 115.0,
-    "now": 67.0,
-    "spreadPct": 42,
-    "comparableDays": 23
-   },
-   "detail": "Across the last 23 days we can compare prices over, our record has it between $67 and $115; it is $67 in today's feed, at the bottom of that range — a 42% spread.",
-   "brandRecord": "This label has marked down 96% of the 82 pieces we track from it.",
-   "chicago": ""
-  },
-  {
-   "kind": "sizes",
-   "kindLabel": "about to sell out",
-   "id": "alohas-berlin-rift-burgundy-leather-boots",
-   "brand": "ALOHAS",
-   "piece": "ALOHAS Berlin Rift Burgundy Leather Ankle Boots",
-   "price": 345.0,
-   "category": "shoes",
-   "retailer": "",
-   "url": "https://useloupe.shop/product/alohas-berlin-rift-burgundy-leather-boots/",
-   "image": "https://cdn.shopify.com/s/files/1/0762/7039/files/berlin-rift-burgundy-leather-boots-1.jpg?v=1759918733",
-   "format": "Piece on screen, the size count as a text overlay; cut on the number.",
-   "title": "ALOHAS Berlin Rift Burgundy Leather Ankle Boots — down to 1 of 8 sizes",
-   "hook": "Down to 1 size from 8 on these ALOHAS shoes.",
-   "fact": "ALOHAS Berlin Rift Burgundy Leather Ankle Boots, $345. We have seen this piece in 18 daily snapshots and the widest in-stock size run we recorded was 8; 1 size is left (41) as of 2026-10-26. 7 have gone.",
-   "measure": {
-    "sizesNow": 1,
-    "sizesMax": 8,
-    "gone": 7,
-    "sizesLeft": [
-     "41"
-    ]
-   },
-   "detail": "We have seen this piece in 18 daily snapshots and the widest in-stock size run we recorded was 8; 1 size is left (41) as of 2026-10-26. 7 have gone.",
-   "brandRecord": "This label has marked down 17% of the 284 pieces we track from it.",
-   "chicago": ""
-  },
-  {
-   "kind": "new",
-   "kindLabel": "new this week",
-   "id": "marland-backus-heart-strings-bracelet",
-   "brand": "Marland Backus",
-   "piece": "Marland Backus Heart Strings Bracelet",
-   "price": 45.0,
-   "category": "accessories",
-   "retailer": "",
-   "url": "https://useloupe.shop/product/marland-backus-heart-strings-bracelet/",
-   "image": "https://cdn.shopify.com/s/files/1/0765/1183/8453/files/DSC02278.jpg?v=1792630506",
-   "format": "Piece on screen, slow pan, with the date it went up as a text overlay.",
-   "title": "New at Marland Backus: Marland Backus Heart Strings Bracelet",
-   "hook": "Marland Backus put this piece up 5 days ago. $45.",
-   "fact": "Marland Backus Heart Strings Bracelet, $45. The shop's own listing date is Oct 21 — 5 days ago; it first reached our daily snapshot on Oct 22. This label has marked down 5% of the 55 pieces we track from it.",
-   "measure": {
-    "firstSeen": "2026-10-22",
-    "ageDays": 4,
-    "publishedAt": "2026-10-21",
-    "publishedDaysAgo": 5,
-    "brandTracked": 55,
-    "brandMedianHold": 127,
-    "brandDisciplineKnown": true,
-    "brandDiscountPct": 5
-   },
-   "detail": "The shop's own listing date is Oct 21 — 5 days ago; it first reached our daily snapshot on Oct 22. This label has marked down 5% of the 55 pieces we track from it.",
-   "brandRecord": "This label has marked down 5% of the 55 pieces we track from it.",
-   "chicago": ""
-  }
- ],
+ "stories": [],
  "lists": [
   {
    "title": "5 pieces under $150 that dropped this week",
    "want": 5,
    "why": "confirmed markdowns, priced under $150",
-   "items": [
-    {
-     "id": "gil-rodriguez-via-olympia-unitard-chocolate",
-     "piece": "Gil Rodriguez Via Olympia Unitard - Chocolate",
-     "brand": "Gil Rodriguez",
-     "price": 55.0,
-     "url": "https://useloupe.shop/product/gil-rodriguez-via-olympia-unitard-chocolate/",
-     "image": "https://cdn.shopify.com/s/files/1/0282/9955/8972/files/chocolate-long-unitard-2_619e5762-84d2-4298-bbe8-6dfc314d4877.jpg?v=1762457711",
-     "fact": "Gil Rodriguez Via Olympia Unitard - Chocolate. $165 on Oct 20, $55 on Oct 21 — a 67% cut, still there in a later snapshot and still $55 in today's feed. No other piece from this label moved that day.",
-     "kind": "drop"
-    },
-    {
-     "id": "fashion-brand-company-diana-bear-velvet-rose-low-rise-garter-briefs",
-     "piece": "Fashion Brand Company Diana Bear Velvet Rose Low Rise Garter Briefs",
-     "brand": "Fashion Brand Company",
-     "price": 24.0,
-     "url": "https://useloupe.shop/product/fashion-brand-company-diana-bear-velvet-rose-low-rise-garter-briefs/",
-     "image": "https://cdn.shopify.com/s/files/1/0101/9278/1369/files/0J4A8110.jpg?v=1789596806",
-     "fact": "Fashion Brand Company Diana Bear Velvet Rose Low Rise Garter Briefs. $58 on Oct 24, $24 on Oct 25 — a 59% cut, still there in a later snapshot and still $24 in today's feed. No other piece from this label moved that day.",
-     "kind": "drop"
-    },
-    {
-     "id": "susmie-s-rumba-reversible-top-skirt-1",
-     "piece": "Susmie's Rumba Reversible Top/Skirt",
-     "brand": "Susmie's",
-     "price": 39.0,
-     "url": "https://useloupe.shop/product/susmie-s-rumba-reversible-top-skirt-1/",
-     "image": "https://cdn.shopify.com/s/files/1/0067/4037/7647/files/Frame-3_5d344b58-4c81-41ae-9cda-e3574a2c2274.jpg?v=1776624006",
-     "fact": "Susmie's Rumba Reversible Top/Skirt. $78 on Oct 20, $39 on Oct 21 — a 50% cut, still there in a later snapshot and still $39 in today's feed. No other piece from this label moved that day.",
-     "kind": "drop"
-    },
-    {
-     "id": "gil-rodriguez-turtleneck-l-s-bellevue-tee-navy",
-     "piece": "Gil Rodriguez Turtleneck L/S Bellevue Tee - Navy",
-     "brand": "Gil Rodriguez",
-     "price": 45.0,
-     "url": "https://useloupe.shop/product/gil-rodriguez-turtleneck-l-s-bellevue-tee-navy/",
-     "image": "https://cdn.shopify.com/s/files/1/0282/9955/8972/files/turtleneck-navy-2.jpg?v=1762469143",
-     "fact": "Gil Rodriguez Turtleneck L/S Bellevue Tee - Navy. $85 on Oct 21, $45 on Oct 22 — a 47% cut, still there in a later snapshot and still $45 in today's feed. No other piece from this label moved that day.",
-     "kind": "drop"
-    },
-    {
-     "id": "ella-mae-ripple-shorts-in-lapis",
-     "piece": "Ella Mae RIPPLE SHORTS IN LAPIS",
-     "brand": "Ella Mae",
-     "price": 65.0,
-     "url": "https://useloupe.shop/product/ella-mae-ripple-shorts-in-lapis/",
-     "image": "https://cdn.shopify.com/s/files/1/0649/8136/8892/files/DSC08972.jpg?v=1743790470",
-     "fact": "Ella Mae RIPPLE SHORTS IN LAPIS. $120 on Oct 23, $65 on Oct 24 — a 46% cut, still there in a later snapshot and still $65 in today's feed. 3 of the 116 pieces we track from this label moved the same day, so it is a house-wide markdown rather than one piece.",
-     "kind": "drop"
-    }
-   ]
+   "items": []
   },
   {
    "title": "The 4 dresses about to sell out",
    "want": 4,
    "why": "dresses down to one or two in-stock sizes from a run of four or more",
-   "items": [
-    {
-     "id": "tyler-mcgillivary-thea-dress-ib",
-     "piece": "Tyler McGillivary Thea Dress - Ink Blue",
-     "brand": "Tyler McGillivary",
-     "price": 178.0,
-     "url": "https://useloupe.shop/product/tyler-mcgillivary-thea-dress-ib/",
-     "image": "https://cdn.shopify.com/s/files/1/0338/7057/7709/files/THEA_DRESS_INK_BLUE.jpg?v=1786649120",
-     "fact": "Tyler McGillivary Thea Dress - Ink Blue, $178. We have seen this piece in 33 daily snapshots and the widest in-stock size run we recorded was 7; 1 size is left (S) as of 2026-10-26. 6 have gone.",
-     "kind": "sizes"
-    },
-    {
-     "id": "with-jéan-mika-dress-slate",
-     "piece": "With Jéan Mika Dress, Slate",
-     "brand": "With Jéan",
-     "price": 164.0,
-     "url": "https://useloupe.shop/product/with-j%C3%A9an-mika-dress-slate/",
-     "image": "https://cdn.shopify.com/s/files/1/0512/3103/1472/files/mika-dress-slate-with-jean-01-campaign.jpg?v=1787673952",
-     "fact": "With Jéan Mika Dress, Slate, $164. We have seen this piece in 61 daily snapshots and the widest in-stock size run we recorded was 6; 1 size is left (XL) as of 2026-10-26. 5 have gone.",
-     "kind": "sizes"
-    },
-    {
-     "id": "feners-caracola-granate-dress",
-     "piece": "Feners Caracola Granate Dress",
-     "brand": "Feners",
-     "price": 109.0,
-     "url": "https://useloupe.shop/product/feners-caracola-granate-dress/",
-     "image": "https://cdn.shopify.com/s/files/1/0068/1469/5539/files/2026_06_10_FENERS0271.jpg?v=1782483713",
-     "fact": "Feners Caracola Granate Dress, $109. We have seen this piece in 119 daily snapshots and the widest in-stock size run we recorded was 5; 1 size is left (S) as of 2026-10-26. 4 have gone.",
-     "kind": "sizes"
-    },
-    {
-     "id": "find-me-now-the-label-viva-dress",
-     "piece": "Find Me Now the Label VIVA DRESS IN CHARCOAL",
-     "brand": "Find Me Now the Label",
-     "price": 189.0,
-     "url": "https://useloupe.shop/product/find-me-now-the-label-viva-dress/",
-     "image": "https://cdn.shopify.com/s/files/1/0410/7570/3976/files/FW5171DRCHARCOAL_1.jpg?v=1779451380",
-     "fact": "Find Me Now the Label VIVA DRESS IN CHARCOAL, $189. We have seen this piece in 97 daily snapshots and the widest in-stock size run we recorded was 5; 1 size is left (S) as of 2026-10-26. 4 have gone.",
-     "kind": "sizes"
-    }
-   ]
+   "items": []
   },
   {
    "title": "New this week from labels that never discount",
    "want": 5,
    "why": "arrived in the last seven days, from a label that has marked down 10% or less of what we track",
-   "items": [
-    {
-     "id": "woodrose-deli-nightloom-knit-top-in-grove",
-     "piece": "Woodrose Deli NIGHTLOOM KNIT TOP IN GROVE",
-     "brand": "Woodrose Deli",
-     "price": 126.0,
-     "url": "https://useloupe.shop/product/woodrose-deli-nightloom-knit-top-in-grove/",
-     "image": "https://cdn.shopify.com/s/files/1/0529/1861/6264/files/TaupeAsymmetricalKnitEnsemblePose_9a541da9-a249-418e-8c3c-8f890341bdfd.png?v=1792966155",
-     "fact": "Woodrose Deli NIGHTLOOM KNIT TOP IN GROVE, $126. The shop's own listing date is Oct 22 — 4 days ago; it first reached our daily snapshot on Oct 23. This label has marked down 9% of the 64 pieces we track from it.",
-     "kind": "new"
-    },
-    {
-     "id": "marland-backus-heart-strings-bracelet",
-     "piece": "Marland Backus Heart Strings Bracelet",
-     "brand": "Marland Backus",
-     "price": 45.0,
-     "url": "https://useloupe.shop/product/marland-backus-heart-strings-bracelet/",
-     "image": "https://cdn.shopify.com/s/files/1/0765/1183/8453/files/DSC02278.jpg?v=1792630506",
-     "fact": "Marland Backus Heart Strings Bracelet, $45. The shop's own listing date is Oct 21 — 5 days ago; it first reached our daily snapshot on Oct 22. This label has marked down 5% of the 55 pieces we track from it.",
-     "kind": "new"
-    },
-    {
-     "id": "marland-backus-heart-strings-bracelet-copy",
-     "piece": "Marland Backus Baby Star Necklace",
-     "brand": "Marland Backus",
-     "price": 75.0,
-     "url": "https://useloupe.shop/product/marland-backus-heart-strings-bracelet-copy/",
-     "image": "https://cdn.shopify.com/s/files/1/0765/1183/8453/files/babystarnecklace_35351a51-eb81-4e9c-b5b2-7215ef9a7674.jpg?v=1792577850",
-     "fact": "Marland Backus Baby Star Necklace, $75. The shop's own listing date is Oct 21 — 5 days ago; it first reached our daily snapshot on Oct 21. This label has marked down 5% of the 55 pieces we track from it.",
-     "kind": "new"
-    },
-    {
-     "id": "brooke-callahan-3-4-sleeve-wrap-top-navy",
-     "piece": "Brooke Callahan 3/4 Sleeve Wrap Top - Navy",
-     "brand": "Brooke Callahan",
-     "price": 145.0,
-     "url": "https://useloupe.shop/product/brooke-callahan-3-4-sleeve-wrap-top-navy/",
-     "image": "https://cdn.shopify.com/s/files/1/0891/6798/6935/files/IMG_7223NEW_531ed579-4e15-414f-b25d-eb1008601022.jpg?v=1792617541",
-     "fact": "Brooke Callahan 3/4 Sleeve Wrap Top - Navy, $145. The shop's own listing date is Oct 21 — 5 days ago; it first reached our daily snapshot on Oct 22. This label has marked down 3% of the 79 pieces we track from it.",
-     "kind": "new"
-    },
-    {
-     "id": "brooke-callahan-3-4-sleeve-wrap-top-white",
-     "piece": "Brooke Callahan 3/4 Sleeve Wrap Top - White",
-     "brand": "Brooke Callahan",
-     "price": 145.0,
-     "url": "https://useloupe.shop/product/brooke-callahan-3-4-sleeve-wrap-top-white/",
-     "image": "https://cdn.shopify.com/s/files/1/0891/6798/6935/files/IMG_9157NEW.jpg?v=1792617441",
-     "fact": "Brooke Callahan 3/4 Sleeve Wrap Top - White, $145. The shop's own listing date is Oct 21 — 5 days ago; it first reached our daily snapshot on Oct 22. This label has marked down 3% of the 79 pieces we track from it.",
-     "kind": "new"
-    }
-   ]
+   "items": []
   }
  ],
  "doNotSay": [
@@ -490,20 +81,7 @@
   "!"
  ],
  "notes": [
-  "No price claim is made about 28natelier, Anna October, Blanch Wear, Christopher Esber, Donde Esteban, My Mum Made It, Sir the Label, With Jéan: price_corrections.json still has an open FX repair window for each of them, which is that file's own statement that it does not vouch for those prices.",
-  "The Chicago story is a piece stocked by Gemini, 1911 W. Division St., Chicago, IL 60622 — the label itself is not Chicago-based, and the sheet does not say it is. brands.json has no city field on any label entry, so a Chicago DESIGNER cannot be identified from this data."
+  "The archive's last snapshot is 2026-10-29 and today is 2026-11-02, more than 3 days apart. Nothing dated can be claimed off a stale file, so no story was built. Check refresh-catalog.yml."
  ],
- "rejected": {
-  "not_held_long_enough": 3555,
-  "no_live_product_page": 493,
-  "price_moved_in_the_window": 348,
-  "brand_has_an_open_fx_correction": 260,
-  "label_is_not_a_full_price_label": 208,
-  "listing_date_contradicts_our_first_sighting": 208,
-  "store_listing_date_is_not_this_week": 191,
-  "move_older_than_a_week": 127,
-  "label_has_too_little_record": 24,
-  "copy_refused": 19,
-  "move_seen_in_only_one_snapshot": 9
- }
+ "rejected": {}
 }
