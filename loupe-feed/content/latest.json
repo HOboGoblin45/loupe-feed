@@ -1,28 +1,28 @@
 {
- "generatedAt": "2026-11-02T22:16:26Z",
- "weekOf": "2026-11-02",
- "builtOn": "2026-11-02",
+ "generatedAt": "2026-11-09T22:57:19Z",
+ "weekOf": "2026-11-09",
+ "builtOn": "2026-11-09",
  "source": {
   "priceRecords": {
-   "generatedAt": "2026-10-29T15:30:55Z",
+   "generatedAt": "2026-11-09T19:01:31Z",
    "windowStart": "2026-06-17",
-   "windowEnd": "2026-10-29",
-   "days": 131,
-   "records": 5555,
-   "brands": 219,
-   "sha256": "9c914486dabcaad9"
+   "windowEnd": "2026-11-09",
+   "days": 138,
+   "records": 5854,
+   "brands": 211,
+   "sha256": "74ab93a8902507f6"
   },
   "catalog": {
-   "generatedAt": "2026-10-29T15:23:31Z",
-   "count": 10222,
-   "sha256": "5df82fcb75e47678"
+   "generatedAt": "2026-11-09T18:50:37Z",
+   "count": 10156,
+   "sha256": "1fdef913b461aaa5"
   }
  },
  "gates": {
-  "comparableDays": 0,
-  "comparableFrom": "",
-  "comparableTo": "",
-  "windowClaimsAllowed": false,
+  "comparableDays": 33,
+  "comparableFrom": "2026-10-04",
+  "comparableTo": "2026-11-09",
+  "windowClaimsAllowed": true,
   "windowClaimsReturn": "",
   "openFxBrands": [
    "28natelier",
@@ -34,42 +34,451 @@
    "Sir the Label",
    "With Jéan"
   ],
-  "archiveStale": true
+  "archiveStale": false
  },
  "counts": {
-  "moved_rows": 853,
-  "confirmed_moves": 791,
-  "available_drop": 0,
-  "available_lowest": 0,
-  "available_sizes": 0,
-  "available_new": 0,
-  "available_hold": 0,
-  "available_tenure": 0
+  "moved_rows": 1033,
+  "confirmed_moves": 978,
+  "available_drop": 116,
+  "available_lowest": 235,
+  "available_sizes": 302,
+  "available_new": 983,
+  "available_hold": 592,
+  "available_tenure": 3050
  },
  "header": [
-  "Week of Monday 2 November 2026 — built 2026-11-02 from 131 daily snapshots (2026-06-17 to 2026-10-29), 5,555 pieces with a price record across 219 labels.",
-  "853 pieces changed price and 791 of those moves are confirmed by a later snapshot.",
-  "Prices can only be compared over 0 snapshots this week, so every price story is held; 0 pieces down to one or two sizes and 0 listed by their shop in the last 7 days are what the record supports today."
+  "Week of Monday 9 November 2026 — built 2026-11-09 from 138 daily snapshots (2026-06-17 to 2026-11-09), 5,854 pieces with a price record across 211 labels.",
+  "1033 pieces changed price and 978 of those moves are confirmed by a later snapshot; the biggest is 53% at Miaou.",
+  "302 pieces are down to one or two in-stock sizes from a run of four or more, and 983 were listed by their own shop in the last 7 days."
  ],
- "stories": [],
+ "stories": [
+  {
+   "kind": "drop",
+   "kindLabel": "confirmed markdown",
+   "id": "miaou-aphex-corset-most-wanted",
+   "brand": "Miaou",
+   "piece": "Miaou APHEX CORSET - MISSING",
+   "price": 139.0,
+   "category": "tops",
+   "retailer": "",
+   "url": "https://useloupe.shop/product/miaou-aphex-corset-most-wanted/",
+   "image": "https://cdn.shopify.com/s/files/1/1231/1148/files/FW25_ECOM_720.jpg?v=1755481038",
+   "format": "Two frames — the piece with the old price, then the new one. No voiceover needed.",
+   "title": "Miaou cut Miaou APHEX CORSET - MISSING by 53%",
+   "hook": "Miaou cut this top 53% on Nov 3.",
+   "fact": "Miaou APHEX CORSET - MISSING. $295 on Oct 29, $139 on Nov 3 — a 53% cut, still there in a later snapshot and still $139 in today's feed. 8 of the 227 pieces we track from this label moved the same day, so it is a house-wide markdown rather than one piece.",
+   "measure": {
+    "pct": 53,
+    "from": 295.0,
+    "to": 139.0,
+    "changedOn": "2026-11-03",
+    "labelPiecesMoved": 8
+   },
+   "detail": "$295 on Oct 29, $139 on Nov 3 — a 53% cut, still there in a later snapshot and still $139 in today's feed. 8 of the 227 pieces we track from this label moved the same day, so it is a house-wide markdown rather than one piece.",
+   "brandRecord": "This label has marked down 32% of the 227 pieces we track from it.",
+   "chicago": ""
+  },
+  {
+   "kind": "lowest",
+   "kindLabel": "lowest price on our record",
+   "id": "gil-rodriguez-via-olympia-unitard-chocolate",
+   "brand": "Gil Rodriguez",
+   "piece": "Gil Rodriguez Via Olympia Unitard - Chocolate",
+   "price": 55.0,
+   "category": "dresses",
+   "retailer": "",
+   "url": "https://useloupe.shop/product/gil-rodriguez-via-olympia-unitard-chocolate/",
+   "image": "https://cdn.shopify.com/s/files/1/0282/9955/8972/files/chocolate-long-unitard-2_619e5762-84d2-4298-bbe8-6dfc314d4877.jpg?v=1762457711",
+   "format": "Piece on screen, price as a text overlay held for the whole clip.",
+   "title": "Gil Rodriguez Via Olympia Unitard - Chocolate at the lowest price on our record",
+   "hook": "$55, the lowest we have logged for this Gil Rodriguez dress in 17 days.",
+   "fact": "Gil Rodriguez Via Olympia Unitard - Chocolate. Across the last 17 days we can compare prices over, our record has it between $55 and $165; it is $55 in today's feed, at the bottom of that range — a 67% spread.",
+   "measure": {
+    "low": 55.0,
+    "high": 165.0,
+    "now": 55.0,
+    "spreadPct": 67,
+    "comparableDays": 17
+   },
+   "detail": "Across the last 17 days we can compare prices over, our record has it between $55 and $165; it is $55 in today's feed, at the bottom of that range — a 67% spread.",
+   "brandRecord": "This label has marked down 2% of the 237 pieces we track from it.",
+   "chicago": ""
+  },
+  {
+   "kind": "sizes",
+   "kindLabel": "about to sell out",
+   "id": "yuni-buffa-marmi-boat-shoe-burgundy",
+   "brand": "Yuni Buffa",
+   "piece": "Yuni Buffa MARMI BOAT SHOE - BURGUNDY",
+   "price": 525.0,
+   "category": "shoes",
+   "retailer": "",
+   "url": "https://useloupe.shop/product/yuni-buffa-marmi-boat-shoe-burgundy/",
+   "image": "https://cdn.shopify.com/s/files/1/0310/6199/9755/files/Yuni_Buffa_Marmi_Boat_Shoe_Burgundy.jpg?v=1785692875",
+   "format": "Piece on screen, the size count as a text overlay; cut on the number.",
+   "title": "Yuni Buffa MARMI BOAT SHOE - BURGUNDY — down to 1 of 10 sizes",
+   "hook": "Down to 1 size from 10 on these Yuni Buffa shoes.",
+   "fact": "Yuni Buffa MARMI BOAT SHOE - BURGUNDY, $525. We have seen this piece in 87 daily snapshots and the widest in-stock size run we recorded was 10; 1 size is left (36.5) as of 2026-11-09. 9 have gone.",
+   "measure": {
+    "sizesNow": 1,
+    "sizesMax": 10,
+    "gone": 9,
+    "sizesLeft": [
+     "36.5"
+    ]
+   },
+   "detail": "We have seen this piece in 87 daily snapshots and the widest in-stock size run we recorded was 10; 1 size is left (36.5) as of 2026-11-09. 9 have gone.",
+   "brandRecord": "This label has marked down 0% of the 20 pieces we track from it.",
+   "chicago": ""
+  },
+  {
+   "kind": "new",
+   "kindLabel": "new this week",
+   "id": "marland-backus-star-hairpin",
+   "brand": "Marland Backus",
+   "piece": "Marland Backus Star Hairpin",
+   "price": 48.0,
+   "category": "accessories",
+   "retailer": "",
+   "url": "https://useloupe.shop/product/marland-backus-star-hairpin/",
+   "image": "https://cdn.shopify.com/s/files/1/0765/1183/8453/files/star_hairpin.webp?v=1771930336",
+   "format": "Piece on screen, slow pan, with the date it went up as a text overlay.",
+   "title": "New at Marland Backus: Marland Backus Star Hairpin",
+   "hook": "Marland Backus put this piece up 1 days ago. $48.",
+   "fact": "Marland Backus Star Hairpin, $48. The shop's own listing date is Nov 8 — 1 days ago; it first reached our daily snapshot on Nov 9. This label has marked down 5% of the 56 pieces we track from it.",
+   "measure": {
+    "firstSeen": "2026-11-09",
+    "ageDays": 0,
+    "publishedAt": "2026-11-08",
+    "publishedDaysAgo": 1,
+    "brandTracked": 56,
+    "brandMedianHold": 137,
+    "brandDisciplineKnown": true,
+    "brandDiscountPct": 5
+   },
+   "detail": "The shop's own listing date is Nov 8 — 1 days ago; it first reached our daily snapshot on Nov 9. This label has marked down 5% of the 56 pieces we track from it.",
+   "brandRecord": "This label has marked down 5% of the 56 pieces we track from it.",
+   "chicago": ""
+  },
+  {
+   "kind": "hold",
+   "kindLabel": "a price that will not move",
+   "id": "charlie-beads-chuck-hoodie-navy-plaid-french-terry",
+   "brand": "Charlie Beads",
+   "piece": "Charlie Beads Chuck Hoodie Navy Plaid",
+   "price": 128.0,
+   "category": "tops",
+   "retailer": "",
+   "url": "https://useloupe.shop/product/charlie-beads-chuck-hoodie-navy-plaid-french-terry/",
+   "image": "https://cdn.shopify.com/s/files/1/0457/5477/7752/files/IMG_8931.jpg?v=1780610586",
+   "format": "Piece on screen + text overlay: the price, then the number of days it has held.",
+   "title": "Charlie Beads has not moved this price in 137 days",
+   "hook": "$128 for 137 days. This label marks down 3% of what we track.",
+   "fact": "Charlie Beads Chuck Hoodie Navy Plaid. $128 in every one of the 137 daily snapshots we have seen it in, with no move inside the window we can compare prices over. This label has marked down 3% of the 104 pieces we track from it.",
+   "measure": {
+    "daysSeen": 137,
+    "brandDiscountPct": 3,
+    "brandTracked": 104
+   },
+   "detail": "$128 in every one of the 137 daily snapshots we have seen it in, with no move inside the window we can compare prices over. This label has marked down 3% of the 104 pieces we track from it.",
+   "brandRecord": "This label has marked down 3% of the 104 pieces we track from it.",
+   "chicago": ""
+  },
+  {
+   "kind": "tenure",
+   "kindLabel": "shelf life",
+   "id": "gemini-damson-madder-antonia-pj-set-in-navy-gingham",
+   "brand": "Damson Madder",
+   "piece": "Damson Madder Antonia PJ Set in Navy Gingham",
+   "price": 119.0,
+   "category": "tops",
+   "retailer": "gemini",
+   "url": "https://useloupe.shop/product/gemini-damson-madder-antonia-pj-set-in-navy-gingham/",
+   "image": "https://cdn.shopify.com/s/files/1/0025/1707/3986/files/Antonia_2.webp?v=1759954617",
+   "format": "Piece on screen + text overlay. The point is that there is no rush.",
+   "title": "Damson Madder Antonia PJ Set in Navy Gingham has been on the shelf 92 days",
+   "hook": "This Damson Madder top has been on the shelf 92 days.",
+   "fact": "Damson Madder Antonia PJ Set in Navy Gingham, $119. The shop listed it on Oct 8, 2025; it has been in our daily snapshot since Aug 9, 92 days ago, and it is still there. 2 sizes in stock.",
+   "measure": {
+    "firstSeen": "2026-08-09",
+    "ageDays": 92,
+    "sizesNow": 2,
+    "publishedAt": "2025-10-08"
+   },
+   "detail": "The shop listed it on Oct 8, 2025; it has been in our daily snapshot since Aug 9, 92 days ago, and it is still there. 2 sizes in stock.",
+   "brandRecord": "This label has marked down 2% of the 676 pieces we track from it.",
+   "chicago": "In stock at Gemini, 1911 W. Division St., Chicago, IL 60622"
+  },
+  {
+   "kind": "drop",
+   "kindLabel": "confirmed markdown",
+   "id": "apres-studio-olympia-ruched-dress",
+   "brand": "Apres Studio",
+   "piece": "Apres Studio Olympia Ruched Dress",
+   "price": 93.0,
+   "category": "dresses",
+   "retailer": "",
+   "url": "https://useloupe.shop/product/apres-studio-olympia-ruched-dress/",
+   "image": "https://cdn.shopify.com/s/files/1/2716/3666/files/Apres-Studio-Olympia-Dress-Black-Scarlet-4.jpg?v=1789697832",
+   "format": "Two frames — the piece with the old price, then the new one. No voiceover needed.",
+   "title": "Apres Studio cut Apres Studio Olympia Ruched Dress by 51%",
+   "hook": "Apres Studio cut this dress 51% on Nov 3.",
+   "fact": "Apres Studio Olympia Ruched Dress. $190 on Oct 29, $93 on Nov 3 — a 51% cut, still there in a later snapshot and still $93 in today's feed. 7 of the 94 pieces we track from this label moved the same day, so it is a house-wide markdown rather than one piece.",
+   "measure": {
+    "pct": 51,
+    "from": 190.0,
+    "to": 93.0,
+    "changedOn": "2026-11-03",
+    "labelPiecesMoved": 7
+   },
+   "detail": "$190 on Oct 29, $93 on Nov 3 — a 51% cut, still there in a later snapshot and still $93 in today's feed. 7 of the 94 pieces we track from this label moved the same day, so it is a house-wide markdown rather than one piece.",
+   "brandRecord": "This label has marked down 67% of the 94 pieces we track from it.",
+   "chicago": ""
+  },
+  {
+   "kind": "lowest",
+   "kindLabel": "lowest price on our record",
+   "id": "nokshi-new-york-the-lanjaron-dress-sage",
+   "brand": "Nokshi New York",
+   "piece": "Nokshi New York The Lanjarón Dress Sage, Limited Edition",
+   "price": 40.0,
+   "category": "dresses",
+   "retailer": "",
+   "url": "https://useloupe.shop/product/nokshi-new-york-the-lanjaron-dress-sage/",
+   "image": "https://cdn.shopify.com/s/files/1/0682/5135/3334/files/IMG_4720.jpg?v=1770751758",
+   "format": "Piece on screen, price as a text overlay held for the whole clip.",
+   "title": "Nokshi New York The Lanjarón Dress Sage, Limited Edition at the lowest price on our record",
+   "hook": "$40, the lowest we have logged for this Nokshi New York dress in 33 days.",
+   "fact": "Nokshi New York The Lanjarón Dress Sage, Limited Edition. Across the last 33 days we can compare prices over, our record has it between $40 and $105; it is $40 in today's feed, at the bottom of that range — a 62% spread.",
+   "measure": {
+    "low": 40.0,
+    "high": 105.0,
+    "now": 40.0,
+    "spreadPct": 62,
+    "comparableDays": 33
+   },
+   "detail": "Across the last 33 days we can compare prices over, our record has it between $40 and $105; it is $40 in today's feed, at the bottom of that range — a 62% spread.",
+   "brandRecord": "This label has marked down 32% of the 77 pieces we track from it.",
+   "chicago": ""
+  },
+  {
+   "kind": "sizes",
+   "kindLabel": "about to sell out",
+   "id": "tyler-mcgillivary-cora-skirt-sl",
+   "brand": "Tyler McGillivary",
+   "piece": "Tyler McGillivary Cora Skirt - Still Life",
+   "price": 128.0,
+   "category": "bottoms",
+   "retailer": "",
+   "url": "https://useloupe.shop/product/tyler-mcgillivary-cora-skirt-sl/",
+   "image": "https://cdn.shopify.com/s/files/1/0338/7057/7709/files/CORA_SKIRT_STILL_LIFE.jpg?v=1786392024",
+   "format": "Piece on screen, the size count as a text overlay; cut on the number.",
+   "title": "Tyler McGillivary Cora Skirt - Still Life — down to 1 of 9 sizes",
+   "hook": "Down to 1 size from 9 on this Tyler McGillivary piece.",
+   "fact": "Tyler McGillivary Cora Skirt - Still Life, $128. We have seen this piece in 68 daily snapshots and the widest in-stock size run we recorded was 9; 1 size is left (XS) as of 2026-11-09. 8 have gone.",
+   "measure": {
+    "sizesNow": 1,
+    "sizesMax": 9,
+    "gone": 8,
+    "sizesLeft": [
+     "XS"
+    ]
+   },
+   "detail": "We have seen this piece in 68 daily snapshots and the widest in-stock size run we recorded was 9; 1 size is left (XS) as of 2026-11-09. 8 have gone.",
+   "brandRecord": "This label has marked down 3% of the 260 pieces we track from it.",
+   "chicago": ""
+  },
+  {
+   "kind": "new",
+   "kindLabel": "new this week",
+   "id": "fait-par-foutch-capucine-dress-noir",
+   "brand": "Fait Par Foutch",
+   "piece": "Fait Par Foutch CAPUCINE DRESS - NOIR",
+   "price": 445.0,
+   "category": "dresses",
+   "retailer": "",
+   "url": "https://useloupe.shop/product/fait-par-foutch-capucine-dress-noir/",
+   "image": "https://cdn.shopify.com/s/files/1/0535/0673/6305/files/capucine_w_sleeves.jpg?v=1793933818",
+   "format": "Try-on, with the date it went up as a text overlay.",
+   "title": "New at Fait Par Foutch: Fait Par Foutch CAPUCINE DRESS - NOIR",
+   "hook": "Fait Par Foutch put this dress up 3 days ago. $445.",
+   "fact": "Fait Par Foutch CAPUCINE DRESS - NOIR, $445. The shop's own listing date is Nov 6 — 3 days ago; it first reached our daily snapshot on Nov 7. This label has marked down 0% of the 81 pieces we track from it.",
+   "measure": {
+    "firstSeen": "2026-11-07",
+    "ageDays": 2,
+    "publishedAt": "2026-11-06",
+    "publishedDaysAgo": 3,
+    "brandTracked": 81,
+    "brandMedianHold": 129,
+    "brandDisciplineKnown": true,
+    "brandDiscountPct": 0
+   },
+   "detail": "The shop's own listing date is Nov 6 — 3 days ago; it first reached our daily snapshot on Nov 7. This label has marked down 0% of the 81 pieces we track from it.",
+   "brandRecord": "This label has marked down 0% of the 81 pieces we track from it.",
+   "chicago": ""
+  }
+ ],
  "lists": [
   {
    "title": "5 pieces under $150 that dropped this week",
    "want": 5,
    "why": "confirmed markdowns, priced under $150",
-   "items": []
+   "items": [
+    {
+     "id": "miaou-aphex-corset-most-wanted",
+     "piece": "Miaou APHEX CORSET - MISSING",
+     "brand": "Miaou",
+     "price": 139.0,
+     "url": "https://useloupe.shop/product/miaou-aphex-corset-most-wanted/",
+     "image": "https://cdn.shopify.com/s/files/1/1231/1148/files/FW25_ECOM_720.jpg?v=1755481038",
+     "fact": "Miaou APHEX CORSET - MISSING. $295 on Oct 29, $139 on Nov 3 — a 53% cut, still there in a later snapshot and still $139 in today's feed. 8 of the 227 pieces we track from this label moved the same day, so it is a house-wide markdown rather than one piece.",
+     "kind": "drop"
+    },
+    {
+     "id": "apres-studio-olympia-ruched-dress",
+     "piece": "Apres Studio Olympia Ruched Dress",
+     "brand": "Apres Studio",
+     "price": 93.0,
+     "url": "https://useloupe.shop/product/apres-studio-olympia-ruched-dress/",
+     "image": "https://cdn.shopify.com/s/files/1/2716/3666/files/Apres-Studio-Olympia-Dress-Black-Scarlet-4.jpg?v=1789697832",
+     "fact": "Apres Studio Olympia Ruched Dress. $190 on Oct 29, $93 on Nov 3 — a 51% cut, still there in a later snapshot and still $93 in today's feed. 7 of the 94 pieces we track from this label moved the same day, so it is a house-wide markdown rather than one piece.",
+     "kind": "drop"
+    },
+    {
+     "id": "alohas-tb-25-burgundy-sneakers",
+     "piece": "ALOHAS Tb.25 Burgundy Sneakers",
+     "brand": "ALOHAS",
+     "price": 135.0,
+     "url": "https://useloupe.shop/product/alohas-tb-25-burgundy-sneakers/",
+     "image": "https://cdn.shopify.com/s/files/1/0762/7039/files/tb-25-burgundy-sneakers-5.jpg?v=1767956416",
+     "fact": "ALOHAS Tb.25 Burgundy Sneakers. $225 on Nov 5, $135 on Nov 6 — a 40% cut, still there in a later snapshot and still $135 in today's feed. 5 of the 293 pieces we track from this label moved the same day, so it is a house-wide markdown rather than one piece.",
+     "kind": "drop"
+    },
+    {
+     "id": "miaou-luna-top-leopard",
+     "piece": "Miaou LUNA TOP - LEOPARD",
+     "brand": "Miaou",
+     "price": 116.0,
+     "url": "https://useloupe.shop/product/miaou-luna-top-leopard/",
+     "image": "https://cdn.shopify.com/s/files/1/1231/1148/files/IMG_7179_b79d3fe7-4b2e-4be2-bac3-fca199a12944.jpg?v=1754331354",
+     "fact": "Miaou LUNA TOP - LEOPARD. $190 on Oct 29, $116 on Nov 3 — a 39% cut, still there in a later snapshot and still $116 in today's feed. 8 of the 227 pieces we track from this label moved the same day, so it is a house-wide markdown rather than one piece.",
+     "kind": "drop"
+    },
+    {
+     "id": "mode-mischief-luma-sequin-top",
+     "piece": "Mode Mischief LUMA SEQUIN TOP",
+     "brand": "Mode Mischief",
+     "price": 146.0,
+     "url": "https://useloupe.shop/product/mode-mischief-luma-sequin-top/",
+     "image": "https://cdn.shopify.com/s/files/1/0999/3889/4122/files/FILM_SEQUIN_3.jpg?v=1779328592",
+     "fact": "Mode Mischief LUMA SEQUIN TOP. $219 on Nov 4, $146 on Nov 5 — a 33% cut, still there in a later snapshot and still $146 in today's feed. 5 of the 204 pieces we track from this label moved the same day, so it is a house-wide markdown rather than one piece.",
+     "kind": "drop"
+    }
+   ]
   },
   {
    "title": "The 4 dresses about to sell out",
    "want": 4,
    "why": "dresses down to one or two in-stock sizes from a run of four or more",
-   "items": []
+   "items": [
+    {
+     "id": "tyler-mcgillivary-cordelia-dress",
+     "piece": "Tyler McGillivary Cordelia Dress - Bubble Siren",
+     "brand": "Tyler McGillivary",
+     "price": 149.0,
+     "url": "https://useloupe.shop/product/tyler-mcgillivary-cordelia-dress/",
+     "image": "https://cdn.shopify.com/s/files/1/0338/7057/7709/files/CordeliaDress.png?v=1772568277",
+     "fact": "Tyler McGillivary Cordelia Dress - Bubble Siren, $149. We have seen this piece in 107 daily snapshots and the widest in-stock size run we recorded was 9; 1 size is left (S) as of 2026-11-09. 8 have gone.",
+     "kind": "sizes"
+    },
+    {
+     "id": "fait-par-foutch-saskia-dress-pistachio-milk",
+     "piece": "Fait Par Foutch SASKIA DRESS - PISTACHIO MILK",
+     "brand": "Fait Par Foutch",
+     "price": 350.0,
+     "url": "https://useloupe.shop/product/fait-par-foutch-saskia-dress-pistachio-milk/",
+     "image": "https://cdn.shopify.com/s/files/1/0535/0673/6305/files/IMG_0048_50f7b4b2-6d8a-4162-8f49-14ff66e6d616.jpg?v=1785493171",
+     "fact": "Fait Par Foutch SASKIA DRESS - PISTACHIO MILK, $350. We have seen this piece in 97 daily snapshots and the widest in-stock size run we recorded was 7; 1 size is left (XXS) as of 2026-11-09. 6 have gone.",
+     "kind": "sizes"
+    },
+    {
+     "id": "tyler-mcgillivary-pompeii-dress-w",
+     "piece": "Tyler McGillivary Pompeii Dress - Wilderness",
+     "brand": "Tyler McGillivary",
+     "price": 215.0,
+     "url": "https://useloupe.shop/product/tyler-mcgillivary-pompeii-dress-w/",
+     "image": "https://cdn.shopify.com/s/files/1/0338/7057/7709/files/POMPEII_DRESS_WILDERNESS.jpg?v=1786648880",
+     "fact": "Tyler McGillivary Pompeii Dress - Wilderness, $215. We have seen this piece in 43 daily snapshots and the widest in-stock size run we recorded was 7; 1 size is left (L) as of 2026-11-09. 6 have gone.",
+     "kind": "sizes"
+    },
+    {
+     "id": "aknvas-the-arlene-gown-in-black",
+     "piece": "Aknvas The Arlene gown in black",
+     "brand": "Aknvas",
+     "price": 1395.0,
+     "url": "https://useloupe.shop/product/aknvas-the-arlene-gown-in-black/",
+     "image": "https://cdn.shopify.com/s/files/1/0274/6338/5221/files/part2aknvas3164copy.jpg?v=1788187817",
+     "fact": "Aknvas The Arlene gown in black, $1,395. We have seen this piece in 67 daily snapshots and the widest in-stock size run we recorded was 6; 1 size is left (6) as of 2026-11-09. 5 have gone.",
+     "kind": "sizes"
+    }
+   ]
   },
   {
    "title": "New this week from labels that never discount",
    "want": 5,
    "why": "arrived in the last seven days, from a label that has marked down 10% or less of what we track",
-   "items": []
+   "items": [
+    {
+     "id": "marland-backus-star-hairpin",
+     "piece": "Marland Backus Star Hairpin",
+     "brand": "Marland Backus",
+     "price": 48.0,
+     "url": "https://useloupe.shop/product/marland-backus-star-hairpin/",
+     "image": "https://cdn.shopify.com/s/files/1/0765/1183/8453/files/star_hairpin.webp?v=1771930336",
+     "fact": "Marland Backus Star Hairpin, $48. The shop's own listing date is Nov 8 — 1 days ago; it first reached our daily snapshot on Nov 9. This label has marked down 5% of the 56 pieces we track from it.",
+     "kind": "new"
+    },
+    {
+     "id": "fait-par-foutch-capucine-dress-noir",
+     "piece": "Fait Par Foutch CAPUCINE DRESS - NOIR",
+     "brand": "Fait Par Foutch",
+     "price": 445.0,
+     "url": "https://useloupe.shop/product/fait-par-foutch-capucine-dress-noir/",
+     "image": "https://cdn.shopify.com/s/files/1/0535/0673/6305/files/capucine_w_sleeves.jpg?v=1793933818",
+     "fact": "Fait Par Foutch CAPUCINE DRESS - NOIR, $445. The shop's own listing date is Nov 6 — 3 days ago; it first reached our daily snapshot on Nov 7. This label has marked down 0% of the 81 pieces we track from it.",
+     "kind": "new"
+    },
+    {
+     "id": "fait-par-foutch-caroline-dress-plum",
+     "piece": "Fait Par Foutch CAROLINE DRESS - PLUM",
+     "brand": "Fait Par Foutch",
+     "price": 415.0,
+     "url": "https://useloupe.shop/product/fait-par-foutch-caroline-dress-plum/",
+     "image": "https://cdn.shopify.com/s/files/1/0535/0673/6305/files/caroline_back.jpg?v=1793933817",
+     "fact": "Fait Par Foutch CAROLINE DRESS - PLUM, $415. The shop's own listing date is Nov 6 — 3 days ago; it first reached our daily snapshot on Nov 7. This label has marked down 0% of the 81 pieces we track from it.",
+     "kind": "new"
+    },
+    {
+     "id": "oddli-makeup-pouch",
+     "piece": "Oddli Makeup Pouch",
+     "brand": "Oddli",
+     "price": 49.0,
+     "url": "https://useloupe.shop/product/oddli-makeup-pouch/",
+     "image": "https://cdn.shopify.com/s/files/1/0515/3662/5860/files/MAKEUP_POUCH1.jpg?v=1793840152",
+     "fact": "Oddli Makeup Pouch, $49. The shop's own listing date is Nov 6 — 3 days ago; it first reached our daily snapshot on Nov 7. This label has marked down 4% of the 79 pieces we track from it.",
+     "kind": "new"
+    },
+    {
+     "id": "geel-hira-pant",
+     "piece": "Geel Hira Pant",
+     "brand": "Geel",
+     "price": 68.0,
+     "url": "https://useloupe.shop/product/geel-hira-pant/",
+     "image": "https://cdn.shopify.com/s/files/1/0523/2561/3759/files/DSCF7424.jpg?v=1793994086",
+     "fact": "Geel Hira Pant, $68. The shop's own listing date is Nov 5 — 4 days ago; it first reached our daily snapshot on Nov 6. This label has marked down 0% of the 92 pieces we track from it.",
+     "kind": "new"
+    }
+   ]
   }
  ],
  "doNotSay": [
@@ -81,7 +490,21 @@
   "!"
  ],
  "notes": [
-  "The archive's last snapshot is 2026-10-29 and today is 2026-11-02, more than 3 days apart. Nothing dated can be claimed off a stale file, so no story was built. Check refresh-catalog.yml."
+  "No price claim is made about 28natelier, Anna October, Blanch Wear, Christopher Esber, Donde Esteban, My Mum Made It, Sir the Label, With Jéan: price_corrections.json still has an open FX repair window for each of them, which is that file's own statement that it does not vouch for those prices.",
+  "The Chicago story is a piece stocked by Gemini, 1911 W. Division St., Chicago, IL 60622 — the label itself is not Chicago-based, and the sheet does not say it is. brands.json has no city field on any label entry, so a Chicago DESIGNER cannot be identified from this data."
  ],
- "rejected": {}
+ "rejected": {
+  "not_held_long_enough": 3731,
+  "no_live_product_page": 603,
+  "price_moved_in_the_window": 440,
+  "store_listing_date_is_not_this_week": 400,
+  "brand_has_an_open_fx_correction": 288,
+  "listing_date_contradicts_our_first_sighting": 248,
+  "label_is_not_a_full_price_label": 214,
+  "move_older_than_a_week": 146,
+  "move_seen_in_only_one_snapshot": 27,
+  "label_has_too_little_record": 18,
+  "copy_refused": 9,
+  "whole_label_stepped_by_one_ratio": 1
+ }
 }
