@@ -314,16 +314,39 @@ FURTHER_DROP_PCT = 5  # a sale already pushed is news again only when this much 
 STAMP_PREFIX = "v2:"
 
 
-def stamp_value(alerts):
+def stamp_value(alerts, fresh=None, prev_stamp=None):
     """What is written to profiles.last_marketing_push_sig after a push.
 
     The signature alone cannot be read back reliably: it is a string built with
     `+`, `-` and `|`, and real sizes contain those characters ("6-8", "S/M").
-    So the record of what the user was told is stored as data next to it."""
+    So the record of what the user was told is stored as data next to it.
+
+    `sales` and `sizes` are what the user has been TOLD, which is not the same as
+    what is currently true. They are built from the FRESH alerts (what this push
+    announces) on top of the previous record: a sale this push did not announce
+    keeps the price the user was last actually told, so a dress announced at $140
+    that drifts to $135 while another piece's sale is announced is still measured
+    against $140 the next time it drops. Sales that have ended and sizes that are
+    gone again are pruned, so their return is news.
+
+    Called with `alerts` alone (the first push, and the tests) everything
+    current counts as told."""
+    if fresh is None:
+        fresh = alerts
+    _sig, prev_sales, prev_sizes = read_stamp(prev_stamp)
+    on_sale = {a["pid"] for a in alerts if a["sale"]}
+    in_stock = {f"{a['pid']}:+{canon_size(s)}" for a in alerts for s in a["new_sizes"]}
+    sales = {pid: price for pid, price in prev_sales.items() if pid in on_sale}
+    sizes = {k for k in prev_sizes if k in in_stock}
+    for a in fresh:
+        if a["sale"]:
+            sales[a["pid"]] = a["sale"]["now"]
+        for size in a["new_sizes"]:
+            sizes.add(f"{a['pid']}:+{canon_size(size)}")
     return STAMP_PREFIX + json.dumps({
         "sig": signature(alerts),
-        "sales": {a["pid"]: a["sale"]["now"] for a in alerts if a["sale"]},
-        "sizes": sorted({f"{a['pid']}:+{canon_size(s)}" for a in alerts for s in a["new_sizes"]}),
+        "sales": sales,
+        "sizes": sorted(sizes),
     }, separators=(",", ":"), sort_keys=True)
 
 
@@ -361,22 +384,28 @@ def read_stamp(text):
 
 
 def fresh_alerts(alerts, prev_stamp):
-    """The alerts that carry something this user has not been pushed about.
+    """The alerts that carry something this user has not been pushed about, each
+    REDUCED to its new part.
 
     A sale counts as fresh when the piece was not on sale at the last push, or is
     now at least FURTHER_DROP_PCT cheaper than the price that push recorded. A
     price that drifts by a dollar either way is the same sale and stays quiet:
-    a monthly FX refresh moves every non-USD brand by about that much."""
+    a monthly FX refresh moves every non-USD brand by about that much.
+
+    An alert that is fresh only because a size came back has its already-told
+    sale REMOVED, and sizes already reported are dropped from `new_sizes`.
+    Otherwise summarize() would lead with the old sale and never mention the
+    restock that justified the push. Returns copies; the input is not modified."""
     _sig, prev_prices, told_sizes = read_stamp(prev_stamp)
     out = []
     for a in alerts:
-        new_size = any(f"{a['pid']}:+{canon_size(s)}" not in told_sizes for s in a["new_sizes"])
+        untold = [s for s in a["new_sizes"] if f"{a['pid']}:+{canon_size(s)}" not in told_sizes]
         new_sale = False
         if a["sale"]:
             before = prev_prices.get(a["pid"])
             new_sale = before is None or a["sale"]["now"] <= before * (1 - FURTHER_DROP_PCT / 100)
-        if new_sale or new_size:
-            out.append(a)
+        if new_sale or untold:
+            out.append({**a, "sale": a["sale"] if new_sale else None, "new_sizes": untold})
     return out
 
 
@@ -601,16 +630,18 @@ def build_digests(users, items, catalog, corrections=None):
         alerts = compute_alerts(by_user.get(uid, []), catalog, corrections)
         if not summarize(alerts):
             continue
-        sig = stamp_value(alerts)
         if signature(alerts) == read_stamp(u.get("sig"))[0]:
             continue  # unchanged since last push — don't re-nag
         # Something changed, but is any of it NEWS? Lead with what is new, and
         # send nothing when the only changes are ones the push never mentions.
         # The message is written from the fresh alerts ALONE, so it can never
         # lead with a sale the user was already pushed about.
-        summ = summarize(fresh_alerts(alerts, u.get("sig")))
+        fresh = fresh_alerts(alerts, u.get("sig"))
+        summ = summarize(fresh)
         if not summ:
             continue
+        # Record only what THIS push announces, on top of what was told before.
+        sig = stamp_value(alerts, fresh, u.get("sig"))
         messages.append(
             {
                 "to": u["token"],

@@ -161,6 +161,46 @@ ok(pdp.read_stamp("v2:{not json") == ("", {}, set()), "corrupt v2 stamp")
 ok(pdp.read_stamp(None) == ("", {}, set()) and pdp.read_stamp("") == ("", {}, set()), "empty stamp")
 ok(run(items, day1, "v2:{not json")[0] is not None, "a corrupt stamp must fail open (send), not crash or go silent")
 
+# ── review findings: announce only the NEW part, and record only that ────────
+# (a) A sale already announced gains a size: the push is about the RESTOCK.
+back = dict(day1, dress=live("dress", "Deiji Studios", "Slip Dress", 140, ["S", "M", "L"]))
+body_r, stamp_r = run(items, back, stamp)
+ok(body_r and "Deiji Studios Slip Dress is back in L" in body_r and "% off" not in body_r,
+   f"a known sale that gained a size re-announced the sale: {body_r}")
+# (b) A second restock names only the size that is new.
+tee1 = dict(day1, top=live("top", "Baserange", "Tee", 80, ["S", "M", "L", "XL"]))
+_b, st1 = run(items, tee1, stamp)
+tee2 = dict(day1, top=live("top", "Baserange", "Tee", 80, ["S", "M", "L", "XL", "XXL"]))
+body_2, _s = run(items, tee2, st1)
+ok(body_2 and "back in XXL" in body_2, f"second restock named an old size: {body_2}")
+# (c) fresh_alerts returns copies; the caller's alerts are untouched.
+al_in = pdp.compute_alerts(items, back, FACTORS)
+snap_in = json.dumps(al_in, sort_keys=True)
+pdp.fresh_alerts(al_in, stamp)
+ok(json.dumps(al_in, sort_keys=True) == snap_in, "fresh_alerts mutated its input")
+# (d) A sale this push did NOT announce keeps the price the user was last told.
+#     Told: dress $140. The dress drifts to $135 while the coat's sale is announced.
+drift = dict(day1, dress=live("dress", "Deiji Studios", "Slip Dress", 135, ["S", "M"]),
+             coat=live("coat", "Toteme", "Coat", 720, ["S"]))
+body_d, stamp_d = run(items, drift, stamp)
+ok(body_d and body_d.startswith("Toteme Coat is 20% off"), f"drift case: wrong lead: {body_d}")
+ok(pdp.read_stamp(stamp_d)[1] == {"dress": 140.0, "coat": 720.0},
+   f"the unannounced $135 overwrote the announced $140: {pdp.read_stamp(stamp_d)[1]}")
+#     $130 is 7% under the announced $140 (only 3.7% under $135): that is news.
+drop = dict(drift, dress=live("dress", "Deiji Studios", "Slip Dress", 130, ["S", "M"]))
+body_n, _s = run(items, drop, stamp_d)
+ok(body_n and "Deiji Studios Slip Dress is 35% off" in body_n,
+   f"a real further drop was hidden by an unannounced drift: {body_n}")
+# (e) Ended sales and sizes gone again are pruned from the record.
+xl = dict(day1, top=live("top", "Baserange", "Tee", 80, ["S", "M", "L", "XL"]))
+_b, st_xl = run(items, xl, None)
+ok(pdp.read_stamp(st_xl)[1:] == ({"dress": 140.0}, {"top:+xl"}), "fixture stamp")
+coat_only = dict(day1, dress=live("dress", "Deiji Studios", "Slip Dress", 200, ["S", "M"]),
+                 coat=live("coat", "Toteme", "Coat", 720, ["S"]))
+_b, st_after = run(items, coat_only, st_xl)
+ok(pdp.read_stamp(st_after)[1:] == ({"coat": 720.0}, set()),
+   f"an ended sale or a gone size stayed in the record: {pdp.read_stamp(st_after)[1:]}")
+
 # The stamp round-trips exactly.
 al = pdp.compute_alerts(items, day7, FACTORS)
 sig, sales, sizes = pdp.read_stamp(pdp.stamp_value(al))
