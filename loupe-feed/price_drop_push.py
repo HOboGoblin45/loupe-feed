@@ -43,6 +43,8 @@ import urllib.error
 import urllib.request
 from datetime import datetime, timezone
 
+from alert_factors import alert_factors
+
 HERE = pathlib.Path(__file__).resolve().parent
 CORRECTIONS = HERE / "price_corrections.json"
 
@@ -134,17 +136,9 @@ def load_price_corrections(path=CORRECTIONS):
             "  It records the FX corrections that must NOT be reported as sales.\n"
             "  Without it this digest would push a currency fix to users as a discount."
         )
-    doc = json.loads(path.read_text(encoding="utf-8"))
-    out = {}
-    for c in doc.get("corrections", []):
-        brand, factor = c.get("brand"), c.get("factor")
-        try:
-            factor = float(factor)
-        except (TypeError, ValueError):
-            continue
-        if brand and factor > 0:
-            out[brand] = factor
-    return out
+    # `corrections` plus `alertCorrections`: see alert_factors.py for why there
+    # are two sections and why the second never touches the archive.
+    return alert_factors(json.loads(path.read_text(encoding="utf-8")))
 
 
 def is_fx_correction_step(now, then, factor):
@@ -299,6 +293,91 @@ def signature(alerts):
         gs = "-" + "|".join(sorted(a["gone_sizes"])) if a["gone_sizes"] else ""
         parts.append(f"{a['pid']}:{s}{ns}{gs}")
     return ";".join(sorted(parts))
+
+
+# ── What has this user ALREADY been told? ────────────────────────────────────────
+# The digest used to re-send whenever signature() changed at all. But the signature
+# covers every saved piece and every size, while the push only ever NAMES the single
+# best sale. So with a few dozen saves some size somewhere sells out most days, the
+# signature moves, and the user gets the identical sentence about the identical
+# piece again -- reported 2026-11-09 as "the same Brooke Callahan price drop alert
+# every day". A change the push does not mention is not a reason to send it.
+#
+# A push is news only if it can say something the user has not been told:
+#   * a piece on sale that was not on sale, or is now cheaper still, or
+#   * a size back in stock that was not reported back in stock.
+# A size selling OUT is never news here (summarize() already refuses to push for
+# it), and neither is a sale that merely persists.
+FURTHER_DROP_PCT = 5  # a sale already pushed is news again only when this much cheaper
+
+
+STAMP_PREFIX = "v2:"
+
+
+def stamp_value(alerts):
+    """What is written to profiles.last_marketing_push_sig after a push.
+
+    The signature alone cannot be read back reliably: it is a string built with
+    `+`, `-` and `|`, and real sizes contain those characters ("6-8", "S/M").
+    So the record of what the user was told is stored as data next to it."""
+    return STAMP_PREFIX + json.dumps({
+        "sig": signature(alerts),
+        "sales": {a["pid"]: a["sale"]["now"] for a in alerts if a["sale"]},
+        "sizes": sorted({f"{a['pid']}:+{canon_size(s)}" for a in alerts for s in a["new_sizes"]}),
+    }, separators=(",", ":"), sort_keys=True)
+
+
+def read_stamp(text):
+    """(sig, {pid: sale price}, {restock keys}) from a stored stamp.
+
+    Reads the v2 form exactly. A stamp written before 2026-11-09 is the bare
+    signature string; it is parsed best-effort, and where a size cannot be
+    recovered the worst outcome is one extra push, once, before the next stamp
+    replaces it with the v2 form."""
+    text = text or ""
+    if text.startswith(STAMP_PREFIX):
+        try:
+            d = json.loads(text[len(STAMP_PREFIX):])
+            sales = {str(k): float(v) for k, v in (d.get("sales") or {}).items()}
+            return str(d.get("sig") or ""), sales, set(d.get("sizes") or [])
+        except (ValueError, TypeError, AttributeError):
+            return "", {}, set()
+    sales, sizes = {}, set()
+    for part in text.split(";"):
+        pid, sep, rest = part.partition(":")
+        if not sep or not pid:
+            continue
+        rest, _, _gone = rest.partition("-")
+        sale, _, new = rest.partition("+")
+        if sale.startswith("s"):
+            try:
+                sales[pid] = float(sale[1:])
+            except ValueError:
+                pass
+        for size in new.split("|") if new else []:
+            if size:
+                sizes.add(f"{pid}:+{canon_size(size)}")
+    return text, sales, sizes
+
+
+def fresh_alerts(alerts, prev_stamp):
+    """The alerts that carry something this user has not been pushed about.
+
+    A sale counts as fresh when the piece was not on sale at the last push, or is
+    now at least FURTHER_DROP_PCT cheaper than the price that push recorded. A
+    price that drifts by a dollar either way is the same sale and stays quiet:
+    a monthly FX refresh moves every non-USD brand by about that much."""
+    _sig, prev_prices, told_sizes = read_stamp(prev_stamp)
+    out = []
+    for a in alerts:
+        new_size = any(f"{a['pid']}:+{canon_size(s)}" not in told_sizes for s in a["new_sizes"])
+        new_sale = False
+        if a["sale"]:
+            before = prev_prices.get(a["pid"])
+            new_sale = before is None or a["sale"]["now"] <= before * (1 - FURTHER_DROP_PCT / 100)
+        if new_sale or new_size:
+            out.append(a)
+    return out
 
 
 def _label(a):
@@ -520,12 +599,18 @@ def build_digests(users, items, catalog, corrections=None):
         if recently_active(u.get("active_at")):
             continue  # on-device 11am digest already covers active users — no double
         alerts = compute_alerts(by_user.get(uid, []), catalog, corrections)
-        summ = summarize(alerts)
+        if not summarize(alerts):
+            continue
+        sig = stamp_value(alerts)
+        if signature(alerts) == read_stamp(u.get("sig"))[0]:
+            continue  # unchanged since last push — don't re-nag
+        # Something changed, but is any of it NEWS? Lead with what is new, and
+        # send nothing when the only changes are ones the push never mentions.
+        # The message is written from the fresh alerts ALONE, so it can never
+        # lead with a sale the user was already pushed about.
+        summ = summarize(fresh_alerts(alerts, u.get("sig")))
         if not summ:
             continue
-        sig = signature(alerts)
-        if sig == u.get("sig"):
-            continue  # unchanged since last push — don't re-nag
         messages.append(
             {
                 "to": u["token"],
