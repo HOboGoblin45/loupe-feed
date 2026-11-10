@@ -37,6 +37,7 @@ from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
 import square_source
+from alert_factors import alert_factors
 
 HERE = Path(__file__).parent
 BRANDS_FILE = HERE / "brands.json"
@@ -3118,6 +3119,19 @@ def main():
         catalog["featured"] = _feat
         summary.append("  -> featured: " + ", ".join(
             f"{w['brand']} {w['from']}..{w['to']}" for w in _feat))
+    # The FX factors the app must not show as a sale (Dresser badge, alerts screen,
+    # on-device digest, share image). The app has parsed this block since August;
+    # nothing published it until 2026-11-09. See alert_factors.py.
+    try:
+        _pc = alert_factors(json.loads(
+            (HERE / "price_corrections.json").read_text(encoding="utf-8")))
+    except (OSError, ValueError) as e:
+        _pc = {}
+        summary.append(f"  \u26a0 price_corrections.json unreadable ({type(e).__name__}); "
+                       f"priceCorrections NOT published, the app will show FX steps as sales")
+    if _pc:
+        catalog["priceCorrections"] = dict(sorted(_pc.items()))
+        summary.append(f"  -> priceCorrections: {len(_pc)} brands")
     # Compact separators: pretty-printing made every daily commit a full-file diff
     # and inflated the payload ~30% against jsDelivr's ~20MB/file ceiling. The
     # app never reads this by eye; use scripts or jq locally.

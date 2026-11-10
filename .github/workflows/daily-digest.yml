@@ -53,7 +53,9 @@ jobs:
       # sent. A missed digest is recoverable, a false one is not.
       - name: Gate — alert rules must still hold
         working-directory: loupe-feed
-        run: python test_currency_fx.py
+        run: |
+          python test_currency_fx.py
+          python test_digest_news.py
 
       - name: Send daily sale/restock digest
         run: python loupe-feed/price_drop_push.py

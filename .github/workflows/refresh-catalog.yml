@@ -148,6 +148,7 @@ jobs:
           python test_square_source.py
           python test_featured.py
           python test_supabase_headers.py
+          python test_digest_news.py
 
       - name: Build catalog
         run: python loupe-feed/build_catalog.py
