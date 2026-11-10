@@ -53,12 +53,23 @@ def iso_now():
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
+# Supabase gets its OWN User-Agent, never the browser one above. A new-style
+# secret key (sb_secret_...) is refused with HTTP 401 on any request whose
+# User-Agent looks like a browser: that is Supabase's guard against a secret
+# key leaking into client code, and it cannot tell a real browser from a server
+# that says "Mozilla/5.0". The storefront fetches need the browser string; the
+# database calls must not carry it. Sending it here is what made every run log
+# "could not reach Supabase (HTTP Error 401: Unauthorized)" while
+# price_drop_push.py, which sends no User-Agent, worked on the same key.
+SUPABASE_USER_AGENT = "loupe-feed/1.0 (+https://github.com/HOboGoblin45/loupe-feed)"
+
+
 def _sb_headers(extra=None):
     h = {
         "apikey": SUPABASE_SERVICE_KEY,
         "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
         "Accept": "application/json",
-        "User-Agent": USER_AGENT,
+        "User-Agent": SUPABASE_USER_AGENT,
     }
     if extra:
         h.update(extra)
