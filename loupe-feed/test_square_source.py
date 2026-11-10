@@ -1,3 +1,4 @@
+import re
 #!/usr/bin/env python3
 """Square Online source fixtures -- run by CI before every catalog build.
 
@@ -106,6 +107,41 @@ ok(build_catalog.normalize(bogus, "RBK Lab", ENTRY["domain"], FX["JPY"])["catego
    "an invalid category pin must be ignored, not published")
 for pin in ROSTER.get("categoryByHandle", {}).values():
     ok(pin in build_catalog.VALID_CATEGORIES, f"roster pins an unknown category {pin!r}")
+
+# ── display titles: shorter on Loupe, the store's listing untouched ───────────
+J_SLUG = by_id(JACKET)["site_link"].split("/")[1]
+full_j = jacket["name"]
+shaped_j = square_source.to_shopify_shape(by_id(JACKET), ENTRY["domain"], ENTRY["brand"],
+                                          ROSTER.get("categoryByHandle"), ROSTER)
+ok(shaped_j["title"] == full_j, "the full store title must still feed inference")
+row_j = build_catalog.normalize(shaped_j, ENTRY["brand"], ENTRY["domain"], FX["JPY"], currency="JPY")
+ok(row_j["name"] == "Be the Part They Remember Jacket", f"display title: {row_j['name']!r}")
+ok(row_j["category"] == "outerwear" and row_j["id"] == jacket["id"] and row_j["price"] == jacket["price"],
+   "a display title changed something other than the name")
+kim = build_catalog.normalize(
+    square_source.to_shopify_shape(by_id(KIMONO), ENTRY["domain"], ENTRY["brand"],
+                                   ROSTER.get("categoryByHandle"), ROSTER),
+    ENTRY["brand"], ENTRY["domain"], FX["JPY"], currency="JPY")
+ok(kim["name"] == "Dress First, Plan Later Tiered Skirt" and kim["category"] == "bottoms",
+   f"kimono skirt: {kim['name']!r} / {kim['category']}")
+# A new listing with no hand-written title falls back to the piece's own name.
+dt = square_source.display_title
+ok(dt("Go Sideways – Reconstructed Denim Skirt, One of a Kind", "new", {"shortTitles": True}) == "Go Sideways",
+   "lead fallback")
+ok(dt("Unexpected Balance — Reconstructed Denim Patchwork Skirt", "new", {"shortTitles": True}) == "Unexpected Balance",
+   "lead fallback must read an em dash too")
+ok(dt("One-of-a-Kind Denim Skirt", "new", {"shortTitles": True}) is None,
+   "a hyphenated word is not a separator")
+ok(dt("Go Sideways – Denim Skirt", "new", {}) is None, "no opt-in, no shortening")
+ok(dt("Go Sideways – Denim Skirt", "new", {"titleByHandle": {"new": "  "}, "shortTitles": False}) is None,
+   "a blank pin must not blank the title")
+ok(square_source.to_shopify_shape(by_id(JACKET), ENTRY["domain"], ENTRY["brand"])["_display_title"] is None,
+   "without a roster entry the store title is shown")
+# Every pinned title fits the card (about two short lines) and is shorter than the original.
+for slug, short in ROSTER.get("titleByHandle", {}).items():
+    ok(0 < len(short) <= 40, f"display title too long for the card: {short!r}")
+    ok(re.fullmatch(r"[a-z0-9-]+", slug) is not None, f"bad handle {slug!r}")
+ok(J_SLUG in ROSTER["titleByHandle"], "the jacket has no display title")
 
 # ── a Shopify row is untouched by the _url hook ──────────────────────────────
 shop = build_catalog.normalize(

@@ -2058,7 +2058,9 @@ def normalize(product, brand, domain, fx, multi_brand=False, retailer=None,
         "id": (f"{retailer['id']}-{slugify(display_brand)}-{handle}" if retailer
                else f"{slugify(display_brand)}-{handle}"),
         "brand": display_brand,
-        "name": title,
+        # A Square entry may ask for a shorter display title than the store's
+        # own (square_source.display_title). Inference above read the full one.
+        "name": product.get("_display_title") or title,
         # `price` is and stays the CONVERTED USD INTEGER. The iOS app reads it as
         # a plain USD number in ~20 render sites and in every price-affinity,
         # budget-filter and look-total calculation; changing what it means would

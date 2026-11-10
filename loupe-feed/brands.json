@@ -33,7 +33,9 @@
   "perBrandDisplay": 60,
   "_retailers_comment": "PARTNER RETAILERS — real shops we've partnered with that stock many designers. Items keep the DESIGNER as the brand (the taste engine learns designers, not shops) and carry a 'retailer' stamp the app resolves against catalog.retailers for the tile tint, badge and in-app store block. 'productTypes' scopes what we ingest (Loupe is a women's app — a boutique also sells menswear, candles and books). 'perVendorCap' stops one high-volume label eating the whole allocation. Set 'enabled': false to switch a partnership off in one edit — items disappear on the next refresh, no app release needed.",
   "_featured_comment": "DATED FEATURED PLACEMENTS. The app features one brand a day (Featured Today on launch, plus the Inspired-by rail): a daily rotation through the whole roster, so with ~245 brands a given label comes up about every 8 months. An entry here overrides the rotation for its days: {\"brand\": exact catalog brand name, \"from\": \"YYYY-MM-DD\", \"to\": \"YYYY-MM-DD\"}, inclusive UTC days, at most 31. build_catalog.py drops (and says so in the run summary) any window that is malformed, already over, or names a brand with no pieces in the catalog. Only app builds that read catalog.featured honour it; older builds keep rotating.",
-  "featured": [],
+  "featured": [
+    {"brand": "RBK Lab", "from": "2026-11-16", "to": "2026-11-22"}
+  ],
   "retailers": [
     {
       "id": "gemini",
@@ -1553,7 +1555,23 @@
       "categoryByHandle": {
         "dress-first-plan-later-reconstructed-denim-tiered-skirt": "bottoms"
       },
-      "_currency_note": "First non-Shopify brand: a Square Online storefront, read by square_source.py. No /cart.js exists to probe, so the currency was verified by hand on 2026-11-09 (storefront and product API both quote yen, e.g. ¥42,500; the shop ships from Japan). One-of-a-kind reconstructed denim, stock of 1 per piece, so sold pieces are dropped (inStockOnly) rather than shown as out of stock. Added at the founder's request (Takashi Matsushima, 2026-11-05 email)."
+      "shortTitles": true,
+      "titleByHandle": {
+        "one-of-a-kind-reconstructed-denim-skirt-japanese-wearable-art-rbk-lab": "Reconstructed Denim Skirt",
+        "unexpected-bloom-one-of-a-kind-reconstructed-denim-skirt-rbk-lab": "Unexpected Bloom Denim Skirt",
+        "wear-a-reason-to-go-out-reconstructed-denim-maxi-skirt": "Wear a Reason to Go Out Maxi Skirt",
+        "get-noticed-by-accident-artistic-patchwork-denim-skirt": "Get Noticed by Accident Skirt",
+        "be-the-part-they-remember-reconstructed-denim-jacket": "Be the Part They Remember Jacket",
+        "break-the-pattern-reconstructed-denim-maxi-skirt": "Break the Pattern Maxi Skirt",
+        "take-the-long-way-reconstructed-denim-maxi-skirt": "Take the Long Way Maxi Skirt",
+        "dress-first-plan-later-reconstructed-denim-tiered-skirt": "Dress First, Plan Later Tiered Skirt",
+        "no-straight-line-reconstructed-denim-maxi-skirt": "No Straight Line Maxi Skirt",
+        "let-the-day-get-strange-reconstructed-denim-skirt": "Let the Day Get Strange Skirt",
+        "take-an-unexpected-turn-reconstructed-denim-maxi-skirt": "Take an Unexpected Turn Maxi Skirt",
+        "unexpected-balance-reconstructed-denim-patchwork-skirt": "Unexpected Balance Patchwork Skirt"
+      },
+      "_titles_note": "Display titles only. The founder asked (2026-11-09 email) for shorter titles on Loupe without changing his Square listings. A new piece with no entry here shows the part of its store title before the dash.",
+      "_currency_note": "First non-Shopify brand: a Square Online storefront, read by square_source.py. No /cart.js exists to probe, so the currency was verified by hand on 2026-11-09 (storefront and product API both quote yen, e.g. ¥42,500; the shop ships from Japan). One-of-a-kind reconstructed denim, stock of 1 per piece, so sold pieces are dropped (inStockOnly) rather than shown as out of stock. Added at the founder's request (Takashi Matsushima, 2026-11-05 email). Photo permission, including background-removed versions, given in writing 2026-11-09 (copyright stays with RBK Lab)."
     }
   ]
 }

@@ -82,6 +82,35 @@ def _strip_brand_suffix(title, brand):
     return out or title
 
 
+_LEAD_SEP = re.compile(r"\s+[–—|]\s+")
+
+
+def display_title(title, slug, entry):
+    """The shorter title Loupe shows for a piece, or None to show the store's own.
+
+    The store's titles are written for search engines ("Break the Pattern –
+    Reconstructed Patchwork Denim Maxi Skirt, One of a Kind") and the app has
+    room for about two short lines. The founder asked for shorter titles on
+    Loupe WITHOUT changing the Square listings, so the short form lives here:
+
+      titleByHandle   {slug: "Short Title"}, written by hand per piece. Wins.
+      shortTitles     true = for a piece with no hand-written title (a new
+                      listing), show the part before the first " – " / " | ",
+                      which on this store is the piece's own name.
+
+    Only the DISPLAY name changes. Category and colour inference still read the
+    full store title, which carries the garment words the short one may drop."""
+    entry = entry or {}
+    pinned = (entry.get("titleByHandle") or {}).get(slug)
+    if isinstance(pinned, str) and pinned.strip():
+        return pinned.strip()
+    if entry.get("shortTitles"):
+        lead = _LEAD_SEP.split(title, 1)[0].strip()
+        if len(lead) >= 3 and lead != title:
+            return lead
+    return None
+
+
 def is_sold_out(sq):
     """True when the storefront itself says this piece cannot be bought."""
     badges = sq.get("badges") or {}
@@ -95,7 +124,7 @@ def is_sold_out(sq):
     return bool(inv.get("enabled")) and (inv.get("total") or 0) <= 0
 
 
-def to_shopify_shape(sq, domain, brand="", category_by_handle=None):
+def to_shopify_shape(sq, domain, brand="", category_by_handle=None, entry=None):
     """One Square storefront product -> a dict normalize() can read, or None.
 
     None means "not a listable product" (hidden, no link, no price): the same
@@ -121,9 +150,12 @@ def to_shopify_shape(sq, domain, brand="", category_by_handle=None):
         src = _image_src(im)
         if src:
             images.append({"src": src})
-    title = html.unescape(str(sq.get("name") or "")).strip()
+    title = _strip_brand_suffix(html.unescape(str(sq.get("name") or "")).strip(), brand)
     return {
-        "title": _strip_brand_suffix(title, brand),
+        "title": title,
+        # What the app prints, when the roster asks for something shorter than
+        # the store's title (None = print the title). See display_title().
+        "_display_title": display_title(title, slug, entry),
         "handle": slug,
         "product_type": "",
         "tags": [],
@@ -181,7 +213,7 @@ def pages(entry, fetch, budget_left=None, state=None):
         for sq in rows:
             if in_stock_only and is_sold_out(sq):
                 continue
-            shaped = to_shopify_shape(sq, domain, brand, entry.get("categoryByHandle"))
+            shaped = to_shopify_shape(sq, domain, brand, entry.get("categoryByHandle"), entry)
             if shaped:
                 out.append(shaped)
         yield out
