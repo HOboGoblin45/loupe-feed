@@ -1537,6 +1537,21 @@
       "currency": "EUR",
       "currencyVerified": true,
       "currencyCheckedAt": "2026-09-22"
+    },
+    {
+      "brand": "RBK Lab",
+      "domain": "rbk-lab.square.site",
+      "currency": "JPY",
+      "currencyVerified": true,
+      "currencyCheckedAt": "2026-11-09",
+      "platform": "square",
+      "squareUserId": "156408825",
+      "squareSiteId": "299912790691262459",
+      "inStockOnly": true,
+      "categoryByHandle": {
+        "dress-first-plan-later-reconstructed-denim-tiered-skirt": "bottoms"
+      },
+      "_currency_note": "First non-Shopify brand: a Square Online storefront, read by square_source.py. No /cart.js exists to probe, so the currency was verified by hand on 2026-11-09 (storefront and product API both quote yen, e.g. ¥42,500; the shop ships from Japan). One-of-a-kind reconstructed denim, stock of 1 per piece, so sold pieces are dropped (inStockOnly) rather than shown as out of stock. Added at the founder's request (Takashi Matsushima, 2026-11-05 email)."
     }
   ]
 }

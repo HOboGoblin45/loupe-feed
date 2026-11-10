@@ -1,0 +1,204 @@
+{
+ "_comment": "Trimmed from the live rbk-lab.square.site product API response of 2026-11-09 (3 of 12 products, 3 images each, unused fields removed). Real values.",
+ "data": [
+  {
+   "id": "J6HA6ACNSWJLTN6MRGCYXCK7",
+   "visibility": "visible",
+   "name": "One-of-a-Kind Reconstructed Denim Skirt | Japanese Wearable Art – RBK Lab",
+   "short_description": "<p>Not every day needs to go as planned.</p><p>Some clothes are made to blend in. This one isn&#39;t.</p><p>What if getting dressed changed where your day takes",
+   "badges": {
+    "out_of_stock": false,
+    "low_stock": true,
+    "on_sale": false
+   },
+   "site_link": "product/one-of-a-kind-reconstructed-denim-skirt-japanese-wearable-art-rbk-lab/J6HA6ACNSWJLTN6MRGCYXCK7",
+   "inventory": {
+    "total": 1,
+    "all_variations_sold_out": false,
+    "marked_sold_out_at_all_existing_locations": false,
+    "marked_sold_out_skus_count": 0,
+    "all_inventory_total": 1,
+    "lowest": 1,
+    "enabled": false,
+    "some_variations_sold_out": false,
+    "has_location_not_tracking": false
+   },
+   "on_sale": false,
+   "created_date": "2026-10-21T14:44:53+00:00",
+   "price": {
+    "low": 42500,
+    "high": 42500,
+    "regular_low": 42500,
+    "regular_high": 42500,
+    "low_formatted": "￥42,500"
+   },
+   "images": {
+    "data": [
+     {
+      "absolute_url": "https://156408825.cdn6.editmysite.com/uploads/1/5/6/4/156408825/7GMYYB7GZJZBPFNHWKLWAF3X.jpeg",
+      "absolute_urls": {
+       "640": "https://156408825.cdn6.editmysite.com/uploads/1/5/6/4/156408825/7GMYYB7GZJZBPFNHWKLWAF3X.jpeg?width=640",
+       "1280": "https://156408825.cdn6.editmysite.com/uploads/1/5/6/4/156408825/7GMYYB7GZJZBPFNHWKLWAF3X.jpeg?width=1280"
+      },
+      "width": 2560,
+      "height": 2560
+     },
+     {
+      "absolute_url": "https://156408825.cdn6.editmysite.com/uploads/1/5/6/4/156408825/EWT45NEX4SVUZMRB5UU3FW55.jpeg",
+      "absolute_urls": {
+       "640": "https://156408825.cdn6.editmysite.com/uploads/1/5/6/4/156408825/EWT45NEX4SVUZMRB5UU3FW55.jpeg?width=640",
+       "1280": "https://156408825.cdn6.editmysite.com/uploads/1/5/6/4/156408825/EWT45NEX4SVUZMRB5UU3FW55.jpeg?width=1280"
+      },
+      "width": 2560,
+      "height": 2560
+     },
+     {
+      "absolute_url": "https://156408825.cdn6.editmysite.com/uploads/1/5/6/4/156408825/SWKNHJZ3SAARFY2VZDV2Y4Y7.jpeg",
+      "absolute_urls": {
+       "640": "https://156408825.cdn6.editmysite.com/uploads/1/5/6/4/156408825/SWKNHJZ3SAARFY2VZDV2Y4Y7.jpeg?width=640",
+       "1280": "https://156408825.cdn6.editmysite.com/uploads/1/5/6/4/156408825/SWKNHJZ3SAARFY2VZDV2Y4Y7.jpeg?width=1280"
+      },
+      "width": 2560,
+      "height": 2560
+     }
+    ]
+   }
+  },
+  {
+   "id": "LGWGZUDFWLZ6BJTPIET3F2KC",
+   "visibility": "visible",
+   "name": "Be the Part They Remember – Reconstructed Denim Patchwork Jacket, One of a Kind",
+   "short_description": "<p>Someone may forget where you met, but remember what you were wearing.</p><p>Reclaimed denim and patterned textile rebuild a familiar jacket into something un",
+   "badges": {
+    "out_of_stock": false,
+    "low_stock": true,
+    "on_sale": false
+   },
+   "site_link": "product/be-the-part-they-remember-reconstructed-denim-jacket/LGWGZUDFWLZ6BJTPIET3F2KC",
+   "inventory": {
+    "total": 1,
+    "all_variations_sold_out": false,
+    "marked_sold_out_at_all_existing_locations": false,
+    "marked_sold_out_skus_count": 0,
+    "all_inventory_total": 1,
+    "lowest": 1,
+    "enabled": false,
+    "some_variations_sold_out": false,
+    "has_location_not_tracking": false
+   },
+   "on_sale": false,
+   "created_date": "2026-10-08T13:29:39+00:00",
+   "price": {
+    "low": 29500,
+    "high": 29500,
+    "regular_low": 29500,
+    "regular_high": 29500,
+    "low_formatted": "￥29,500"
+   },
+   "images": {
+    "data": [
+     {
+      "absolute_url": "https://156408825.cdn6.editmysite.com/uploads/1/5/6/4/156408825/ZE3RDWSK7O25ZRBI2PQDNVL4.jpeg",
+      "absolute_urls": {
+       "640": "https://156408825.cdn6.editmysite.com/uploads/1/5/6/4/156408825/ZE3RDWSK7O25ZRBI2PQDNVL4.jpeg?width=640",
+       "1280": "https://156408825.cdn6.editmysite.com/uploads/1/5/6/4/156408825/ZE3RDWSK7O25ZRBI2PQDNVL4.jpeg?width=1280"
+      },
+      "width": 2560,
+      "height": 2560
+     },
+     {
+      "absolute_url": "https://156408825.cdn6.editmysite.com/uploads/1/5/6/4/156408825/YOACWVZVMTVHVRTXMSYAAVB3.jpeg",
+      "absolute_urls": {
+       "640": "https://156408825.cdn6.editmysite.com/uploads/1/5/6/4/156408825/YOACWVZVMTVHVRTXMSYAAVB3.jpeg?width=640",
+       "1280": "https://156408825.cdn6.editmysite.com/uploads/1/5/6/4/156408825/YOACWVZVMTVHVRTXMSYAAVB3.jpeg?width=1280"
+      },
+      "width": 2560,
+      "height": 2560
+     },
+     {
+      "absolute_url": "https://156408825.cdn6.editmysite.com/uploads/1/5/6/4/156408825/JEEV7HTRK2KSQXQBOTIS73I4.jpeg",
+      "absolute_urls": {
+       "640": "https://156408825.cdn6.editmysite.com/uploads/1/5/6/4/156408825/JEEV7HTRK2KSQXQBOTIS73I4.jpeg?width=640",
+       "1280": "https://156408825.cdn6.editmysite.com/uploads/1/5/6/4/156408825/JEEV7HTRK2KSQXQBOTIS73I4.jpeg?width=1280"
+      },
+      "width": 2560,
+      "height": 2560
+     }
+    ]
+   }
+  },
+  {
+   "id": "OY73CI7VJ752EQEC6OKTYAEA",
+   "visibility": "visible",
+   "name": "Dress First, Plan Later – Reconstructed Denim Kimono Tiered Skirt, One of a Kind",
+   "short_description": "<p>Get dressed first. Decide where you are going later.</p><p>Denim and Japanese textile layers break away from the expected shape of a skirt.</p><p>A wearable ",
+   "badges": {
+    "out_of_stock": false,
+    "low_stock": true,
+    "on_sale": false
+   },
+   "site_link": "product/dress-first-plan-later-reconstructed-denim-tiered-skirt/OY73CI7VJ752EQEC6OKTYAEA",
+   "inventory": {
+    "total": 1,
+    "all_variations_sold_out": false,
+    "marked_sold_out_at_all_existing_locations": false,
+    "marked_sold_out_skus_count": 0,
+    "all_inventory_total": 1,
+    "lowest": 1,
+    "enabled": false,
+    "some_variations_sold_out": false,
+    "has_location_not_tracking": false
+   },
+   "on_sale": false,
+   "created_date": "2026-10-08T13:17:04+00:00",
+   "price": {
+    "low": 46000,
+    "high": 46000,
+    "regular_low": 46000,
+    "regular_high": 46000,
+    "low_formatted": "￥46,000"
+   },
+   "images": {
+    "data": [
+     {
+      "absolute_url": "https://156408825.cdn6.editmysite.com/uploads/1/5/6/4/156408825/EEJT3L7ANTYVIT6OSQRXB3R5.jpeg",
+      "absolute_urls": {
+       "640": "https://156408825.cdn6.editmysite.com/uploads/1/5/6/4/156408825/EEJT3L7ANTYVIT6OSQRXB3R5.jpeg?width=640",
+       "1280": "https://156408825.cdn6.editmysite.com/uploads/1/5/6/4/156408825/EEJT3L7ANTYVIT6OSQRXB3R5.jpeg?width=1280"
+      },
+      "width": 2560,
+      "height": 2560
+     },
+     {
+      "absolute_url": "https://156408825.cdn6.editmysite.com/uploads/1/5/6/4/156408825/RNHWIG2DIEGCKSLP4A5EWZWF.jpeg",
+      "absolute_urls": {
+       "640": "https://156408825.cdn6.editmysite.com/uploads/1/5/6/4/156408825/RNHWIG2DIEGCKSLP4A5EWZWF.jpeg?width=640",
+       "1280": "https://156408825.cdn6.editmysite.com/uploads/1/5/6/4/156408825/RNHWIG2DIEGCKSLP4A5EWZWF.jpeg?width=1280"
+      },
+      "width": 2560,
+      "height": 2560
+     },
+     {
+      "absolute_url": "https://156408825.cdn6.editmysite.com/uploads/1/5/6/4/156408825/6MQJAFZTJ4C3P7PWRJ5IFVXB.jpeg",
+      "absolute_urls": {
+       "640": "https://156408825.cdn6.editmysite.com/uploads/1/5/6/4/156408825/6MQJAFZTJ4C3P7PWRJ5IFVXB.jpeg?width=640",
+       "1280": "https://156408825.cdn6.editmysite.com/uploads/1/5/6/4/156408825/6MQJAFZTJ4C3P7PWRJ5IFVXB.jpeg?width=1280"
+      },
+      "width": 2560,
+      "height": 2560
+     }
+    ]
+   }
+  }
+ ],
+ "meta": {
+  "pagination": {
+   "total": 12,
+   "count": 12,
+   "per_page": 60,
+   "current_page": 1,
+   "total_pages": 1,
+   "links": []
+  }
+ }
+}

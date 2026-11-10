@@ -36,6 +36,8 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
+import square_source
+
 HERE = Path(__file__).parent
 BRANDS_FILE = HERE / "brands.json"
 OUT_FILE = HERE / "catalog.json"
@@ -257,6 +259,7 @@ MULTICOLOR_HINTS = ["print", "printed", "floral", "stripe", "striped", "check", 
                     "patchwork", "rainbow", "tie-dye", "tie dye", "leopard", "animal",
                     "paisley", "ditsy", "polka dot", "polka", "plaid", "tartan"]
 
+VALID_CATEGORIES = {"tops", "bottoms", "dresses", "outerwear", "shoes", "accessories"}
 VALID_COLORS = {"black", "white", "pink", "blue", "green", "brown", "red", "neutral", "multicolor"}
 
 # ── Mainstream-house cap ──────────────────────────────────────────────────────
@@ -1959,6 +1962,11 @@ def normalize(product, brand, domain, fx, multi_brand=False, retailer=None,
     if _norm_brand(display_brand) in EXCLUDE_BRANDS:
         return None
     category = infer_category(product_type, title, product.get("tags"))
+    # A source may pin the category of a piece whose title misleads the keyword
+    # rules ("Dress First, Plan Later ... Tiered Skirt" is a skirt). Set only by
+    # square_source.py from a brand entry's `categoryByHandle`.
+    if product.get("_category") in VALID_CATEGORIES:
+        category = product["_category"]
     subtype = infer_accessory_subtype(category, title, product_type, display_brand)
     # ── Partner shelves carry clothes, not the trinket wall ───────────────────
     # A partner's presence in Loupe is a CURATED shelf we assemble on their
@@ -1980,7 +1988,9 @@ def normalize(product, brand, domain, fx, multi_brand=False, retailer=None,
     # sizes == [] (a one-size item) from a genuine sell-out — the app renders
     # "Out of Stock" in the sizes slot only on an explicit false.
     is_available = any(v.get("available") for v in (product.get("variants") or []))
-    product_url = f"https://{domain}/products/{handle}"
+    # A non-Shopify source (square_source.py) supplies its own product URL,
+    # because its pages do not live at /products/<handle>.
+    product_url = product.get("_url") or f"https://{domain}/products/{handle}"
     if retailer:
         # Partner links stay CLEAN and go straight to the retailer's own product
         # page (never re-wrapped by an affiliate network), with a UTM so the shop
@@ -2228,13 +2238,19 @@ def main():
     def resolve_and_log(entry, label=None):
         """resolve_currency() plus the shouting. Kept thin on purpose — the logic
         is module level so a test can drive it without a network."""
-        currency, fx, verified, notes = resolve_currency(entry, fx_table, label=label)
+        if square_source.is_square(entry):
+            # No /cart.js on a Square storefront, so there is nothing to probe:
+            # the annotation is the authority (see square_source.py).
+            currency, fx, verified, notes = resolve_currency(
+                entry, fx_table, probe=lambda _domain: None, label=label)
+        else:
+            currency, fx, verified, notes = resolve_currency(entry, fx_table, label=label)
         for line in notes:
             summary.append(line)
             print(line, file=sys.stderr)
         return currency, fx, verified
 
-    def scrape_brand(domain, cap):
+    def scrape_brand(domain, cap, entry=None):
         """Yield successive products.json pages for a brand, by PAGE NUMBER,
         until a short/empty page (store exhausted), MAX_PAGES, or the global
         request budget runs out.
@@ -2271,6 +2287,11 @@ def main():
         BEFORE the first page is normalized — its answer is an input to the price
         arithmetic rather than a line in the log, so it has to be known before
         there is a price to get wrong."""
+        if square_source.is_square(entry):
+            # Square Online storefront: same walk, different API. Pages arrive
+            # already in Shopify's shape (see square_source.py).
+            yield from square_source.pages(entry, fetch_json, budget_left)
+            return
         for n in range(1, MAX_PAGES + 1):
             if budget_left() <= 0:
                 return
@@ -2308,7 +2329,7 @@ def main():
             # the walk depth. Unlike before 2026-08-06 this does NOT stop at the
             # display cap: stopping there is what made the tracked shelf a
             # rotating window instead of a catalogue.
-            for page in scrape_brand(domain, walk_cap):
+            for page in scrape_brand(domain, walk_cap, entry):
                 pages_seen += 1
                 if len(page) < PAGE_LIMIT:
                     exhausted = True
