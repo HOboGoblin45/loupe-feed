@@ -28,6 +28,12 @@ on:
         type: boolean
         default: false
   push:
+    # main ONLY. Without this filter a push to ANY branch that touches a build
+    # input ran this whole production job on that branch: brand-request
+    # processing against the live database, and the follower notifications. A
+    # feature-branch push did exactly that on 2026-11-10 and was cancelled by
+    # hand during the build step.
+    branches: [main]
     # Rebuild immediately when ANY build INPUT changes — not just the brand list.
     # Before 2026-07-29 this listed brands.json only, so a fix to build_catalog.py
     # (a currency correction, a junk-filter tightening, a category rule) sat dark
@@ -140,6 +146,7 @@ jobs:
           # catalog.json's row shape did not gain a single field.
           python test_market_signals.py
           python test_supabase_headers.py
+          python test_digest_news.py
 
       - name: Build catalog
         run: python loupe-feed/build_catalog.py

@@ -306,6 +306,30 @@
       "note": "Double-conversion."
     }
   ],
+  "_alertCorrections_comment": "ALERT PATHS ONLY. Brands whose stored prices stepped by one ratio for a reason the archive cannot invert, so they are NOT in `corrections` and nothing that reads the archive uses this section. Before 2026-07-15 the scrape sent no country parameter and these three stores served the CI runner a foreign presentment price that was stored as dollars: a $130 Brooke Callahan top was recorded as 485. Anyone who saved a piece in that window has a price-at-save on the wrong side of the step, and the daily digest told them it was 73% off every day (reported by Charlie, 2026-11-09). `factor` is the measured ratio of today's price to the stored one, taken from the pieces users actually hold: Brooke Callahan 6 of 6 live saves at 0.2679 to 0.2681, Marland Backus 2 of 2 at 0.2674 to 0.2680. MISBHV's ten affected saves have all left the catalog, so its factor is the brand-wide step the Index measured on 2026-07-16. Read by alert_factors.py; a move that lands on the factor within the rounding bound is suppressed as a sale, exactly as for `corrections`.",
+  "alertCorrections": [
+    {
+      "brand": "Brooke Callahan",
+      "factor": 0.268,
+      "savedFrom": "2026-07-01",
+      "savedTo": "2026-07-15",
+      "note": "Line stepped x3.7315 on 2026-07-01 and x0.268 back on 2026-07-16 (100% of pieces both days). 12 saves predate 2026-07-16."
+    },
+    {
+      "brand": "Marland Backus",
+      "factor": 0.268,
+      "savedFrom": "2026-07-01",
+      "savedTo": "2026-07-15",
+      "note": "Same step as Brooke Callahan: 100% of the line x0.268 on 2026-07-16."
+    },
+    {
+      "brand": "MISBHV",
+      "factor": 0.2582,
+      "savedFrom": "2026-07-01",
+      "savedTo": "2026-07-15",
+      "note": "100% of the line x0.2582 on 2026-07-16. No affected save is live today; listed so a relisted piece cannot alert."
+    }
+  ],
   "_uncorrectable_comment": "Before 2026-07-15 the scrape sent NO country parameter (commit 10b4c79 added it), so a Shopify Markets store served whatever presentment currency it chose for the CI runner's geo on that day. That currency is not recorded anywhere, the raw price was discarded, and the runner's IP is not reconstructible — so for these windows there is no honest inversion and none is attempted. This is the same boundary build_price_history.PRICE_EPOCHS already voids price comparisons across; it is restated here so that a reader of the corrections cannot assume the untouched days are correct days.",
   "uncorrectable": [
     {"brand": "Anna October", "fromDay": "2026-06-17", "toDay": "2026-07-14", "productDays": 1356},

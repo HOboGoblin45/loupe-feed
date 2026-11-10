@@ -233,8 +233,18 @@ pdp_table = pdp.load_price_corrections()
 # The tell is the ratio, and the record is the source of it. A brand-wide step
 # that lands exactly on the published factor is our own arithmetic, not a sale.
 check("the digest reads the SHARED record, not its own brand list",
-      pdp_table == {c["brand"]: float(c["factor"]) for c in corr["corrections"]},
+      pdp_table == {**{c["brand"]: float(c["factor"]) for c in corr.get("alertCorrections", [])},
+                    **{c["brand"]: float(c["factor"]) for c in corr["corrections"]}},
       f"got {pdp_table}")
+# Alert-only entries must never leak into the ARCHIVE readers: they exist because
+# those windows cannot be honestly inverted (see _uncorrectable_comment).
+check("alert-only corrections do not re-derive the archive",
+      not ({c["brand"] for c in corr.get("alertCorrections", [])} & set(bph.load_corrections())),
+      "an alertCorrections brand reached build_price_history.load_corrections()")
+check("alert-only corrections do not reach the grace-window re-pricing",
+      not ({c["brand"] for c in corr.get("alertCorrections", [])}
+           & set(__import__("build_catalog").load_fx_corrections())),
+      "an alertCorrections brand reached build_catalog.load_fx_corrections()")
 # The record must be READ, never restated. A brand named in the digest's
 # executable code is a second list that drifts from the archive the first time
 # anyone corrects a ninth brand — and the two would then disagree about what a
