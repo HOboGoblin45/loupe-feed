@@ -164,6 +164,72 @@
         "Stine Goya": 0.976924
       },
       "note": "Scheduled FX refresh by refresh_fx.py. Every price in these currencies steps by the brand ratio above on this day. It is our own arithmetic, never a markdown: void price comparisons across it (PRICE_EPOCHS) and never report it as a sale."
+    },
+    {
+      "day": "2026-11-10",
+      "kind": "fx-table-refresh",
+      "asOf": "2026-11-09",
+      "sources": {
+        "frankfurter(ECB)": "https://api.frankfurter.app/latest?from=USD",
+        "open.er-api.com": "https://open.er-api.com/v6/latest/USD"
+      },
+      "maxAbsPct": 3.89,
+      "rates": {
+        "EGP": {
+          "from": 0.019243,
+          "to": 0.018494,
+          "pct": -3.89
+        },
+        "TRY": {
+          "from": 0.020401,
+          "to": 0.019945,
+          "pct": -2.24
+        },
+        "SEK": {
+          "from": 0.100211,
+          "to": 0.101792,
+          "pct": 1.58
+        },
+        "EUR": {
+          "from": 1.135499,
+          "to": 1.119294,
+          "pct": -1.43
+        },
+        "DKK": {
+          "from": 0.151897,
+          "to": 0.149734,
+          "pct": -1.42
+        },
+        "AUD": {
+          "from": 0.696767,
+          "to": 0.689417,
+          "pct": -1.05
+        },
+        "GBP": {
+          "from": 1.328639,
+          "to": 1.341598,
+          "pct": 0.98
+        },
+        "JPY": {
+          "from": 0.006369,
+          "to": 0.006331,
+          "pct": -0.6
+        },
+        "CAD": {
+          "from": 0.705069,
+          "to": 0.709069,
+          "pct": 0.57
+        },
+        "NZD": {
+          "from": 0.564493,
+          "to": 0.561293,
+          "pct": -0.57
+        }
+      },
+      "brands": {
+        "Marfa Istanbul": 0.977648
+      },
+      "note": "Scheduled FX refresh by refresh_fx.py. Every price in these currencies steps by the brand ratio above on this day. It is our own arithmetic, never a markdown: void price comparisons across it (PRICE_EPOCHS) and never report it as a sale."
     }
   ],
   "corrections": [
