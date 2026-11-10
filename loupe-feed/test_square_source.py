@@ -177,6 +177,42 @@ ok(list(square_source.pages(ENTRY, fake_fetch, budget_left=lambda: 0)) == [] and
 
 ok(list(square_source.pages(ENTRY, lambda u: {"data": []})) == [], "empty store must yield nothing")
 
+# ── did the walk reach the END of the store? Only the adapter knows ───────────
+st = {}
+list(square_source.pages(ENTRY, fake_fetch, state=st))
+ok(st == {"exhausted": True}, f"a completed walk must report exhausted: {st}")
+st = {}
+list(square_source.pages(ENTRY, lambda u: {"data": []}, state=st))
+ok(st == {"exhausted": True}, "an empty store IS a completed walk")
+st = {}
+list(square_source.pages(ENTRY, fake_fetch, budget_left=lambda: 0, state=st))
+ok(st == {"exhausted": False}, "a budget-stopped walk must NOT report exhausted")
+left = [1]
+
+
+def one_request_budget():
+    left[0] -= 1
+    return left[0] + 1
+
+
+st = {}
+part = list(square_source.pages(ENTRY, fake_fetch, budget_left=one_request_budget, state=st))
+ok(len(part) == 1 and st == {"exhausted": False},
+   f"stopped after page 1 of 2: one page, not exhausted; got {len(part)} {st}")
+st = {}
+sold = list(square_source.pages(
+    ENTRY, lambda u: {"data": [dict(by_id(SKIRT), badges={"out_of_stock": True})],
+                      "meta": {"pagination": {"total_pages": 1}}}, state=st))
+ok(sold == [[]] and st == {"exhausted": True},
+   "every piece sold: an empty page from a COMPLETED walk (the caller must not grace-carry it)")
+
+# ── and the builder acts on it: no grace carry for a confirmed sell-out ───────
+src = (build_catalog.HERE / "build_catalog.py").read_text(encoding="utf-8")
+ok("label in confirmed_empty" in src and "confirmed_empty.add(brand)" in src,
+   "build_catalog no longer excludes a confirmed-empty Square brand from grace carry-forward")
+ok("not is_sq and len(page) < PAGE_LIMIT" in src,
+   "build_catalog infers Square exhaustion from Shopify's page size again")
+
 # ── the real roster entry is wired the way this file assumes ─────────────────
 cfg = json.loads(build_catalog.BRANDS_FILE.read_text(encoding="utf-8"))
 sq = [e for e in cfg["brands"] if square_source.is_square(e)]

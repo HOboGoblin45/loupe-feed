@@ -147,13 +147,26 @@ def description_text(sq):
         str(sq.get("short_description") or "")))).strip()
 
 
-def pages(entry, fetch, budget_left=None):
+def pages(entry, fetch, budget_left=None, state=None):
     """Yield lists of Shopify-shaped products, one per API page.
 
     `fetch` is build_catalog.fetch_json (paced, counted against the run's
     request budget). Sold-out pieces are dropped here when the entry says
     `inStockOnly`, because for one-of-a-kind work a sold piece never restocks
-    and an "Out of Stock" tile is a dead end."""
+    and an "Out of Stock" tile is a dead end.
+
+    `state`, when given, gets state["exhausted"] = True only if the walk reached
+    the END of the store. The caller cannot infer that from a page's length: the
+    pages here are 60 long, not Shopify's 250, and the stock filter shortens
+    them further, so "short page" says nothing. A walk stopped by the request
+    budget or by MAX_PAGES leaves it False, which is the difference between
+    "this store has nothing for sale" and "we did not finish looking"."""
+    if state is not None:
+        state["exhausted"] = False
+
+    def done():
+        if state is not None:
+            state["exhausted"] = True
     domain = entry["domain"]
     brand = entry.get("brand") or ""
     in_stock_only = bool(entry.get("inStockOnly"))
@@ -163,7 +176,7 @@ def pages(entry, fetch, budget_left=None):
         data = fetch(products_url(entry.get("squareUserId"), entry.get("squareSiteId"), n))
         rows = (data or {}).get("data") or []
         if not rows:
-            return
+            return done()
         out = []
         for sq in rows:
             if in_stock_only and is_sold_out(sq):
@@ -176,6 +189,6 @@ def pages(entry, fetch, budget_left=None):
         total_pages = pg.get("total_pages")
         if isinstance(total_pages, int):
             if n >= total_pages:
-                return
+                return done()
         elif len(rows) < PER_PAGE:
-            return
+            return done()

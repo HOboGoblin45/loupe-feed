@@ -2137,6 +2137,9 @@ def main():
     observed = {}
     observed_meta = {}
     observed_failed = {}
+    # Brands whose store answered in full and had nothing in stock (see the
+    # Square branch of the walk). Excluded from the grace-window carry-forward.
+    confirmed_empty = set()
     summary = []
     # ── The market-only side-record ───────────────────────────────────────────
     # Everything here is about the WALK, not about the deck, and none of it may
@@ -2298,7 +2301,7 @@ def main():
             print(line, file=sys.stderr)
         return currency, fx, verified
 
-    def scrape_brand(domain, cap, entry=None):
+    def scrape_brand(domain, cap, entry=None, state=None):
         """Yield successive products.json pages for a brand, by PAGE NUMBER,
         until a short/empty page (store exhausted), MAX_PAGES, or the global
         request budget runs out.
@@ -2338,7 +2341,7 @@ def main():
         if square_source.is_square(entry):
             # Square Online storefront: same walk, different API. Pages arrive
             # already in Shopify's shape (see square_source.py).
-            yield from square_source.pages(entry, fetch_json, budget_left)
+            yield from square_source.pages(entry, fetch_json, budget_left, state)
             return
         for n in range(1, MAX_PAGES + 1):
             if budget_left() <= 0:
@@ -2377,9 +2380,14 @@ def main():
             # the walk depth. Unlike before 2026-08-06 this does NOT stop at the
             # display cap: stopping there is what made the tracked shelf a
             # rotating window instead of a catalogue.
-            for page in scrape_brand(domain, walk_cap, entry):
+            is_sq = square_source.is_square(entry)
+            sq_state = {}
+            for page in scrape_brand(domain, walk_cap, entry, sq_state):
                 pages_seen += 1
-                if len(page) < PAGE_LIMIT:
+                # Shopify: a short page is the end of the store. A Square walk
+                # reports its own end (its pages are 60 long and stock-filtered,
+                # so their length says nothing) and is read after the loop.
+                if not is_sq and len(page) < PAGE_LIMIT:
                     exhausted = True
                 for product in page:
                     if got >= walk_cap:
@@ -2407,6 +2415,15 @@ def main():
                     got += 1
                 if got >= walk_cap:
                     break  # walk depth reached — don't fetch further pages
+            if is_sq:
+                exhausted = bool(sq_state.get("exhausted")) and got < walk_cap
+                # Walked the WHOLE store and nothing is for sale: every piece
+                # sold. That is an observation, not an outage, so the grace
+                # window below must not restore yesterday's rows as available.
+                if exhausted and not bucket and entry.get("inStockOnly"):
+                    confirmed_empty.add(brand)
+                    summary.append(f"  {brand:<22}   0 items (store walked to the "
+                                   f"end: nothing in stock, not carried forward)")
             # THE FULL WALK is the observation. Recorded before anything is
             # trimmed, because everything downstream of here is a display
             # decision and none of it belongs in a market measurement.
@@ -2658,7 +2675,7 @@ def main():
         summary.append("  ⚠ price_corrections.json unreadable — grace-carried rows "
                        "from a corrected brand will keep their pre-correction price")
     for label, prev_items in prev_by_brand.items():
-        if not label or label in present_labels:
+        if not label or label in present_labels or label in confirmed_empty:
             continue
         kept = []
         for p in prev_items:
