@@ -139,6 +139,7 @@ jobs:
           # shelf.json so it cannot cost the catalog a product, and that
           # catalog.json's row shape did not gain a single field.
           python test_market_signals.py
+          python test_supabase_headers.py
 
       - name: Build catalog
         run: python loupe-feed/build_catalog.py
