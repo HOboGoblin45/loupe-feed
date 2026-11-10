@@ -140,6 +140,7 @@ jobs:
           # catalog.json's row shape did not gain a single field.
           python test_market_signals.py
           python test_square_source.py
+          python test_featured.py
 
       - name: Build catalog
         run: python loupe-feed/build_catalog.py

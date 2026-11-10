@@ -345,6 +345,54 @@ EXCLUDE_BRANDS = {
 }
 
 
+FEATURED_MAX_DAYS = 31
+
+
+def featured_windows(cfg, brands_present, today):
+    """(windows, notes) -- the dated featured placements to publish in
+    catalog.json's `featured` block, from brands.json's `featured` list.
+
+    The app features ONE brand a day: a daily rotation through the roster, which
+    this overrides for the days a window covers (app: lib/featuredBrand.ts).
+
+    Each entry is {"brand", "from", "to"} with inclusive UTC days. Anything that
+    cannot be honoured is dropped WITH a line in the run summary rather than
+    published and silently ignored by the app:
+      * a malformed or backwards date range
+      * a window longer than FEATURED_MAX_DAYS (a typo'd year pins a brand)
+      * a brand with no pieces in today's catalog (it would open an empty page)
+      * a window that has already ended (kept out so the block does not grow)
+    The app applies the same checks; this is the copy a human reads.
+    """
+    out, notes = [], []
+    raw = cfg.get("featured") or []
+    if not isinstance(raw, list):
+        return out, ["  \u26a0 featured: not a list, ignored"]
+    for w in raw:
+        if not isinstance(w, dict):
+            notes.append("  \u26a0 featured: entry is not an object, dropped")
+            continue
+        brand = str(w.get("brand") or "").strip()
+        try:
+            a = datetime.strptime(str(w.get("from")), "%Y-%m-%d").date()
+            b = datetime.strptime(str(w.get("to")), "%Y-%m-%d").date()
+        except ValueError:
+            notes.append(f"  \u26a0 featured: bad dates for {brand or '?'}, dropped")
+            continue
+        if not brand or b < a or (b - a).days + 1 > FEATURED_MAX_DAYS:
+            notes.append(f"  \u26a0 featured: invalid window for {brand or '?'} "
+                         f"({a} -> {b}), dropped")
+            continue
+        if b < today:
+            continue  # ended; say nothing, this is the normal end of a placement
+        if brand not in brands_present:
+            notes.append(f"  \u26a0 featured: {brand} has no pieces in today's catalog, "
+                         f"window {a} -> {b} NOT published")
+            continue
+        out.append({"brand": brand, "from": a.isoformat(), "to": b.isoformat()})
+    return out, notes
+
+
 def effective_cap(brand, per_brand):
     """Per-brand DISPLAY cap: mainstream houses are capped at MAINSTREAM_CAP so
     the feed stays indie-forward; everyone else keeps the full display budget.
@@ -3041,6 +3089,16 @@ def main():
                 summary.append(f"  -> embedded ranker config (version={_ranker_cfg.get('version')})")
     except (ValueError, OSError) as e:
         summary.append(f"  -> ranker_config.json present but unreadable ({type(e).__name__}); omitted")
+    # Dated featured placements (brands.json `featured`). Omitted entirely when
+    # there are none, so a catalog without one is byte-for-byte what it was.
+    _feat, _feat_notes = featured_windows(
+        cfg, {p.get("brand") for p in catalog.get("products", [])},
+        datetime.now(timezone.utc).date())
+    summary.extend(_feat_notes)
+    if _feat:
+        catalog["featured"] = _feat
+        summary.append("  -> featured: " + ", ".join(
+            f"{w['brand']} {w['from']}..{w['to']}" for w in _feat))
     # Compact separators: pretty-printing made every daily commit a full-file diff
     # and inflated the payload ~30% against jsDelivr's ~20MB/file ceiling. The
     # app never reads this by eye; use scripts or jq locally.

@@ -32,6 +32,8 @@
   "perBrand": 750,
   "perBrandDisplay": 60,
   "_retailers_comment": "PARTNER RETAILERS — real shops we've partnered with that stock many designers. Items keep the DESIGNER as the brand (the taste engine learns designers, not shops) and carry a 'retailer' stamp the app resolves against catalog.retailers for the tile tint, badge and in-app store block. 'productTypes' scopes what we ingest (Loupe is a women's app — a boutique also sells menswear, candles and books). 'perVendorCap' stops one high-volume label eating the whole allocation. Set 'enabled': false to switch a partnership off in one edit — items disappear on the next refresh, no app release needed.",
+  "_featured_comment": "DATED FEATURED PLACEMENTS. The app features one brand a day (Featured Today on launch, plus the Inspired-by rail): a daily rotation through the whole roster, so with ~245 brands a given label comes up about every 8 months. An entry here overrides the rotation for its days: {\"brand\": exact catalog brand name, \"from\": \"YYYY-MM-DD\", \"to\": \"YYYY-MM-DD\"}, inclusive UTC days, at most 31. build_catalog.py drops (and says so in the run summary) any window that is malformed, already over, or names a brand with no pieces in the catalog. Only app builds that read catalog.featured honour it; older builds keep rotating.",
+  "featured": [],
   "retailers": [
     {
       "id": "gemini",
