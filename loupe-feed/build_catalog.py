@@ -36,6 +36,7 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
+import square_source
 from alert_factors import alert_factors
 
 HERE = Path(__file__).parent
@@ -259,6 +260,7 @@ MULTICOLOR_HINTS = ["print", "printed", "floral", "stripe", "striped", "check", 
                     "patchwork", "rainbow", "tie-dye", "tie dye", "leopard", "animal",
                     "paisley", "ditsy", "polka dot", "polka", "plaid", "tartan"]
 
+VALID_CATEGORIES = {"tops", "bottoms", "dresses", "outerwear", "shoes", "accessories"}
 VALID_COLORS = {"black", "white", "pink", "blue", "green", "brown", "red", "neutral", "multicolor"}
 
 # ── Mainstream-house cap ──────────────────────────────────────────────────────
@@ -342,6 +344,54 @@ EXCLUDE_BRANDS = {
         "INK + ALLOY",
     ]
 }
+
+
+FEATURED_MAX_DAYS = 31
+
+
+def featured_windows(cfg, brands_present, today):
+    """(windows, notes) -- the dated featured placements to publish in
+    catalog.json's `featured` block, from brands.json's `featured` list.
+
+    The app features ONE brand a day: a daily rotation through the roster, which
+    this overrides for the days a window covers (app: lib/featuredBrand.ts).
+
+    Each entry is {"brand", "from", "to"} with inclusive UTC days. Anything that
+    cannot be honoured is dropped WITH a line in the run summary rather than
+    published and silently ignored by the app:
+      * a malformed or backwards date range
+      * a window longer than FEATURED_MAX_DAYS (a typo'd year pins a brand)
+      * a brand with no pieces in today's catalog (it would open an empty page)
+      * a window that has already ended (kept out so the block does not grow)
+    The app applies the same checks; this is the copy a human reads.
+    """
+    out, notes = [], []
+    raw = cfg.get("featured") or []
+    if not isinstance(raw, list):
+        return out, ["  \u26a0 featured: not a list, ignored"]
+    for w in raw:
+        if not isinstance(w, dict):
+            notes.append("  \u26a0 featured: entry is not an object, dropped")
+            continue
+        brand = str(w.get("brand") or "").strip()
+        try:
+            a = datetime.strptime(str(w.get("from")), "%Y-%m-%d").date()
+            b = datetime.strptime(str(w.get("to")), "%Y-%m-%d").date()
+        except ValueError:
+            notes.append(f"  \u26a0 featured: bad dates for {brand or '?'}, dropped")
+            continue
+        if not brand or b < a or (b - a).days + 1 > FEATURED_MAX_DAYS:
+            notes.append(f"  \u26a0 featured: invalid window for {brand or '?'} "
+                         f"({a} -> {b}), dropped")
+            continue
+        if b < today:
+            continue  # ended; say nothing, this is the normal end of a placement
+        if brand not in brands_present:
+            notes.append(f"  \u26a0 featured: {brand} has no pieces in today's catalog, "
+                         f"window {a} -> {b} NOT published")
+            continue
+        out.append({"brand": brand, "from": a.isoformat(), "to": b.isoformat()})
+    return out, notes
 
 
 def effective_cap(brand, per_brand):
@@ -1961,6 +2011,11 @@ def normalize(product, brand, domain, fx, multi_brand=False, retailer=None,
     if _norm_brand(display_brand) in EXCLUDE_BRANDS:
         return None
     category = infer_category(product_type, title, product.get("tags"))
+    # A source may pin the category of a piece whose title misleads the keyword
+    # rules ("Dress First, Plan Later ... Tiered Skirt" is a skirt). Set only by
+    # square_source.py from a brand entry's `categoryByHandle`.
+    if product.get("_category") in VALID_CATEGORIES:
+        category = product["_category"]
     subtype = infer_accessory_subtype(category, title, product_type, display_brand)
     # ── Partner shelves carry clothes, not the trinket wall ───────────────────
     # A partner's presence in Loupe is a CURATED shelf we assemble on their
@@ -1982,7 +2037,9 @@ def normalize(product, brand, domain, fx, multi_brand=False, retailer=None,
     # sizes == [] (a one-size item) from a genuine sell-out — the app renders
     # "Out of Stock" in the sizes slot only on an explicit false.
     is_available = any(v.get("available") for v in (product.get("variants") or []))
-    product_url = f"https://{domain}/products/{handle}"
+    # A non-Shopify source (square_source.py) supplies its own product URL,
+    # because its pages do not live at /products/<handle>.
+    product_url = product.get("_url") or f"https://{domain}/products/{handle}"
     if retailer:
         # Partner links stay CLEAN and go straight to the retailer's own product
         # page (never re-wrapped by an affiliate network), with a UTM so the shop
@@ -2002,7 +2059,9 @@ def normalize(product, brand, domain, fx, multi_brand=False, retailer=None,
         "id": (f"{retailer['id']}-{slugify(display_brand)}-{handle}" if retailer
                else f"{slugify(display_brand)}-{handle}"),
         "brand": display_brand,
-        "name": title,
+        # A Square entry may ask for a shorter display title than the store's
+        # own (square_source.display_title). Inference above read the full one.
+        "name": product.get("_display_title") or title,
         # `price` is and stays the CONVERTED USD INTEGER. The iOS app reads it as
         # a plain USD number in ~20 render sites and in every price-affinity,
         # budget-filter and look-total calculation; changing what it means would
@@ -2081,6 +2140,9 @@ def main():
     observed = {}
     observed_meta = {}
     observed_failed = {}
+    # Brands whose store answered in full and had nothing in stock (see the
+    # Square branch of the walk). Excluded from the grace-window carry-forward.
+    confirmed_empty = set()
     summary = []
     # ── The market-only side-record ───────────────────────────────────────────
     # Everything here is about the WALK, not about the deck, and none of it may
@@ -2230,13 +2292,19 @@ def main():
     def resolve_and_log(entry, label=None):
         """resolve_currency() plus the shouting. Kept thin on purpose — the logic
         is module level so a test can drive it without a network."""
-        currency, fx, verified, notes = resolve_currency(entry, fx_table, label=label)
+        if square_source.is_square(entry):
+            # No /cart.js on a Square storefront, so there is nothing to probe:
+            # the annotation is the authority (see square_source.py).
+            currency, fx, verified, notes = resolve_currency(
+                entry, fx_table, probe=lambda _domain: None, label=label)
+        else:
+            currency, fx, verified, notes = resolve_currency(entry, fx_table, label=label)
         for line in notes:
             summary.append(line)
             print(line, file=sys.stderr)
         return currency, fx, verified
 
-    def scrape_brand(domain, cap):
+    def scrape_brand(domain, cap, entry=None, state=None):
         """Yield successive products.json pages for a brand, by PAGE NUMBER,
         until a short/empty page (store exhausted), MAX_PAGES, or the global
         request budget runs out.
@@ -2273,6 +2341,11 @@ def main():
         BEFORE the first page is normalized — its answer is an input to the price
         arithmetic rather than a line in the log, so it has to be known before
         there is a price to get wrong."""
+        if square_source.is_square(entry):
+            # Square Online storefront: same walk, different API. Pages arrive
+            # already in Shopify's shape (see square_source.py).
+            yield from square_source.pages(entry, fetch_json, budget_left, state)
+            return
         for n in range(1, MAX_PAGES + 1):
             if budget_left() <= 0:
                 return
@@ -2310,9 +2383,14 @@ def main():
             # the walk depth. Unlike before 2026-08-06 this does NOT stop at the
             # display cap: stopping there is what made the tracked shelf a
             # rotating window instead of a catalogue.
-            for page in scrape_brand(domain, walk_cap):
+            is_sq = square_source.is_square(entry)
+            sq_state = {}
+            for page in scrape_brand(domain, walk_cap, entry, sq_state):
                 pages_seen += 1
-                if len(page) < PAGE_LIMIT:
+                # Shopify: a short page is the end of the store. A Square walk
+                # reports its own end (its pages are 60 long and stock-filtered,
+                # so their length says nothing) and is read after the loop.
+                if not is_sq and len(page) < PAGE_LIMIT:
                     exhausted = True
                 for product in page:
                     if got >= walk_cap:
@@ -2340,6 +2418,15 @@ def main():
                     got += 1
                 if got >= walk_cap:
                     break  # walk depth reached — don't fetch further pages
+            if is_sq:
+                exhausted = bool(sq_state.get("exhausted")) and got < walk_cap
+                # Walked the WHOLE store and nothing is for sale: every piece
+                # sold. That is an observation, not an outage, so the grace
+                # window below must not restore yesterday's rows as available.
+                if exhausted and not bucket and entry.get("inStockOnly"):
+                    confirmed_empty.add(brand)
+                    summary.append(f"  {brand:<22}   0 items (store walked to the "
+                                   f"end: nothing in stock, not carried forward)")
             # THE FULL WALK is the observation. Recorded before anything is
             # trimmed, because everything downstream of here is a display
             # decision and none of it belongs in a market measurement.
@@ -2591,7 +2678,7 @@ def main():
         summary.append("  ⚠ price_corrections.json unreadable — grace-carried rows "
                        "from a corrected brand will keep their pre-correction price")
     for label, prev_items in prev_by_brand.items():
-        if not label or label in present_labels:
+        if not label or label in present_labels or label in confirmed_empty:
             continue
         kept = []
         for p in prev_items:
@@ -3022,6 +3109,16 @@ def main():
                 summary.append(f"  -> embedded ranker config (version={_ranker_cfg.get('version')})")
     except (ValueError, OSError) as e:
         summary.append(f"  -> ranker_config.json present but unreadable ({type(e).__name__}); omitted")
+    # Dated featured placements (brands.json `featured`). Omitted entirely when
+    # there are none, so a catalog without one is byte-for-byte what it was.
+    _feat, _feat_notes = featured_windows(
+        cfg, {p.get("brand") for p in catalog.get("products", [])},
+        datetime.now(timezone.utc).date())
+    summary.extend(_feat_notes)
+    if _feat:
+        catalog["featured"] = _feat
+        summary.append("  -> featured: " + ", ".join(
+            f"{w['brand']} {w['from']}..{w['to']}" for w in _feat))
     # The FX factors the app must not show as a sale (Dresser badge, alerts screen,
     # on-device digest, share image). The app has parsed this block since August;
     # nothing published it until 2026-11-09. See alert_factors.py.

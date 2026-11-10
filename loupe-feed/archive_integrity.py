@@ -131,6 +131,16 @@ KNOWN_CAUSES = {
         "and published nothing until `4a85662` fixed the fixture on 2026-07-29. The "
         "workflow failed loudly all four days; nobody was looking. That is what this "
         "file and the watchdog exist to change.",
+    ("2026-10-30", "2026-11-02"):
+        "`2026-10-30` -> `2026-11-02`: no code fault. GitHub refused to start any "
+        "Actions job on the account: every run in the window ends in zero steps with "
+        "the annotation \"The job was not started because your account is locked due "
+        "to a billing issue.\" (catalog refresh runs 41076539257, 41210284183, "
+        "41318812804, 41498353133). The same lock stopped the daily digest, the "
+        "archive backup of 2026-11-01, the product-page build on loupe-site, and the "
+        "monthly FX refresh of 2026-11-01, which has not been re-run. The watchdog "
+        "could not report it because the watchdog is an Actions job too: a monitor "
+        "that runs on the thing it monitors is silent exactly when that thing is down.",
 }
 
 
