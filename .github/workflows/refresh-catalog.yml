@@ -149,6 +149,7 @@ jobs:
           python test_featured.py
           python test_supabase_headers.py
           python test_digest_news.py
+          python test_first_deck.py
 
       - name: Build catalog
         run: python loupe-feed/build_catalog.py
@@ -180,6 +181,12 @@ jobs:
           # is exactly why it is a fallback and not the design.
           LOUPE_STOCK_SALT: ${{ secrets.LOUPE_STOCK_SALT }}
           APPROVAL_HMAC_SECRET: ${{ secrets.APPROVAL_HMAC_SECRET }}
+
+
+      # A few hundred pieces in catalog.json's schema, so a first open shows a
+      # real deck before the 11 MB catalog lands (see build_first_deck.py).
+      - name: Build first deck
+        run: python loupe-feed/build_first_deck.py
 
       - name: Archive heartbeat (did this build actually produce anything?)
         # The July gap was the LOUD failure. This guards the quiet one on the
@@ -242,6 +249,7 @@ jobs:
           # is fail-soft and may legitimately write nothing, so use a glob-safe
           # add that does not abort the commit under `set -e`.
           git add loupe-feed/brands.json loupe-feed/catalog.json loupe-feed/catalog.meta.json loupe-feed/shelf.json
+          [[ -f loupe-feed/first_deck.json ]] && git add loupe-feed/first_deck.json || true
           [[ -f loupe-feed/stock.json ]] && git add loupe-feed/stock.json || \
             echo "NOTE: no stock.json this run (the inventory pass is fail-soft)."
           git commit -m "chore: refresh catalog $(date -u +%Y-%m-%d)"
